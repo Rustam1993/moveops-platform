@@ -79,9 +79,50 @@ Used for:
 - Automated invoicing cycles
 - Payments gateway integration
 - SMS/email automations
-- Migration / Import
+  
+  **Migration / Import**
 - Admin-only import screen
 - Dry-run shows: counts, duplicates, validation errors
 - Import is idempotent (re-importing the same file should not duplicate records)
-
 Details: docs/migration-plan.md
+
+## Security baseline
+- Multi-tenant isolation (tenant_id everywhere) + automated cross-tenant tests
+- RBAC enforced server-side
+- Secure sessions + CSRF protection (cookie auth)
+- Rate limiting (auth/search)
+- Input validation (OpenAPI + business rules)
+- Audit log for sensitive changes
+- CI: static analysis + dependency scanning
+Details: docs/threat-model.md
+
+
+## Tests
+**Backend unit tests**
+```
+cd apps/api
+go test ./...
+```
+**E2E smoke test (Playwright)**
+```
+cd apps/web
+npm ci
+npm run test:e2e
+```
+**Smoke flow:**
+login → create estimate → convert/schedule → appears on calendar → update storage → appears in storage list
+
+## Deployment (Azure)
+**Target**:
+- Azure Container Apps (web + api)
+- Azure Database for PostgreSQL Flexible Server
+- Terraform/OpenTofu IaC
+Runbook: docs/runbook-azure.md
+
+**Contributing (internal)**
+- Keep changes small and phase-aligned
+- Update docs/decisions.md for meaningful architectural changes
+- Add tests for anything security-sensitive (RBAC/tenant isolation/import)
+
+## License
+Proprietary (update when ready).
