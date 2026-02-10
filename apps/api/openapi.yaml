@@ -1,0 +1,226 @@
+openapi: 3.0.3
+info:
+  title: MoveOps API
+  version: 0.1.0
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      operationId: GetHealth
+      summary: Liveness probe
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /auth/login:
+    post:
+      operationId: PostAuthLogin
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /auth/logout:
+    post:
+      operationId: PostAuthLogout
+      summary: Logout current session
+      responses:
+        '204':
+          description: Logged out
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /auth/me:
+    get:
+      operationId: GetAuthMe
+      summary: Get current user and tenant
+      responses:
+        '200':
+          description: Current session principal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSessionResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /auth/csrf:
+    get:
+      operationId: GetAuthCsrf
+      summary: Get csrf token for session
+      responses:
+        '200':
+          description: CSRF token response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [csrfToken]
+                properties:
+                  csrfToken:
+                    type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /customers:
+    post:
+      operationId: PostCustomers
+      summary: Create customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /customers/{customerId}:
+    get:
+      operationId: GetCustomersCustomerId
+      summary: Get customer by id
+      parameters:
+        - in: path
+          name: customerId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  responses:
+    ErrorResponse:
+      description: Standard API error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    AuthSessionResponse:
+      type: object
+      required: [user, tenant]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        tenant:
+          $ref: '#/components/schemas/Tenant'
+    Tenant:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+    User:
+      type: object
+      required: [id, email, fullName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+    CreateCustomerRequest:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+    Customer:
+      type: object
+      required: [id, tenantId, firstName, lastName, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      required: [error, requestId]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+        requestId:
+          type: string
