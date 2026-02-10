@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: moveops
+      POSTGRES_PASSWORD: moveops
+      POSTGRES_DB: moveops
+    ports:
+      - "5432:5432"
+    volumes:
+      - moveops_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moveops -d moveops"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      APP_ENV: dev
+      API_ADDR: :8080
+      DATABASE_URL: postgres://moveops:moveops@db:5432/moveops?sslmode=disable
+      SESSION_COOKIE_NAME: mo_sess
+      SESSION_TTL_HOURS: "12"
+      COOKIE_SECURE: "false"
+      CSRF_ENFORCE: "true"
+      SEED_TENANT_SLUG: local-dev
+      SEED_TENANT_NAME: Local Dev Tenant
+      SEED_ADMIN_EMAIL: admin@local.moveops
+      SEED_ADMIN_PASSWORD: Admin12345!
+      SEED_ADMIN_NAME: Local Admin
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  moveops_pgdata:
