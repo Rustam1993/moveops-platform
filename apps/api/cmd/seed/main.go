@@ -1,0 +1,127 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+	"github.com/moveops-platform/apps/api/internal/auth"
+)
+
+func main() {
+	_ = godotenv.Load()
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL is required")
+	}
+
+	email := envOrDefault("SEED_ADMIN_EMAIL", "admin@local.moveops")
+	password := envOrDefault("SEED_ADMIN_PASSWORD", "Admin12345!")
+	fullName := envOrDefault("SEED_ADMIN_NAME", "Local Admin")
+	tenantSlug := envOrDefault("SEED_TENANT_SLUG", "local-dev")
+	tenantName := envOrDefault("SEED_TENANT_NAME", "Local Dev Tenant")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		log.Fatalf("connect db: %v", err)
+	}
+	defer pool.Close()
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		log.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var tenantID uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO tenants (slug, name)
+		VALUES ($1, $2)
+		ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+		RETURNING id
+	`, tenantSlug, tenantName).Scan(&tenantID); err != nil {
+		log.Fatalf("upsert tenant: %v", err)
+	}
+
+	passwordHash, err := auth.HashPassword(password)
+	if err != nil {
+		log.Fatalf("hash password: %v", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO users (tenant_id, email, full_name, password_hash, is_active)
+		VALUES ($1, $2, $3, $4, TRUE)
+		ON CONFLICT DO NOTHING
+	`, tenantID, email, fullName, passwordHash)
+	if err != nil {
+		log.Fatalf("insert user: %v", err)
+	}
+
+	var userID uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT id FROM users WHERE tenant_id = $1 AND lower(email) = lower($2)
+	`, tenantID, email).Scan(&userID); err != nil {
+		log.Fatalf("find user: %v", err)
+	}
+
+	permissions := []string{"customers.read", "customers.write"}
+	for _, perm := range permissions {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO permissions (name, description)
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO NOTHING
+		`, perm, fmt.Sprintf("Permission for %s", perm)); err != nil {
+			log.Fatalf("insert permission: %v", err)
+		}
+	}
+
+	var roleID uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO roles (tenant_id, name, description)
+		VALUES ($1, 'admin', 'Tenant administrator')
+		ON CONFLICT (tenant_id, name) DO UPDATE SET description = EXCLUDED.description
+		RETURNING id
+	`, tenantID).Scan(&roleID); err != nil {
+		log.Fatalf("upsert role: %v", err)
+	}
+
+	for _, perm := range permissions {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO role_permissions (role_id, permission_id)
+			SELECT $1, p.id FROM permissions p WHERE p.name = $2
+			ON CONFLICT DO NOTHING
+		`, roleID, perm); err != nil {
+			log.Fatalf("insert role permission: %v", err)
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO user_roles (user_id, role_id, tenant_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING
+	`, userID, roleID, tenantID); err != nil {
+		log.Fatalf("insert user role: %v", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Fatalf("commit tx: %v", err)
+	}
+
+	fmt.Printf("Seed completed. Tenant=%s, admin=%s, password=%s\n", tenantSlug, email, password)
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
