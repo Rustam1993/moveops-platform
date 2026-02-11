@@ -2,16 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
+@layer base {
+  :root {
+    --background: 35 34% 97%;
+    --foreground: 222 22% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 22% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 22% 15%;
+
+    --primary: 194 78% 31%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 30% 94%;
+    --secondary-foreground: 222 22% 16%;
+
+    --muted: 213 25% 94%;
+    --muted-foreground: 215 14% 44%;
+
+    --accent: 45 91% 83%;
+    --accent-foreground: 222 22% 16%;
+
+    --destructive: 0 76% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 216 20% 88%;
+    --input: 216 20% 88%;
+    --ring: 194 78% 31%;
+  }
+
+  .dark {
+    --background: 222 20% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 18% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 18% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 190 89% 45%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 19% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 19% 18%;
+    --muted-foreground: 215 20% 74%;
+
+    --accent: 219 18% 20%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 74% 44%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 17% 24%;
+    --input: 217 17% 24%;
+    --ring: 190 89% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-screen;
+    background-image: radial-gradient(circle at top right, hsl(var(--primary) / 0.08), transparent 34%),
+      radial-gradient(circle at bottom left, hsl(var(--accent) / 0.2), transparent 30%);
+  }
 }
 
-body {
-  @apply bg-background text-foreground min-h-screen;
-  background-image: radial-gradient(circle at top left, #fff8dc, transparent 40%),
-    radial-gradient(circle at bottom right, #d9f0f2, transparent 35%);
-}
-
-a {
-  @apply text-primary underline-offset-2 hover:underline;
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-[1600px];
+  }
 }
