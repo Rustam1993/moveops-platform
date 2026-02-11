@@ -24,8 +24,8 @@ func TestTenantIsolation(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
 
-	_, userA := seedTenantUser(t, ctx, env.pool, "tenant-a", "Tenant A", "a@example.com", "Password123!", []string{"customers.read", "customers.write"})
-	_, _ = userA, seedTenantUser(t, ctx, env.pool, "tenant-b", "Tenant B", "b@example.com", "Password123!", []string{"customers.read"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-a", "Tenant A", "a@example.com", "Password123!", []string{"customers.read", "customers.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-b", "Tenant B", "b@example.com", "Password123!", []string{"customers.read"})
 
 	cookieA := login(t, env.router, "a@example.com", "Password123!")
 	csrfA := csrfToken(t, env.router, cookieA)
