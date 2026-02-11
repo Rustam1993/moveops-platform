@@ -1,0 +1,17 @@
+.git
+.worktrees
+.DS_Store
+
+# Local env files
+.env
+apps/api/.env
+apps/web/.env
+
+# Build output / caches
+bin
+**/.cache
+apps/web/.next
+packages/client/dist
+
+# Dependencies
+**/node_modules

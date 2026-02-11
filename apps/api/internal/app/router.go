@@ -37,6 +37,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, logger *slog.Logger) (http.Han
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
 	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.Logging(logger))
 
