@@ -26,3 +26,13 @@
   - Use normalized `permissions`, `role_permissions`, and `user_roles` tables (instead of hardcoded permissions in application code) so permission assignment remains tenant-configurable from the data layer.
 - Session model:
   - Session cookies carry an opaque token; DB stores only token hash + CSRF token + expiry/revocation timestamps.
+
+## Phase 2
+- Tenant-scoped numbering:
+  - Use a `tenant_counters` table (`tenant_id`, `counter_type`, `next_value`) and an atomic `UPDATE ... RETURNING` path to issue `estimate_number` and `job_number` values without race conditions.
+  - Formatted identifiers are generated in application code as `E-%06d` and `J-%06d`.
+- Idempotency storage strategy:
+  - Use nullable idempotency key columns directly on business tables:
+    - `estimates.idempotency_key` with unique index `(tenant_id, idempotency_key)` when present.
+    - `jobs.convert_idempotency_key` with unique index `(tenant_id, convert_idempotency_key)` when present.
+  - Store `estimates.idempotency_payload_hash` to detect key reuse with different payloads and return `409 IDEMPOTENCY_KEY_REUSE`.
