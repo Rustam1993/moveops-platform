@@ -1,8 +1,14 @@
 FROM golang:1.22-alpine AS builder
-WORKDIR /src
+WORKDIR /src/apps/api
 
 RUN apk add --no-cache git
-COPY . .
+
+# Copy module files first for better layer caching.
+COPY apps/api/go.mod apps/api/go.sum ./
+RUN go mod download
+
+# Copy API source.
+COPY apps/api ./
 
 RUN go build -o /out/api ./cmd/server
 RUN go build -o /out/migrate ./cmd/migrate
@@ -16,9 +22,9 @@ RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /out/api /usr/local/bin/api
 COPY --from=builder /out/migrate /usr/local/bin/migrate
 COPY --from=builder /out/seed /usr/local/bin/seed
-COPY --from=builder /src/openapi.yaml /app/openapi.yaml
-COPY --from=builder /src/migrations /app/migrations
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --from=builder /src/apps/api/openapi.yaml /app/openapi.yaml
+COPY --from=builder /src/apps/api/migrations /app/migrations
+COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

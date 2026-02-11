@@ -2,6 +2,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY packages/client ./packages/client
+COPY apps/api/openapi.yaml ./apps/api/openapi.yaml
 COPY apps/web ./apps/web
 
 WORKDIR /app/packages/client
