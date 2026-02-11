@@ -2,11 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LoginRequest } from "@moveops/client";
+import { Building2, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
-import { Button, Card, Input } from "@/components/ui";
 
 type CsrfResponse = { csrfToken: string };
+type LoginRequest = { email: string; password: string };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,40 +35,83 @@ export default function LoginPage() {
 
       const csrf = await api.request<CsrfResponse>("/auth/csrf");
       sessionStorage.setItem("csrfToken", csrf.csrfToken);
+      toast.success("Welcome back");
       router.push("/");
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const message = err instanceof Error ? err.message : "Login failed";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md items-center px-6 py-10">
-      <Card className="w-full">
-        <h1 className="text-2xl font-bold">Login</h1>
-        <form className="mt-4 space-y-4" onSubmit={onSubmit}>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">Email</span>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-10">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.16),transparent_36%),radial-gradient(circle_at_bottom_left,hsl(var(--accent)/0.3),transparent_32%)]" />
 
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium">Password</span>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
+      <Card className="relative z-10 w-full max-w-md border-border/70 shadow-xl">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">MoveOps</p>
+              <CardTitle>Sign in to your workspace</CardTitle>
+            </div>
+          </div>
+          <CardDescription>
+            Access tenant-scoped operations, scheduling, and storage workflows.
+          </CardDescription>
+        </CardHeader>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <CardContent>
+          <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
 
-          <Button type="submit" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 text-muted-foreground">
+                <Checkbox id="remember" />
+                Remember me
+              </label>
+              <span className="text-muted-foreground">Session-based auth</span>
+            </div>
+
+            {error ? (
+              <p className="rounded-md border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
+        </CardContent>
+
+        <CardFooter className="justify-between border-t border-border/60 pt-4 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Secure cookie session
+          </span>
+          <span>Phase 1 foundation</span>
+        </CardFooter>
       </Card>
     </main>
   );
