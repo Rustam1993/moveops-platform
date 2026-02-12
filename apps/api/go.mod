@@ -9,11 +9,13 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/joho/godotenv v1.5.1
 	github.com/oapi-codegen/nethttp-middleware v1.1.1
+	github.com/oapi-codegen/runtime v1.1.1
 	github.com/pressly/goose/v3 v3.22.1
 	golang.org/x/crypto v0.33.0
 )
 
 require (
+	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect

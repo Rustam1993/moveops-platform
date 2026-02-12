@@ -73,42 +73,74 @@ func main() {
 		log.Fatalf("find user: %v", err)
 	}
 
-	permissions := []string{"customers.read", "customers.write"}
-	for _, perm := range permissions {
+	permissionDescriptions := map[string]string{
+		"customers.read":    "Read customer records",
+		"customers.write":   "Create and update customer records",
+		"estimates.read":    "Read estimate records",
+		"estimates.write":   "Create and update estimate records",
+		"estimates.convert": "Convert estimates into jobs",
+		"jobs.read":         "Read job records",
+		"jobs.write":        "Update job scheduling and status",
+	}
+
+	for perm, description := range permissionDescriptions {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO permissions (name, description)
 			VALUES ($1, $2)
-			ON CONFLICT (name) DO NOTHING
-		`, perm, fmt.Sprintf("Permission for %s", perm)); err != nil {
+			ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
+		`, perm, description); err != nil {
 			log.Fatalf("insert permission: %v", err)
 		}
 	}
 
-	var roleID uuid.UUID
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO roles (tenant_id, name, description)
-		VALUES ($1, 'admin', 'Tenant administrator')
-		ON CONFLICT (tenant_id, name) DO UPDATE SET description = EXCLUDED.description
-		RETURNING id
-	`, tenantID).Scan(&roleID); err != nil {
-		log.Fatalf("upsert role: %v", err)
+	roles := map[string]struct {
+		description string
+		permissions []string
+	}{
+		"admin": {
+			description: "Tenant administrator",
+			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "jobs.read", "jobs.write"},
+		},
+		"sales": {
+			description: "Sales role",
+			permissions: []string{"estimates.read", "estimates.write", "estimates.convert", "jobs.read"},
+		},
+		"ops": {
+			description: "Operations role",
+			permissions: []string{"estimates.read", "jobs.read", "jobs.write"},
+		},
 	}
 
-	for _, perm := range permissions {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO role_permissions (role_id, permission_id)
-			SELECT $1, p.id FROM permissions p WHERE p.name = $2
-			ON CONFLICT DO NOTHING
-		`, roleID, perm); err != nil {
-			log.Fatalf("insert role permission: %v", err)
+	roleIDs := make(map[string]uuid.UUID, len(roles))
+	for roleName, role := range roles {
+		var roleID uuid.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO roles (tenant_id, name, description)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (tenant_id, name) DO UPDATE SET description = EXCLUDED.description
+			RETURNING id
+		`, tenantID, roleName, role.description).Scan(&roleID); err != nil {
+			log.Fatalf("upsert role %s: %v", roleName, err)
+		}
+		roleIDs[roleName] = roleID
+
+		for _, perm := range role.permissions {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO role_permissions (role_id, permission_id)
+				SELECT $1, p.id FROM permissions p WHERE p.name = $2
+				ON CONFLICT DO NOTHING
+			`, roleID, perm); err != nil {
+				log.Fatalf("insert role permission: %v", err)
+			}
 		}
 	}
 
+	adminRoleID := roleIDs["admin"]
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO user_roles (user_id, role_id, tenant_id)
 		VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
-	`, userID, roleID, tenantID); err != nil {
+	`, userID, adminRoleID, tenantID); err != nil {
 		log.Fatalf("insert user role: %v", err)
 	}
 

@@ -83,6 +83,128 @@ func TestLogoutRevokesSession(t *testing.T) {
 	}
 }
 
+func TestEstimateTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-estimate-a", "Tenant Estimate A", "estimate-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-estimate-b", "Tenant Estimate B", "estimate-b@example.com", "Password123!", []string{"estimates.read"})
+
+	cookieA := login(t, env.router, "estimate-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-estimate-a")
+
+	cookieB := login(t, env.router, "estimate-b@example.com", "Password123!")
+	status, _ := request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID, nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant estimate read, got %d", status)
+	}
+}
+
+func TestEstimateRBACForCreateAndConvert(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-rbac-est", "Tenant RBAC Est", "est-admin@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "est-reader@example.com", "Password123!", []string{"estimates.read"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "est-writer@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	readerCookie := login(t, env.router, "est-reader@example.com", "Password123!")
+	readerCsrf := csrfToken(t, env.router, readerCookie)
+	status, _ := request(t, env.router, http.MethodPost, "/api/estimates", estimatePayload("Reader Blocked"), readerCookie, readerCsrf, withIdempotency("idem-rbac-reader"))
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing estimates.write, got %d", status)
+	}
+
+	writerCookie := login(t, env.router, "est-writer@example.com", "Password123!")
+	writerCsrf := csrfToken(t, env.router, writerCookie)
+	estimateID := createEstimate(t, env.router, writerCookie, writerCsrf, "idem-rbac-writer")
+
+	status, _ = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/convert", nil, writerCookie, writerCsrf, withIdempotency("idem-rbac-convert"))
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing estimates.convert, got %d", status)
+	}
+}
+
+func TestEstimateCreateIdempotency(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-idem-create", "Tenant Idem Create", "idem-create@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookie := login(t, env.router, "idem-create@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+
+	key := "idem-create-same"
+	status1, body1 := request(t, env.router, http.MethodPost, "/api/estimates", estimatePayload("Alice Create"), cookie, csrf, withIdempotency(key))
+	if status1 != http.StatusCreated {
+		t.Fatalf("expected 201 create, got %d (%s)", status1, string(body1))
+	}
+	estimateID1 := parseEstimateID(t, body1)
+
+	status2, body2 := request(t, env.router, http.MethodPost, "/api/estimates", estimatePayload("Alice Create"), cookie, csrf, withIdempotency(key))
+	if status2 != http.StatusOK {
+		t.Fatalf("expected 200 idempotent replay, got %d (%s)", status2, string(body2))
+	}
+	estimateID2 := parseEstimateID(t, body2)
+	if estimateID1 != estimateID2 {
+		t.Fatalf("expected same estimate id for idempotent replay, got %s and %s", estimateID1, estimateID2)
+	}
+
+	status3, body3 := request(t, env.router, http.MethodPost, "/api/estimates", estimatePayload("Different Payload"), cookie, csrf, withIdempotency(key))
+	if status3 != http.StatusConflict {
+		t.Fatalf("expected 409 for key reuse with different payload, got %d (%s)", status3, string(body3))
+	}
+}
+
+func TestEstimateConvertIdempotencyAndSingleJob(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-idem-convert", "Tenant Idem Convert", "idem-convert@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert"})
+
+	cookie := login(t, env.router, "idem-convert@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "idem-convert-estimate")
+
+	key := "idem-convert-key"
+	status1, body1 := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/convert", nil, cookie, csrf, withIdempotency(key))
+	if status1 != http.StatusCreated {
+		t.Fatalf("expected 201 convert, got %d (%s)", status1, string(body1))
+	}
+	jobID1 := parseJobID(t, body1)
+
+	status2, body2 := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/convert", nil, cookie, csrf, withIdempotency(key))
+	if status2 != http.StatusOK {
+		t.Fatalf("expected 200 idempotent convert replay, got %d (%s)", status2, string(body2))
+	}
+	jobID2 := parseJobID(t, body2)
+	if jobID1 != jobID2 {
+		t.Fatalf("expected same job id for idempotent convert replay, got %s and %s", jobID1, jobID2)
+	}
+
+	status3, body3 := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/convert", nil, cookie, csrf, withIdempotency("idem-convert-key-2"))
+	if status3 != http.StatusOK {
+		t.Fatalf("expected 200 for repeated convert with different key, got %d (%s)", status3, string(body3))
+	}
+	jobID3 := parseJobID(t, body3)
+	if jobID1 != jobID3 {
+		t.Fatalf("expected same job id for repeated convert, got %s and %s", jobID1, jobID3)
+	}
+
+	var count int
+	estimateUUID, err := uuid.Parse(estimateID)
+	if err != nil {
+		t.Fatalf("parse estimate id: %v", err)
+	}
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM jobs WHERE tenant_id = $1 AND estimate_id = $2`, tenantID, estimateUUID).Scan(&count); err != nil {
+		t.Fatalf("count jobs by estimate: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 job for estimate, got %d", count)
+	}
+}
+
 type testEnv struct {
 	pool   *pgxpool.Pool
 	router http.Handler
@@ -117,7 +239,7 @@ func setupTestEnv(t *testing.T) testEnv {
 		Env:               "test",
 	}
 
-	router, err := NewRouter(cfg, gen.New(pool), logger)
+	router, err := NewRouter(cfg, gen.New(pool), pool, logger)
 	if err != nil {
 		t.Fatalf("create router: %v", err)
 	}
@@ -253,7 +375,72 @@ func createCustomer(t *testing.T, router http.Handler, session *http.Cookie, csr
 	return id
 }
 
-func request(t *testing.T, router http.Handler, method, path string, body []byte, session *http.Cookie, csrf string) (int, []byte) {
+func createEstimate(t *testing.T, router http.Handler, session *http.Cookie, csrf, idempotencyKey string) string {
+	t.Helper()
+	status, body := request(t, router, http.MethodPost, "/api/estimates", estimatePayload("Integration Customer"), session, csrf, withIdempotency(idempotencyKey))
+	if status != http.StatusCreated {
+		t.Fatalf("create estimate expected 201, got %d (%s)", status, string(body))
+	}
+	return parseEstimateID(t, body)
+}
+
+func estimatePayload(customerName string) []byte {
+	payload, _ := json.Marshal(map[string]any{
+		"customerName":            customerName,
+		"primaryPhone":            "+1-555-0100",
+		"email":                   "customer@example.com",
+		"originAddressLine1":      "100 Origin St",
+		"originCity":              "Austin",
+		"originState":             "TX",
+		"originPostalCode":        "78701",
+		"destinationAddressLine1": "900 Destination Ave",
+		"destinationCity":         "Dallas",
+		"destinationState":        "TX",
+		"destinationPostalCode":   "75001",
+		"moveDate":                "2026-03-20",
+		"leadSource":              "Website",
+		"pickupTime":              "09:00",
+	})
+	return payload
+}
+
+func parseEstimateID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Estimate struct {
+			ID string `json:"id"`
+		} `json:"estimate"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse estimate body: %v", err)
+	}
+	if payload.Estimate.ID == "" {
+		t.Fatalf("estimate id missing")
+	}
+	return payload.Estimate.ID
+}
+
+func parseJobID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Job struct {
+			ID string `json:"id"`
+		} `json:"job"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse job body: %v", err)
+	}
+	if payload.Job.ID == "" {
+		t.Fatalf("job id missing")
+	}
+	return payload.Job.ID
+}
+
+func withIdempotency(key string) map[string]string {
+	return map[string]string{"Idempotency-Key": key}
+}
+
+func request(t *testing.T, router http.Handler, method, path string, body []byte, session *http.Cookie, csrf string, extraHeaders ...map[string]string) (int, []byte) {
 	t.Helper()
 	req := httptest.NewRequest(method, path, bytes.NewReader(body))
 	req.RemoteAddr = "127.0.0.1:12345"
@@ -265,6 +452,11 @@ func request(t *testing.T, router http.Handler, method, path string, body []byte
 	}
 	if csrf != "" {
 		req.Header.Set("X-CSRF-Token", csrf)
+	}
+	for _, headers := range extraHeaders {
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
 	}
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

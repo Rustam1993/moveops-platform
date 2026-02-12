@@ -14,3 +14,8 @@
 - CSRF tokens are tied to session rows and exposed via `GET /auth/csrf`; state-changing routes enforce `X-CSRF-Token` when `CSRF_ENFORCE=true` (default).
 - Local seed data is development-only and includes one default tenant and one admin credential pair.
 - Integration tests requiring a live Postgres instance use `TEST_DATABASE_URL`; when it is absent, those tests are skipped.
+
+## Phase 2
+- `POST /estimates` requires `Idempotency-Key` in the request header; body-level idempotency keys are not used.
+- New estimate required fields: `customerName`, `primaryPhone`, `email`, origin address/city/state/postal code, destination address/city/state/postal code, `moveDate`, and `leadSource`.
+- Optional estimate fields (`pickupTime`, `secondaryPhone`, `moveSize`, `locationType`, pricing fields, and notes) are stored when provided and omitted otherwise.

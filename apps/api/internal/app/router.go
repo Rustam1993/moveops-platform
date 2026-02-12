@@ -10,17 +10,21 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	openapimiddleware "github.com/oapi-codegen/nethttp-middleware"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moveops-platform/apps/api/internal/audit"
 	"github.com/moveops-platform/apps/api/internal/config"
 	gen "github.com/moveops-platform/apps/api/internal/gen/db"
+	"github.com/moveops-platform/apps/api/internal/gen/oapi"
 	"github.com/moveops-platform/apps/api/internal/handlers"
 	"github.com/moveops-platform/apps/api/internal/httpx"
 	"github.com/moveops-platform/apps/api/internal/middleware"
 )
 
-func NewRouter(cfg config.Config, q *gen.Queries, logger *slog.Logger) (http.Handler, error) {
+func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *slog.Logger) (http.Handler, error) {
 	specPath := filepath.Join("openapi.yaml")
 	if _, err := os.Stat(specPath); err != nil {
 		return nil, fmt.Errorf("openapi spec not found at %s: %w", specPath, err)
@@ -54,7 +58,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, logger *slog.Logger) (http.Han
 	}))
 
 	auditLogger := audit.NewLogger(q)
-	h := handlers.NewServer(cfg, q, auditLogger, logger)
+	h := handlers.NewServer(cfg, q, auditLogger, logger, pool)
 
 	authMW := middleware.AuthMiddleware{Queries: q, CookieName: cfg.SessionCookieName}
 	loginLimiter := middleware.NewLoginRateLimiter(10, time.Minute)
@@ -73,15 +77,88 @@ func NewRouter(cfg config.Config, q *gen.Queries, logger *slog.Logger) (http.Han
 		protected.With(
 			middleware.RequirePermission(q, "customers.read"),
 		).Get("/customers/{customerId}", func(w http.ResponseWriter, r *http.Request) {
-			h.GetCustomersCustomerId(w, r, chi.URLParam(r, "customerId"))
+			customerID, ok := parseUUIDParam(w, r, chi.URLParam(r, "customerId"), "invalid_customer_id", "Customer id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetCustomersCustomerId(w, r, openapi_types.UUID(customerID))
 		})
 
 		protected.With(
 			middleware.RequirePermission(q, "customers.write"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
 		).Post("/customers", h.PostCustomers)
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates", func(w http.ResponseWriter, r *http.Request) {
+			h.PostEstimates(w, r, oapi.PostEstimatesParams{IdempotencyKey: r.Header.Get("Idempotency-Key")})
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateId(w, r, openapi_types.UUID(estimateID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Patch("/estimates/{estimateId}", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PatchEstimatesEstimateId(w, r, openapi_types.UUID(estimateID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.convert"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates/{estimateId}/convert", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostEstimatesEstimateIdConvert(w, r, openapi_types.UUID(estimateID), oapi.PostEstimatesEstimateIdConvertParams{IdempotencyKey: r.Header.Get("Idempotency-Key")})
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "jobs.read"),
+		).Get("/jobs/{jobId}", func(w http.ResponseWriter, r *http.Request) {
+			jobID, ok := parseUUIDParam(w, r, chi.URLParam(r, "jobId"), "invalid_job_id", "Job id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetJobsJobId(w, r, openapi_types.UUID(jobID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "jobs.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Patch("/jobs/{jobId}", func(w http.ResponseWriter, r *http.Request) {
+			jobID, ok := parseUUIDParam(w, r, chi.URLParam(r, "jobId"), "invalid_job_id", "Job id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PatchJobsJobId(w, r, openapi_types.UUID(jobID))
+		})
 	})
 
 	r.Mount("/api", api)
 	return r, nil
+}
+
+func parseUUIDParam(w http.ResponseWriter, r *http.Request, raw, code, message string) (uuid.UUID, bool) {
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusBadRequest, code, message, nil)
+		return uuid.Nil, false
+	}
+	return id, true
 }

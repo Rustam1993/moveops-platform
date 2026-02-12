@@ -35,7 +35,7 @@ func main() {
 	defer pool.Close()
 
 	queries := gen.New(pool)
-	router, err := app.NewRouter(cfg, queries, logger)
+	router, err := app.NewRouter(cfg, queries, pool, logger)
 	if err != nil {
 		logger.Error("build router", "error", err)
 		os.Exit(1)

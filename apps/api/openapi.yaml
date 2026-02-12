@@ -118,7 +118,160 @@ paths:
                 $ref: '#/components/schemas/Customer'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates:
+    post:
+      operationId: PostEstimates
+      summary: Create a draft estimate
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEstimateRequest'
+      responses:
+        '201':
+          description: Draft estimate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+        '200':
+          description: Idempotent replay returned existing estimate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}:
+    get:
+      operationId: GetEstimatesEstimateId
+      summary: Get estimate by id
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      operationId: PatchEstimatesEstimateId
+      summary: Update estimate fields
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEstimateRequest'
+      responses:
+        '200':
+          description: Estimate updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/convert:
+    post:
+      operationId: PostEstimatesEstimateIdConvert
+      summary: Convert estimate to job (idempotent)
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Job created from estimate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '200':
+          description: Idempotent replay returned existing job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /jobs/{jobId}:
+    get:
+      operationId: GetJobsJobId
+      summary: Get job by id
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      operationId: PatchJobsJobId
+      summary: Update minimal job scheduling fields
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateJobRequest'
+      responses:
+        '200':
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
 components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
   responses:
     ErrorResponse:
       description: Standard API error
@@ -208,6 +361,307 @@ components:
         updatedAt:
           type: string
           format: date-time
+    CreateEstimateRequest:
+      type: object
+      required:
+        - customerName
+        - primaryPhone
+        - email
+        - originAddressLine1
+        - originCity
+        - originState
+        - originPostalCode
+        - destinationAddressLine1
+        - destinationCity
+        - destinationState
+        - destinationPostalCode
+        - moveDate
+        - leadSource
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        primaryPhone:
+          type: string
+          minLength: 1
+        secondaryPhone:
+          type: string
+        email:
+          type: string
+          format: email
+        originAddressLine1:
+          type: string
+          minLength: 1
+        originCity:
+          type: string
+          minLength: 1
+        originState:
+          type: string
+          minLength: 1
+        originPostalCode:
+          type: string
+          minLength: 1
+        destinationAddressLine1:
+          type: string
+          minLength: 1
+        destinationCity:
+          type: string
+          minLength: 1
+        destinationState:
+          type: string
+          minLength: 1
+        destinationPostalCode:
+          type: string
+          minLength: 1
+        moveDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        leadSource:
+          type: string
+          minLength: 1
+        moveSize:
+          type: string
+        locationType:
+          type: string
+        estimatedTotalCents:
+          type: integer
+          format: int64
+          minimum: 0
+        depositCents:
+          type: integer
+          format: int64
+          minimum: 0
+        notes:
+          type: string
+    UpdateEstimateRequest:
+      type: object
+      properties:
+        customerName:
+          type: string
+          minLength: 1
+        primaryPhone:
+          type: string
+          minLength: 1
+        secondaryPhone:
+          type: string
+        email:
+          type: string
+          format: email
+        originAddressLine1:
+          type: string
+          minLength: 1
+        originCity:
+          type: string
+          minLength: 1
+        originState:
+          type: string
+          minLength: 1
+        originPostalCode:
+          type: string
+          minLength: 1
+        destinationAddressLine1:
+          type: string
+          minLength: 1
+        destinationCity:
+          type: string
+          minLength: 1
+        destinationState:
+          type: string
+          minLength: 1
+        destinationPostalCode:
+          type: string
+          minLength: 1
+        moveDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        leadSource:
+          type: string
+          minLength: 1
+        moveSize:
+          type: string
+        locationType:
+          type: string
+        estimatedTotalCents:
+          type: integer
+          format: int64
+          minimum: 0
+        depositCents:
+          type: integer
+          format: int64
+          minimum: 0
+        notes:
+          type: string
+    Estimate:
+      type: object
+      required:
+        - id
+        - tenantId
+        - estimateNumber
+        - customerId
+        - customerName
+        - primaryPhone
+        - email
+        - status
+        - originAddressLine1
+        - originCity
+        - originState
+        - originPostalCode
+        - destinationAddressLine1
+        - destinationCity
+        - destinationState
+        - destinationPostalCode
+        - moveDate
+        - leadSource
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        estimateNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        primaryPhone:
+          type: string
+        secondaryPhone:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [draft, converted]
+        originAddressLine1:
+          type: string
+        originCity:
+          type: string
+        originState:
+          type: string
+        originPostalCode:
+          type: string
+        destinationAddressLine1:
+          type: string
+        destinationCity:
+          type: string
+        destinationState:
+          type: string
+        destinationPostalCode:
+          type: string
+        moveDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        leadSource:
+          type: string
+        moveSize:
+          type: string
+        locationType:
+          type: string
+        estimatedTotalCents:
+          type: integer
+          format: int64
+        depositCents:
+          type: integer
+          format: int64
+        notes:
+          type: string
+        convertedJobId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EstimateResponse:
+      type: object
+      required: [estimate, requestId]
+      properties:
+        estimate:
+          $ref: '#/components/schemas/Estimate'
+        requestId:
+          type: string
+    UpdateJobRequest:
+      type: object
+      properties:
+        scheduledDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        status:
+          type: string
+          enum: [booked, scheduled, completed, cancelled]
+    Job:
+      type: object
+      required:
+        - id
+        - tenantId
+        - jobNumber
+        - customerId
+        - customerName
+        - primaryPhone
+        - email
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        jobNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        primaryPhone:
+          type: string
+        email:
+          type: string
+          format: email
+        estimateId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [booked, scheduled, completed, cancelled]
+        scheduledDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    JobResponse:
+      type: object
+      required: [job, requestId]
+      properties:
+        job:
+          $ref: '#/components/schemas/Job'
+        requestId:
+          type: string
     ErrorEnvelope:
       type: object
       required: [error, requestId]

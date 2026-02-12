@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moveops-platform/apps/api/internal/audit"
 	"github.com/moveops-platform/apps/api/internal/auth"
 	"github.com/moveops-platform/apps/api/internal/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/moveops-platform/apps/api/internal/gen/oapi"
 	"github.com/moveops-platform/apps/api/internal/httpx"
 	"github.com/moveops-platform/apps/api/internal/middleware"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type Server struct {
@@ -23,10 +25,11 @@ type Server struct {
 	Q      *gen.Queries
 	Audit  *audit.Logger
 	Logger *slog.Logger
+	DB     *pgxpool.Pool
 }
 
-func NewServer(cfg config.Config, q *gen.Queries, auditLogger *audit.Logger, logger *slog.Logger) *Server {
-	return &Server{Config: cfg, Q: q, Audit: auditLogger, Logger: logger}
+func NewServer(cfg config.Config, q *gen.Queries, auditLogger *audit.Logger, logger *slog.Logger, db *pgxpool.Pool) *Server {
+	return &Server{Config: cfg, Q: q, Audit: auditLogger, Logger: logger, DB: db}
 }
 
 func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +43,7 @@ func (s *Server) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := s.Q.ListUsersByEmail(r.Context(), req.Email)
+	users, err := s.Q.ListUsersByEmail(r.Context(), string(req.Email))
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "Failed to load user", nil)
 		return
@@ -117,12 +120,12 @@ func (s *Server) PostAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, oapi.AuthSessionResponse{
 		User: oapi.User{
-			ID:       matched.ID.String(),
-			Email:    matched.Email,
+			Id:       matched.ID,
+			Email:    openapi_types.Email(matched.Email),
 			FullName: matched.FullName,
 		},
 		Tenant: oapi.Tenant{
-			ID:   matched.TenantID.String(),
+			Id:   matched.TenantID,
 			Slug: matched.TenantSlug,
 			Name: matched.TenantName,
 		},
@@ -181,9 +184,20 @@ func (s *Server) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID, err := uuid.Parse(actor.UserID)
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid user", nil)
+		return
+	}
+	tenantID, err := uuid.Parse(actor.TenantID)
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid tenant", nil)
+		return
+	}
+
 	httpx.WriteJSON(w, http.StatusOK, oapi.AuthSessionResponse{
-		User:   oapi.User{ID: actor.UserID, Email: actor.Email, FullName: actor.FullName},
-		Tenant: oapi.Tenant{ID: actor.TenantID, Slug: actor.TenantSlug, Name: actor.TenantName},
+		User:   oapi.User{Id: userID, Email: openapi_types.Email(actor.Email), FullName: actor.FullName},
+		Tenant: oapi.Tenant{Id: tenantID, Slug: actor.TenantSlug, Name: actor.TenantName},
 	})
 }
 
@@ -225,14 +239,20 @@ func (s *Server) PostCustomers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var email *string
+	if req.Email != nil {
+		e := string(*req.Email)
+		email = &e
+	}
+
 	customer, err := s.Q.CreateCustomer(r.Context(), gen.CreateCustomerParams{
 		TenantID:  tenantID,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		Email:     req.Email,
+		Email:     email,
 		Phone:     req.Phone,
-		CreatedBy: userID,
-		UpdatedBy: userID,
+		CreatedBy: &userID,
+		UpdatedBy: &userID,
 	})
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "Failed to create customer", nil)
@@ -252,24 +272,20 @@ func (s *Server) PostCustomers(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, mapCustomer(customer))
 }
 
-func (s *Server) GetCustomersCustomerId(w http.ResponseWriter, r *http.Request, customerId string) {
+func (s *Server) GetCustomersCustomerId(w http.ResponseWriter, r *http.Request, customerId openapi_types.UUID) {
 	actor, ok := middleware.ActorFromContext(r.Context())
 	if !ok {
 		httpx.WriteError(w, r, http.StatusUnauthorized, "unauthorized", "Authentication required", nil)
 		return
 	}
 
-	customerUUID, err := uuid.Parse(customerId)
-	if err != nil {
-		httpx.WriteError(w, r, http.StatusBadRequest, "invalid_customer_id", "Customer id must be a valid UUID", nil)
-		return
-	}
 	tenantID, err := uuid.Parse(actor.TenantID)
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusUnauthorized, "unauthorized", "Invalid tenant", nil)
 		return
 	}
 
+	customerUUID := uuid.UUID(customerId)
 	customer, err := s.Q.GetCustomerByID(r.Context(), gen.GetCustomerByIDParams{ID: customerUUID, TenantID: tenantID})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -284,14 +300,20 @@ func (s *Server) GetCustomersCustomerId(w http.ResponseWriter, r *http.Request, 
 }
 
 func mapCustomer(customer gen.Customer) oapi.Customer {
+	var email *openapi_types.Email
+	if customer.Email != nil {
+		e := openapi_types.Email(*customer.Email)
+		email = &e
+	}
+
 	return oapi.Customer{
-		ID:        customer.ID.String(),
-		TenantID:  customer.TenantID.String(),
+		Id:        customer.ID,
+		TenantId:  customer.TenantID,
 		FirstName: customer.FirstName,
 		LastName:  customer.LastName,
-		Email:     customer.Email,
+		Email:     email,
 		Phone:     customer.Phone,
-		CreatedAt: customer.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: customer.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: customer.CreatedAt.UTC(),
+		UpdatedAt: customer.UpdatedAt.UTC(),
 	}
 }
