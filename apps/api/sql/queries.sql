@@ -824,6 +824,400 @@ WHERE j.tenant_id = sqlc.arg(tenant_id)
 ORDER BY COALESCE(sr.updated_at, j.updated_at) DESC, j.id DESC
 LIMIT sqlc.arg(limit_rows);
 
+-- name: FindCustomerByEmail :one
+SELECT
+  id,
+  tenant_id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND lower(email) = lower(sqlc.arg(email));
+
+-- name: FindCustomerByPhone :one
+SELECT
+  id,
+  tenant_id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND phone = sqlc.arg(phone);
+
+-- name: GetJobByJobNumber :one
+SELECT
+  id,
+  tenant_id,
+  job_number,
+  estimate_id,
+  customer_id,
+  status,
+  scheduled_date,
+  pickup_time,
+  convert_idempotency_key,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM jobs
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND job_number = sqlc.arg(job_number);
+
+-- name: UpdateJobByJobNumber :one
+UPDATE jobs
+SET
+  estimate_id = COALESCE(sqlc.narg(estimate_id)::uuid, estimate_id),
+  customer_id = sqlc.arg(customer_id),
+  status = COALESCE(sqlc.narg(status), status),
+  scheduled_date = COALESCE(sqlc.narg(scheduled_date)::date, scheduled_date),
+  pickup_time = COALESCE(sqlc.narg(pickup_time), pickup_time),
+  updated_by = sqlc.narg(updated_by),
+  updated_at = NOW()
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND job_number = sqlc.arg(job_number)
+RETURNING *;
+
+-- name: GetEstimateByNumber :one
+SELECT
+  id,
+  tenant_id,
+  estimate_number,
+  customer_id,
+  status,
+  customer_name,
+  primary_phone,
+  secondary_phone,
+  email,
+  origin_address_line1,
+  origin_city,
+  origin_state,
+  origin_postal_code,
+  destination_address_line1,
+  destination_city,
+  destination_state,
+  destination_postal_code,
+  move_date,
+  pickup_time,
+  lead_source,
+  move_size,
+  location_type,
+  estimated_total_cents,
+  deposit_cents,
+  notes,
+  idempotency_key,
+  idempotency_payload_hash,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM estimates
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_number = sqlc.arg(estimate_number);
+
+-- name: UpdateEstimateByNumber :one
+UPDATE estimates
+SET
+  customer_id = sqlc.arg(customer_id),
+  status = COALESCE(sqlc.narg(status), status),
+  customer_name = sqlc.arg(customer_name),
+  primary_phone = sqlc.arg(primary_phone),
+  secondary_phone = sqlc.narg(secondary_phone),
+  email = sqlc.arg(email),
+  origin_address_line1 = sqlc.arg(origin_address_line1),
+  origin_city = sqlc.arg(origin_city),
+  origin_state = sqlc.arg(origin_state),
+  origin_postal_code = sqlc.arg(origin_postal_code),
+  destination_address_line1 = sqlc.arg(destination_address_line1),
+  destination_city = sqlc.arg(destination_city),
+  destination_state = sqlc.arg(destination_state),
+  destination_postal_code = sqlc.arg(destination_postal_code),
+  move_date = sqlc.arg(move_date)::date,
+  pickup_time = sqlc.narg(pickup_time),
+  lead_source = sqlc.arg(lead_source),
+  move_size = sqlc.narg(move_size),
+  location_type = sqlc.narg(location_type),
+  estimated_total_cents = sqlc.narg(estimated_total_cents)::bigint,
+  deposit_cents = sqlc.narg(deposit_cents)::bigint,
+  notes = sqlc.narg(notes),
+  updated_by = sqlc.narg(updated_by),
+  updated_at = NOW()
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_number = sqlc.arg(estimate_number)
+RETURNING *;
+
+-- name: CreateImportRun :one
+INSERT INTO import_run (
+  tenant_id,
+  created_by_user_id,
+  source,
+  filename,
+  file_sha256,
+  mode,
+  status,
+  mapping_json,
+  summary_json
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.narg(created_by_user_id),
+  sqlc.arg(source),
+  sqlc.arg(filename),
+  sqlc.arg(file_sha256),
+  sqlc.arg(mode),
+  sqlc.arg(status),
+  sqlc.arg(mapping_json),
+  sqlc.arg(summary_json)
+)
+RETURNING *;
+
+-- name: CompleteImportRun :one
+UPDATE import_run
+SET
+  status = sqlc.arg(status),
+  summary_json = sqlc.arg(summary_json),
+  completed_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+RETURNING *;
+
+-- name: GetImportRunByID :one
+SELECT
+  id,
+  tenant_id,
+  created_by_user_id,
+  source,
+  filename,
+  file_sha256,
+  mode,
+  status,
+  mapping_json,
+  summary_json,
+  created_at,
+  completed_at
+FROM import_run
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: UpsertImportRowResult :one
+INSERT INTO import_row_result (
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(import_run_id),
+  sqlc.arg(row_number),
+  sqlc.arg(severity),
+  sqlc.arg(entity_type),
+  sqlc.arg(idempotency_key),
+  sqlc.arg(result),
+  sqlc.narg(field),
+  sqlc.arg(message),
+  sqlc.narg(raw_value),
+  sqlc.narg(target_entity_id)
+)
+ON CONFLICT (tenant_id, import_run_id, entity_type, idempotency_key) DO UPDATE
+SET
+  row_number = EXCLUDED.row_number,
+  severity = EXCLUDED.severity,
+  result = EXCLUDED.result,
+  field = EXCLUDED.field,
+  message = EXCLUDED.message,
+  raw_value = EXCLUDED.raw_value,
+  target_entity_id = EXCLUDED.target_entity_id
+RETURNING *;
+
+-- name: ListImportRowResultsByRun :many
+SELECT
+  id,
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id,
+  created_at
+FROM import_row_result
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND import_run_id = sqlc.arg(import_run_id)
+ORDER BY row_number ASC, created_at ASC;
+
+-- name: ListImportRowResultsByRunAndSeverity :many
+SELECT
+  id,
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id,
+  created_at
+FROM import_row_result
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND import_run_id = sqlc.arg(import_run_id)
+  AND severity = sqlc.arg(severity)
+ORDER BY row_number ASC, created_at ASC
+LIMIT sqlc.arg(limit_rows);
+
+-- name: GetImportIdempotency :one
+SELECT
+  tenant_id,
+  entity_type,
+  idempotency_key,
+  target_entity_id,
+  first_seen_at,
+  last_seen_at
+FROM import_idempotency
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND entity_type = sqlc.arg(entity_type)
+  AND idempotency_key = sqlc.arg(idempotency_key);
+
+-- name: UpsertImportIdempotency :one
+INSERT INTO import_idempotency (
+  tenant_id,
+  entity_type,
+  idempotency_key,
+  target_entity_id
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(entity_type),
+  sqlc.arg(idempotency_key),
+  sqlc.arg(target_entity_id)
+)
+ON CONFLICT (tenant_id, entity_type, idempotency_key) DO UPDATE
+SET
+  target_entity_id = EXCLUDED.target_entity_id,
+  last_seen_at = NOW()
+RETURNING *;
+
+-- name: ExportCustomersRows :many
+SELECT
+  id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = sqlc.arg(tenant_id)
+ORDER BY created_at ASC;
+
+-- name: ExportEstimatesRows :many
+SELECT
+  id,
+  estimate_number,
+  customer_name,
+  email,
+  primary_phone,
+  secondary_phone,
+  status,
+  origin_city,
+  origin_state,
+  origin_postal_code,
+  destination_city,
+  destination_state,
+  destination_postal_code,
+  move_date,
+  pickup_time,
+  lead_source,
+  estimated_total_cents,
+  deposit_cents,
+  notes,
+  created_at,
+  updated_at
+FROM estimates
+WHERE tenant_id = sqlc.arg(tenant_id)
+ORDER BY created_at ASC;
+
+-- name: ExportJobsRows :many
+SELECT
+  j.id,
+  j.job_number,
+  j.status,
+  j.scheduled_date,
+  j.pickup_time,
+  c.first_name,
+  c.last_name,
+  c.email,
+  c.phone,
+  e.estimate_number,
+  e.origin_city,
+  e.origin_state,
+  e.origin_postal_code,
+  e.destination_city,
+  e.destination_state,
+  e.destination_postal_code,
+  j.created_at,
+  j.updated_at
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE j.tenant_id = sqlc.arg(tenant_id)
+ORDER BY j.created_at ASC;
+
+-- name: ExportStorageRows :many
+SELECT
+  sr.id,
+  j.job_number,
+  sr.facility,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  sr.vaults,
+  sr.pads,
+  sr.items,
+  sr.oversize_items,
+  sr.volume,
+  sr.monthly_rate_cents,
+  sr.storage_balance_cents,
+  sr.move_balance_cents,
+  sr.notes,
+  sr.created_at,
+  sr.updated_at
+FROM storage_record sr
+JOIN jobs j
+  ON j.id = sr.job_id
+  AND j.tenant_id = sr.tenant_id
+WHERE sr.tenant_id = sqlc.arg(tenant_id)
+ORDER BY sr.created_at ASC;
+
 -- name: InsertAuditLog :exec
 INSERT INTO audit_log (
   tenant_id,

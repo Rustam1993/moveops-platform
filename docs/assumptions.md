@@ -35,3 +35,17 @@
 - Storage filters in this phase:
   - Working: facility, search (`q`), status, delivery scheduled (`hasDateOut`), balance due (`balanceDue`), and has containers (`hasContainers`).
   - Stubbed in UI: “Past 30 days without payment” and “Monthly invoice cycle actions”.
+
+## Phase 5
+- Upload constraints:
+  - `IMPORT_MAX_FILE_MB` defaults to `15` MB.
+  - `IMPORT_MAX_ROWS` defaults to `5000` rows.
+- Import file support:
+  - CSV is required for this phase.
+  - XLSX uploads are explicitly rejected with `XLSX_NOT_SUPPORTED`.
+- Required import semantics:
+  - customer row requires `customer_name` or a contact signal (`email` / `phone_primary`).
+  - estimate upsert requires `origin_zip`, `destination_zip`, and `requested_pickup_date` when estimate fields are present.
+- `job_number` stance:
+  - strongly recommended for deterministic job idempotency.
+  - if missing, system generates a deterministic import job number and emits a warning.

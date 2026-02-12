@@ -47,9 +47,39 @@ type ServerInterface interface {
 	// Convert estimate to job (idempotent)
 	// (POST /estimates/{estimateId}/convert)
 	PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, params PostEstimatesEstimateIdConvertParams)
+	// Export tenant customers CSV
+	// (GET /exports/customers.csv)
+	GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request)
+	// Export tenant estimates CSV
+	// (GET /exports/estimates.csv)
+	GetExportsEstimatesCsv(w http.ResponseWriter, r *http.Request)
+	// Export tenant jobs CSV
+	// (GET /exports/jobs.csv)
+	GetExportsJobsCsv(w http.ResponseWriter, r *http.Request)
+	// Export tenant storage CSV
+	// (GET /exports/storage.csv)
+	GetExportsStorageCsv(w http.ResponseWriter, r *http.Request)
 	// Liveness probe
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// Upload import file and apply upserts
+	// (POST /imports/apply)
+	PostImportsApply(w http.ResponseWriter, r *http.Request)
+	// Upload import file and run dry-run validation
+	// (POST /imports/dry-run)
+	PostImportsDryRun(w http.ResponseWriter, r *http.Request)
+	// Download canonical import template CSV
+	// (GET /imports/templates/{template}.csv)
+	GetImportsTemplatesTemplateCsv(w http.ResponseWriter, r *http.Request, template ImportTemplate)
+	// Get import run status and summary
+	// (GET /imports/{importRunId})
+	GetImportsImportRunId(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID)
+	// Download import run errors CSV
+	// (GET /imports/{importRunId}/errors.csv)
+	GetImportsImportRunIdErrorsCsv(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID)
+	// Download full import report JSON
+	// (GET /imports/{importRunId}/report.json)
+	GetImportsImportRunIdReportJson(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID)
 	// Get job by id
 	// (GET /jobs/{jobId})
 	GetJobsJobId(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
@@ -140,9 +170,69 @@ func (_ Unimplemented) PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Export tenant customers CSV
+// (GET /exports/customers.csv)
+func (_ Unimplemented) GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export tenant estimates CSV
+// (GET /exports/estimates.csv)
+func (_ Unimplemented) GetExportsEstimatesCsv(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export tenant jobs CSV
+// (GET /exports/jobs.csv)
+func (_ Unimplemented) GetExportsJobsCsv(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export tenant storage CSV
+// (GET /exports/storage.csv)
+func (_ Unimplemented) GetExportsStorageCsv(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Liveness probe
 // (GET /health)
 func (_ Unimplemented) GetHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upload import file and apply upserts
+// (POST /imports/apply)
+func (_ Unimplemented) PostImportsApply(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upload import file and run dry-run validation
+// (POST /imports/dry-run)
+func (_ Unimplemented) PostImportsDryRun(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download canonical import template CSV
+// (GET /imports/templates/{template}.csv)
+func (_ Unimplemented) GetImportsTemplatesTemplateCsv(w http.ResponseWriter, r *http.Request, template ImportTemplate) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get import run status and summary
+// (GET /imports/{importRunId})
+func (_ Unimplemented) GetImportsImportRunId(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download import run errors CSV
+// (GET /imports/{importRunId}/errors.csv)
+func (_ Unimplemented) GetImportsImportRunIdErrorsCsv(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download full import report JSON
+// (GET /imports/{importRunId}/report.json)
+func (_ Unimplemented) GetImportsImportRunIdReportJson(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -514,11 +604,195 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdConvert(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// GetExportsCustomersCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExportsCustomersCsv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExportsEstimatesCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetExportsEstimatesCsv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExportsEstimatesCsv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExportsJobsCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetExportsJobsCsv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExportsJobsCsv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetExportsStorageCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetExportsStorageCsv(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExportsStorageCsv(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostImportsApply operation middleware
+func (siw *ServerInterfaceWrapper) PostImportsApply(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostImportsApply(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostImportsDryRun operation middleware
+func (siw *ServerInterfaceWrapper) PostImportsDryRun(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostImportsDryRun(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImportsTemplatesTemplateCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetImportsTemplatesTemplateCsv(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "template" -------------
+	var template ImportTemplate
+
+	err = runtime.BindStyledParameterWithOptions("simple", "template", chi.URLParam(r, "template"), &template, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "template", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportsTemplatesTemplateCsv(w, r, template)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImportsImportRunId operation middleware
+func (siw *ServerInterfaceWrapper) GetImportsImportRunId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "importRunId" -------------
+	var importRunId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "importRunId", chi.URLParam(r, "importRunId"), &importRunId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "importRunId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportsImportRunId(w, r, importRunId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImportsImportRunIdErrorsCsv operation middleware
+func (siw *ServerInterfaceWrapper) GetImportsImportRunIdErrorsCsv(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "importRunId" -------------
+	var importRunId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "importRunId", chi.URLParam(r, "importRunId"), &importRunId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "importRunId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportsImportRunIdErrorsCsv(w, r, importRunId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetImportsImportRunIdReportJson operation middleware
+func (siw *ServerInterfaceWrapper) GetImportsImportRunIdReportJson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "importRunId" -------------
+	var importRunId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "importRunId", chi.URLParam(r, "importRunId"), &importRunId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "importRunId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportsImportRunIdReportJson(w, r, importRunId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -898,7 +1172,37 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/estimates/{estimateId}/convert", wrapper.PostEstimatesEstimateIdConvert)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/customers.csv", wrapper.GetExportsCustomersCsv)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/estimates.csv", wrapper.GetExportsEstimatesCsv)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/jobs.csv", wrapper.GetExportsJobsCsv)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/exports/storage.csv", wrapper.GetExportsStorageCsv)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/health", wrapper.GetHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/imports/apply", wrapper.PostImportsApply)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/imports/dry-run", wrapper.PostImportsDryRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/templates/{template}.csv", wrapper.GetImportsTemplatesTemplateCsv)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/{importRunId}", wrapper.GetImportsImportRunId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/{importRunId}/errors.csv", wrapper.GetImportsImportRunIdErrorsCsv)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/{importRunId}/report.json", wrapper.GetImportsImportRunIdReportJson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/jobs/{jobId}", wrapper.GetJobsJobId)

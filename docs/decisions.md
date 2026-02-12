@@ -64,3 +64,24 @@
     - `admin`: both `storage.read` and `storage.write`.
     - `ops`: both `storage.read` and `storage.write`.
     - `sales`: `storage.read` only.
+
+## Phase 5
+- Import endpoint style:
+  - `POST /imports/dry-run` and `POST /imports/apply` both accept multipart file + options.
+  - `GET /imports/{importRunId}` is the canonical status/summary read endpoint.
+  - report artifacts are served as:
+    - `GET /imports/{importRunId}/errors.csv`
+    - `GET /imports/{importRunId}/report.json`
+- Idempotency approach:
+  - Natural keys are used first (email, phone, job_number, estimate_number, storage by job_id).
+  - Cross-run mapping is persisted in `import_idempotency` to keep deterministic dedupe across repeated imports.
+  - Row-level outcomes are persisted in `import_row_result` keyed by `(tenant_id, import_run_id, entity_type, idempotency_key)`.
+- XLSX decision:
+  - deferred for this phase; API rejects `.xlsx` with `XLSX_NOT_SUPPORTED`.
+  - UI directs users to export legacy spreadsheets to CSV before upload.
+- Permissions and access:
+  - Added `imports.read`, `imports.write`, `exports.read`.
+  - Seed mapping is admin-only for Phase 5:
+    - `admin`: all three permissions.
+    - `ops`: none by default.
+    - `sales`: none by default.

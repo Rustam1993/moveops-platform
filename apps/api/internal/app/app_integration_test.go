@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -504,6 +508,142 @@ func TestStorageUpdateCreatesAuditLog(t *testing.T) {
 	}
 }
 
+func TestImportExportRBACDeniedWithoutPermissions(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-import-rbac", "Tenant Import RBAC", "import-rbac-admin@example.com", "Password123!", []string{"imports.write", "imports.read", "exports.read"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "import-rbac-limited@example.com", "Password123!", []string{"storage.read"})
+
+	limitedCookie := login(t, env.router, "import-rbac-limited@example.com", "Password123!")
+	limitedCsrf := csrfToken(t, env.router, limitedCookie)
+
+	status, _ := multipartImportRequest(t, env.router, "/api/imports/dry-run", limitedCookie, limitedCsrf, "rbac.csv", validImportCSV("J-RBAC-001", "E-RBAC-001", "rbac@example.com"), importMapping())
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing imports.write, got %d", status)
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/exports/customers.csv", nil, limitedCookie, "")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing exports.read, got %d", status)
+	}
+}
+
+func TestImportRunTenantIsolationAndExportTenantScope(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-import-a", "Tenant Import A", "import-a@example.com", "Password123!", []string{"imports.write", "imports.read", "exports.read"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-import-b", "Tenant Import B", "import-b@example.com", "Password123!", []string{"imports.write", "imports.read", "exports.read"})
+
+	cookieA := login(t, env.router, "import-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	status, body := multipartImportRequest(t, env.router, "/api/imports/apply", cookieA, csrfA, "tenant-a.csv", validImportCSV("J-TENANT-A-001", "E-TENANT-A-001", "tenant-a-customer@example.com"), importMapping())
+	if status != http.StatusOK {
+		t.Fatalf("tenant A apply import expected 200, got %d (%s)", status, string(body))
+	}
+	runA := parseImportRun(t, body)
+
+	cookieB := login(t, env.router, "import-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+	status, body = multipartImportRequest(t, env.router, "/api/imports/apply", cookieB, csrfB, "tenant-b.csv", validImportCSV("J-TENANT-B-001", "E-TENANT-B-001", "tenant-b-customer@example.com"), importMapping())
+	if status != http.StatusOK {
+		t.Fatalf("tenant B apply import expected 200, got %d (%s)", status, string(body))
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/imports/"+runA.ImportRunID, nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant import run fetch, got %d", status)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/exports/jobs.csv", nil, cookieA, "")
+	if status != http.StatusOK {
+		t.Fatalf("tenant A jobs export expected 200, got %d (%s)", status, string(body))
+	}
+	csvBody := string(body)
+	if !strings.Contains(csvBody, "J-TENANT-A-001") {
+		t.Fatalf("expected tenant A export to include J-TENANT-A-001")
+	}
+	if strings.Contains(csvBody, "J-TENANT-B-001") {
+		t.Fatalf("expected tenant A export to exclude tenant B job data")
+	}
+}
+
+func TestImportApplyIsIdempotentAcrossRuns(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-import-idem", "Tenant Import Idem", "import-idem@example.com", "Password123!", []string{"imports.write", "imports.read"})
+
+	cookie := login(t, env.router, "import-idem@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	csvData := validImportCSV("J-IDEM-001", "E-IDEM-001", "idem-customer@example.com")
+
+	status, body := multipartImportRequest(t, env.router, "/api/imports/apply", cookie, csrf, "idem.csv", csvData, importMapping())
+	if status != http.StatusOK {
+		t.Fatalf("first apply import expected 200, got %d (%s)", status, string(body))
+	}
+
+	status, body = multipartImportRequest(t, env.router, "/api/imports/apply", cookie, csrf, "idem.csv", csvData, importMapping())
+	if status != http.StatusOK {
+		t.Fatalf("second apply import expected 200, got %d (%s)", status, string(body))
+	}
+	secondRun := parseImportRun(t, body)
+	if secondRun.Summary.Customer.Created != 0 || secondRun.Summary.Estimate.Created != 0 || secondRun.Summary.Job.Created != 0 || secondRun.Summary.StorageRecord.Created != 0 {
+		t.Fatalf("expected second run created counts to be zero, got %+v", secondRun.Summary)
+	}
+
+	var customerCount, estimateCount, jobCount, storageCount int
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM customers WHERE tenant_id = $1`, tenantID).Scan(&customerCount); err != nil {
+		t.Fatalf("count customers: %v", err)
+	}
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM estimates WHERE tenant_id = $1`, tenantID).Scan(&estimateCount); err != nil {
+		t.Fatalf("count estimates: %v", err)
+	}
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM jobs WHERE tenant_id = $1`, tenantID).Scan(&jobCount); err != nil {
+		t.Fatalf("count jobs: %v", err)
+	}
+	if err := env.pool.QueryRow(ctx, `SELECT COUNT(*) FROM storage_record WHERE tenant_id = $1`, tenantID).Scan(&storageCount); err != nil {
+		t.Fatalf("count storage records: %v", err)
+	}
+
+	if customerCount != 1 || estimateCount != 1 || jobCount != 1 || storageCount != 1 {
+		t.Fatalf("expected entity counts to remain 1 after re-import, got customers=%d estimates=%d jobs=%d storage=%d", customerCount, estimateCount, jobCount, storageCount)
+	}
+}
+
+func TestImportDryRunValidationProvidesErrorsCSV(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-import-errors", "Tenant Import Errors", "import-errors@example.com", "Password123!", []string{"imports.write", "imports.read"})
+
+	cookie := login(t, env.router, "import-errors@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+
+	status, body := multipartImportRequest(t, env.router, "/api/imports/dry-run", cookie, csrf, "errors.csv", invalidImportCSVMissingEstimateRequired(), invalidImportMapping())
+	if status != http.StatusOK {
+		t.Fatalf("dry-run expected 200, got %d (%s)", status, string(body))
+	}
+	run := parseImportRun(t, body)
+	if run.Summary.RowsError == 0 {
+		t.Fatalf("expected dry-run to report row errors")
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/imports/"+run.ImportRunID+"/errors.csv", nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("errors.csv expected 200, got %d (%s)", status, string(body))
+	}
+
+	errorsCSV := string(body)
+	if !strings.Contains(errorsCSV, "row_number,severity,entity_type,result,field,message") {
+		t.Fatalf("expected errors.csv header row, got %q", errorsCSV)
+	}
+	if !strings.Contains(errorsCSV, "origin_zip, destination_zip, and requested_pickup_date are required") {
+		t.Fatalf("expected validation error message in errors.csv, got %q", errorsCSV)
+	}
+}
+
 type testEnv struct {
 	pool   *pgxpool.Pool
 	router http.Handler
@@ -529,13 +669,15 @@ func setupTestEnv(t *testing.T) testEnv {
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.Config{
-		Addr:              ":0",
-		DatabaseURL:       databaseURL,
-		SessionCookieName: "mo_sess",
-		SessionTTL:        12 * time.Hour,
-		SecureCookies:     false,
-		CSRFEnforce:       true,
-		Env:               "test",
+		Addr:               ":0",
+		DatabaseURL:        databaseURL,
+		SessionCookieName:  "mo_sess",
+		SessionTTL:         12 * time.Hour,
+		SecureCookies:      false,
+		CSRFEnforce:        true,
+		ImportMaxFileBytes: 15 * 1024 * 1024,
+		ImportMaxRows:      5000,
+		Env:                "test",
 	}
 
 	router, err := NewRouter(cfg, gen.New(pool), pool, logger)
@@ -861,6 +1003,171 @@ func convertEstimateToJob(t *testing.T, router http.Handler, session *http.Cooki
 
 func withIdempotency(key string) map[string]string {
 	return map[string]string{"Idempotency-Key": key}
+}
+
+type importRunResponsePayload struct {
+	ImportRunID string `json:"importRunId"`
+	Summary     struct {
+		RowsTotal int `json:"rowsTotal"`
+		RowsValid int `json:"rowsValid"`
+		RowsError int `json:"rowsError"`
+		Customer  struct {
+			Created int `json:"created"`
+			Updated int `json:"updated"`
+			Skipped int `json:"skipped"`
+			Error   int `json:"error"`
+		} `json:"customer"`
+		Estimate struct {
+			Created int `json:"created"`
+			Updated int `json:"updated"`
+			Skipped int `json:"skipped"`
+			Error   int `json:"error"`
+		} `json:"estimate"`
+		Job struct {
+			Created int `json:"created"`
+			Updated int `json:"updated"`
+			Skipped int `json:"skipped"`
+			Error   int `json:"error"`
+		} `json:"job"`
+		StorageRecord struct {
+			Created int `json:"created"`
+			Updated int `json:"updated"`
+			Skipped int `json:"skipped"`
+			Error   int `json:"error"`
+		} `json:"storageRecord"`
+	} `json:"summary"`
+}
+
+func parseImportRun(t *testing.T, body []byte) importRunResponsePayload {
+	t.Helper()
+	var payload importRunResponsePayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse import run response: %v", err)
+	}
+	if payload.ImportRunID == "" {
+		t.Fatalf("importRunId missing from response")
+	}
+	return payload
+}
+
+func importMapping() map[string]any {
+	return map[string]any{
+		"job_number":            "job_number",
+		"estimate_number":       "estimate_number",
+		"customer_name":         "customer_name",
+		"email":                 "email",
+		"phone_primary":         "phone_primary",
+		"origin_zip":            "origin_zip",
+		"destination_zip":       "destination_zip",
+		"requested_pickup_date": "requested_pickup_date",
+		"requested_pickup_time": "requested_pickup_time",
+		"scheduled_date":        "scheduled_date",
+		"pickup_time":           "pickup_time",
+		"status":                "status",
+		"job_type":              "job_type",
+		"lead_source":           "lead_source",
+		"estimated_total":       "estimated_total",
+		"deposit":               "deposit",
+		"pricing_notes":         "pricing_notes",
+		"facility":              "facility",
+		"storage_status":        "storage_status",
+		"date_in":               "date_in",
+		"next_bill_date":        "next_bill_date",
+		"vaults":                "vaults",
+		"pads":                  "pads",
+		"items":                 "items",
+		"oversize_items":        "oversize_items",
+		"volume":                "volume",
+		"monthly_rate":          "monthly_rate",
+		"storage_balance":       "storage_balance",
+		"move_balance":          "move_balance",
+	}
+}
+
+func invalidImportMapping() map[string]any {
+	return map[string]any{
+		"job_number":            "job_number",
+		"estimate_number":       "estimate_number",
+		"customer_name":         "customer_name",
+		"email":                 "email",
+		"phone_primary":         "phone_primary",
+		"origin_zip":            "origin_zip",
+		"destination_zip":       "destination_zip",
+		"requested_pickup_date": "requested_pickup_date",
+		"scheduled_date":        "scheduled_date",
+		"status":                "status",
+		"job_type":              "job_type",
+	}
+}
+
+func validImportCSV(jobNumber, estimateNumber, email string) string {
+	return strings.Join([]string{
+		"job_number,estimate_number,customer_name,email,phone_primary,origin_zip,destination_zip,requested_pickup_date,requested_pickup_time,scheduled_date,pickup_time,status,job_type,lead_source,estimated_total,deposit,pricing_notes,facility,storage_status,date_in,next_bill_date,vaults,pads,items,oversize_items,volume,monthly_rate,storage_balance,move_balance",
+		fmt.Sprintf("%s,%s,Import Customer,%s,5125550100,78701,75001,2026-03-22,09:00,2026-03-22,09:00,scheduled,local,Referral,250000,25000,Imported note,Main Facility,in_storage,2026-03-23,2026-04-23,2,1,18,2,120,32900,28000,7000", jobNumber, estimateNumber, email),
+	}, "\n")
+}
+
+func invalidImportCSVMissingEstimateRequired() string {
+	return strings.Join([]string{
+		"job_number,estimate_number,customer_name,email,phone_primary,origin_zip,destination_zip,requested_pickup_date,scheduled_date,status,job_type",
+		"J-ERR-001,E-ERR-001,Error Customer,error-customer@example.com,5125550100,,,,2026-03-22,scheduled,local",
+	}, "\n")
+}
+
+func multipartImportRequest(t *testing.T, router http.Handler, path string, session *http.Cookie, csrf, filename, csvContent string, mapping map[string]any) (int, []byte) {
+	t.Helper()
+
+	options := map[string]any{
+		"source":    "generic",
+		"hasHeader": true,
+		"mapping":   mapping,
+	}
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		t.Fatalf("marshal import options: %v", err)
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	fileHeader := textproto.MIMEHeader{}
+	fileHeader.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, filename))
+	fileHeader.Set("Content-Type", "text/csv")
+	filePart, err := writer.CreatePart(fileHeader)
+	if err != nil {
+		t.Fatalf("create multipart file part: %v", err)
+	}
+	if _, err := io.Copy(filePart, strings.NewReader(csvContent)); err != nil {
+		t.Fatalf("write multipart file body: %v", err)
+	}
+	optionsHeader := textproto.MIMEHeader{}
+	optionsHeader.Set("Content-Disposition", `form-data; name="options"`)
+	optionsHeader.Set("Content-Type", "application/json")
+	optionsPart, err := writer.CreatePart(optionsHeader)
+	if err != nil {
+		t.Fatalf("create multipart options part: %v", err)
+	}
+	if _, err := optionsPart.Write(optionsJSON); err != nil {
+		t.Fatalf("write multipart options body: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, path, body)
+	req.RemoteAddr = "127.0.0.1:12345"
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if session != nil {
+		req.AddCookie(session)
+	}
+	if csrf != "" {
+		req.Header.Set("X-CSRF-Token", csrf)
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	resBody, _ := io.ReadAll(rec.Result().Body)
+	return rec.Code, resBody
 }
 
 func request(t *testing.T, router http.Handler, method, path string, body []byte, session *http.Cookie, csrf string, extraHeaders ...map[string]string) (int, []byte) {

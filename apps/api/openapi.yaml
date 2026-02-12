@@ -452,6 +452,175 @@ paths:
                 $ref: '#/components/schemas/StorageRecordResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /imports/dry-run:
+    post:
+      operationId: PostImportsDryRun
+      summary: Upload import file and run dry-run validation
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImportUploadRequest'
+      responses:
+        '200':
+          description: Dry-run completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportRunResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /imports/apply:
+    post:
+      operationId: PostImportsApply
+      summary: Upload import file and apply upserts
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImportUploadRequest'
+      responses:
+        '200':
+          description: Import apply completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportRunResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /imports/{importRunId}:
+    get:
+      operationId: GetImportsImportRunId
+      summary: Get import run status and summary
+      parameters:
+        - in: path
+          name: importRunId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Import run details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportRunResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /imports/{importRunId}/errors.csv:
+    get:
+      operationId: GetImportsImportRunIdErrorsCsv
+      summary: Download import run errors CSV
+      parameters:
+        - in: path
+          name: importRunId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: CSV of row-level warnings and errors
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /imports/{importRunId}/report.json:
+    get:
+      operationId: GetImportsImportRunIdReportJson
+      summary: Download full import report JSON
+      parameters:
+        - in: path
+          name: importRunId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Full report payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportRunReportResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /imports/templates/{template}.csv:
+    get:
+      operationId: GetImportsTemplatesTemplateCsv
+      summary: Download canonical import template CSV
+      parameters:
+        - in: path
+          name: template
+          required: true
+          schema:
+            $ref: '#/components/schemas/ImportTemplate'
+      responses:
+        '200':
+          description: Template CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /exports/customers.csv:
+    get:
+      operationId: GetExportsCustomersCsv
+      summary: Export tenant customers CSV
+      responses:
+        '200':
+          description: Customers CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /exports/estimates.csv:
+    get:
+      operationId: GetExportsEstimatesCsv
+      summary: Export tenant estimates CSV
+      responses:
+        '200':
+          description: Estimates CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /exports/jobs.csv:
+    get:
+      operationId: GetExportsJobsCsv
+      summary: Export tenant jobs CSV
+      responses:
+        '200':
+          description: Jobs CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /exports/storage.csv:
+    get:
+      operationId: GetExportsStorageCsv
+      summary: Export tenant storage CSV
+      responses:
+        '200':
+          description: Storage CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
 components:
   parameters:
     IdempotencyKey:
@@ -1218,6 +1387,186 @@ components:
       properties:
         storage:
           $ref: '#/components/schemas/StorageRecord'
+        requestId:
+          type: string
+    ImportMode:
+      type: string
+      enum: [dry_run, apply]
+    ImportSource:
+      type: string
+      enum: [granot, generic]
+    ImportRunStatus:
+      type: string
+      enum: [completed, failed]
+    ImportTemplate:
+      type: string
+      enum: [customers, estimates, jobs, storage, combined]
+    ImportUploadRequest:
+      type: object
+      required: [file, options]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: CSV file. XLSX is currently rejected with XLSX_NOT_SUPPORTED.
+        options:
+          $ref: '#/components/schemas/ImportOptions'
+    ImportOptions:
+      type: object
+      required: [source, mapping]
+      properties:
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        hasHeader:
+          type: boolean
+          default: true
+        mapping:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: integer
+    ImportResultCounts:
+      type: object
+      required: [created, updated, skipped, error]
+      properties:
+        created:
+          type: integer
+          minimum: 0
+        updated:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+        error:
+          type: integer
+          minimum: 0
+    ImportSummary:
+      type: object
+      required:
+        - rowsTotal
+        - rowsValid
+        - rowsError
+        - customer
+        - estimate
+        - job
+        - storageRecord
+      properties:
+        rowsTotal:
+          type: integer
+          minimum: 0
+        rowsValid:
+          type: integer
+          minimum: 0
+        rowsError:
+          type: integer
+          minimum: 0
+        customer:
+          $ref: '#/components/schemas/ImportResultCounts'
+        estimate:
+          $ref: '#/components/schemas/ImportResultCounts'
+        job:
+          $ref: '#/components/schemas/ImportResultCounts'
+        storageRecord:
+          $ref: '#/components/schemas/ImportResultCounts'
+    ImportRowMessage:
+      type: object
+      required:
+        - rowNumber
+        - severity
+        - entityType
+        - result
+        - idempotencyKey
+        - message
+      properties:
+        rowNumber:
+          type: integer
+          minimum: 1
+        severity:
+          type: string
+          enum: [error, warn, info]
+        entityType:
+          type: string
+          enum: [customer, estimate, job, storage_record]
+        result:
+          type: string
+          enum: [created, updated, skipped, error]
+        idempotencyKey:
+          type: string
+        field:
+          type: string
+        message:
+          type: string
+        rawValue:
+          type: string
+        targetEntityId:
+          type: string
+          format: uuid
+    ImportDownloadUrls:
+      type: object
+      required: [errorsCsv, reportJson]
+      properties:
+        errorsCsv:
+          type: string
+        reportJson:
+          type: string
+    ImportRunResponse:
+      type: object
+      required:
+        - importRunId
+        - mode
+        - status
+        - source
+        - filename
+        - summary
+        - topWarnings
+        - topErrors
+        - downloadUrls
+        - createdAt
+        - requestId
+      properties:
+        importRunId:
+          type: string
+          format: uuid
+        mode:
+          $ref: '#/components/schemas/ImportMode'
+        status:
+          $ref: '#/components/schemas/ImportRunStatus'
+        source:
+          $ref: '#/components/schemas/ImportSource'
+        filename:
+          type: string
+        summary:
+          $ref: '#/components/schemas/ImportSummary'
+        topWarnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowMessage'
+        topErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowMessage'
+        downloadUrls:
+          $ref: '#/components/schemas/ImportDownloadUrls'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+    ImportRunReportResponse:
+      type: object
+      required: [run, rows, requestId]
+      properties:
+        run:
+          $ref: '#/components/schemas/ImportRunResponse'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowMessage'
         requestId:
           type: string
     ErrorEnvelope:

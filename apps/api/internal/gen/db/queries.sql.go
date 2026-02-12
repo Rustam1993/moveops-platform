@@ -12,6 +12,49 @@ import (
 	"github.com/google/uuid"
 )
 
+const completeImportRun = `-- name: CompleteImportRun :one
+UPDATE import_run
+SET
+  status = $1,
+  summary_json = $2,
+  completed_at = NOW()
+WHERE id = $3
+  AND tenant_id = $4
+RETURNING id, tenant_id, created_by_user_id, source, filename, file_sha256, mode, status, mapping_json, summary_json, created_at, completed_at
+`
+
+type CompleteImportRunParams struct {
+	Status      string    `json:"status"`
+	SummaryJson []byte    `json:"summary_json"`
+	ID          uuid.UUID `json:"id"`
+	TenantID    uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) CompleteImportRun(ctx context.Context, arg CompleteImportRunParams) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, completeImportRun,
+		arg.Status,
+		arg.SummaryJson,
+		arg.ID,
+		arg.TenantID,
+	)
+	var i ImportRun
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CreatedByUserID,
+		&i.Source,
+		&i.Filename,
+		&i.FileSha256,
+		&i.Mode,
+		&i.Status,
+		&i.MappingJson,
+		&i.SummaryJson,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const createCustomer = `-- name: CreateCustomer :one
 INSERT INTO customers (
   tenant_id,
@@ -288,6 +331,73 @@ func (q *Queries) CreateEstimate(ctx context.Context, arg CreateEstimateParams) 
 	return i, err
 }
 
+const createImportRun = `-- name: CreateImportRun :one
+INSERT INTO import_run (
+  tenant_id,
+  created_by_user_id,
+  source,
+  filename,
+  file_sha256,
+  mode,
+  status,
+  mapping_json,
+  summary_json
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9
+)
+RETURNING id, tenant_id, created_by_user_id, source, filename, file_sha256, mode, status, mapping_json, summary_json, created_at, completed_at
+`
+
+type CreateImportRunParams struct {
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	CreatedByUserID *uuid.UUID `json:"created_by_user_id"`
+	Source          string     `json:"source"`
+	Filename        string     `json:"filename"`
+	FileSha256      string     `json:"file_sha256"`
+	Mode            string     `json:"mode"`
+	Status          string     `json:"status"`
+	MappingJson     []byte     `json:"mapping_json"`
+	SummaryJson     []byte     `json:"summary_json"`
+}
+
+func (q *Queries) CreateImportRun(ctx context.Context, arg CreateImportRunParams) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, createImportRun,
+		arg.TenantID,
+		arg.CreatedByUserID,
+		arg.Source,
+		arg.Filename,
+		arg.FileSha256,
+		arg.Mode,
+		arg.Status,
+		arg.MappingJson,
+		arg.SummaryJson,
+	)
+	var i ImportRun
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CreatedByUserID,
+		&i.Source,
+		&i.Filename,
+		&i.FileSha256,
+		&i.Mode,
+		&i.Status,
+		&i.MappingJson,
+		&i.SummaryJson,
+		&i.CreatedAt,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (
   tenant_id,
@@ -525,6 +635,417 @@ func (q *Queries) CreateStorageRecord(ctx context.Context, arg CreateStorageReco
 	return i, err
 }
 
+const exportCustomersRows = `-- name: ExportCustomersRows :many
+SELECT
+  id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = $1
+ORDER BY created_at ASC
+`
+
+type ExportCustomersRowsRow struct {
+	ID        uuid.UUID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     *string   `json:"email"`
+	Phone     *string   `json:"phone"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (q *Queries) ExportCustomersRows(ctx context.Context, tenantID uuid.UUID) ([]ExportCustomersRowsRow, error) {
+	rows, err := q.db.Query(ctx, exportCustomersRows, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExportCustomersRowsRow{}
+	for rows.Next() {
+		var i ExportCustomersRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+			&i.Phone,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportEstimatesRows = `-- name: ExportEstimatesRows :many
+SELECT
+  id,
+  estimate_number,
+  customer_name,
+  email,
+  primary_phone,
+  secondary_phone,
+  status,
+  origin_city,
+  origin_state,
+  origin_postal_code,
+  destination_city,
+  destination_state,
+  destination_postal_code,
+  move_date,
+  pickup_time,
+  lead_source,
+  estimated_total_cents,
+  deposit_cents,
+  notes,
+  created_at,
+  updated_at
+FROM estimates
+WHERE tenant_id = $1
+ORDER BY created_at ASC
+`
+
+type ExportEstimatesRowsRow struct {
+	ID                    uuid.UUID `json:"id"`
+	EstimateNumber        string    `json:"estimate_number"`
+	CustomerName          string    `json:"customer_name"`
+	Email                 string    `json:"email"`
+	PrimaryPhone          string    `json:"primary_phone"`
+	SecondaryPhone        *string   `json:"secondary_phone"`
+	Status                string    `json:"status"`
+	OriginCity            string    `json:"origin_city"`
+	OriginState           string    `json:"origin_state"`
+	OriginPostalCode      string    `json:"origin_postal_code"`
+	DestinationCity       string    `json:"destination_city"`
+	DestinationState      string    `json:"destination_state"`
+	DestinationPostalCode string    `json:"destination_postal_code"`
+	MoveDate              time.Time `json:"move_date"`
+	PickupTime            *string   `json:"pickup_time"`
+	LeadSource            string    `json:"lead_source"`
+	EstimatedTotalCents   *int64    `json:"estimated_total_cents"`
+	DepositCents          *int64    `json:"deposit_cents"`
+	Notes                 *string   `json:"notes"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+func (q *Queries) ExportEstimatesRows(ctx context.Context, tenantID uuid.UUID) ([]ExportEstimatesRowsRow, error) {
+	rows, err := q.db.Query(ctx, exportEstimatesRows, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExportEstimatesRowsRow{}
+	for rows.Next() {
+		var i ExportEstimatesRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.EstimateNumber,
+			&i.CustomerName,
+			&i.Email,
+			&i.PrimaryPhone,
+			&i.SecondaryPhone,
+			&i.Status,
+			&i.OriginCity,
+			&i.OriginState,
+			&i.OriginPostalCode,
+			&i.DestinationCity,
+			&i.DestinationState,
+			&i.DestinationPostalCode,
+			&i.MoveDate,
+			&i.PickupTime,
+			&i.LeadSource,
+			&i.EstimatedTotalCents,
+			&i.DepositCents,
+			&i.Notes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportJobsRows = `-- name: ExportJobsRows :many
+SELECT
+  j.id,
+  j.job_number,
+  j.status,
+  j.scheduled_date,
+  j.pickup_time,
+  c.first_name,
+  c.last_name,
+  c.email,
+  c.phone,
+  e.estimate_number,
+  e.origin_city,
+  e.origin_state,
+  e.origin_postal_code,
+  e.destination_city,
+  e.destination_state,
+  e.destination_postal_code,
+  j.created_at,
+  j.updated_at
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE j.tenant_id = $1
+ORDER BY j.created_at ASC
+`
+
+type ExportJobsRowsRow struct {
+	ID                    uuid.UUID  `json:"id"`
+	JobNumber             string     `json:"job_number"`
+	Status                string     `json:"status"`
+	ScheduledDate         *time.Time `json:"scheduled_date"`
+	PickupTime            *string    `json:"pickup_time"`
+	FirstName             string     `json:"first_name"`
+	LastName              string     `json:"last_name"`
+	Email                 *string    `json:"email"`
+	Phone                 *string    `json:"phone"`
+	EstimateNumber        *string    `json:"estimate_number"`
+	OriginCity            *string    `json:"origin_city"`
+	OriginState           *string    `json:"origin_state"`
+	OriginPostalCode      *string    `json:"origin_postal_code"`
+	DestinationCity       *string    `json:"destination_city"`
+	DestinationState      *string    `json:"destination_state"`
+	DestinationPostalCode *string    `json:"destination_postal_code"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+}
+
+func (q *Queries) ExportJobsRows(ctx context.Context, tenantID uuid.UUID) ([]ExportJobsRowsRow, error) {
+	rows, err := q.db.Query(ctx, exportJobsRows, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExportJobsRowsRow{}
+	for rows.Next() {
+		var i ExportJobsRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobNumber,
+			&i.Status,
+			&i.ScheduledDate,
+			&i.PickupTime,
+			&i.FirstName,
+			&i.LastName,
+			&i.Email,
+			&i.Phone,
+			&i.EstimateNumber,
+			&i.OriginCity,
+			&i.OriginState,
+			&i.OriginPostalCode,
+			&i.DestinationCity,
+			&i.DestinationState,
+			&i.DestinationPostalCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const exportStorageRows = `-- name: ExportStorageRows :many
+SELECT
+  sr.id,
+  j.job_number,
+  sr.facility,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  sr.vaults,
+  sr.pads,
+  sr.items,
+  sr.oversize_items,
+  sr.volume,
+  sr.monthly_rate_cents,
+  sr.storage_balance_cents,
+  sr.move_balance_cents,
+  sr.notes,
+  sr.created_at,
+  sr.updated_at
+FROM storage_record sr
+JOIN jobs j
+  ON j.id = sr.job_id
+  AND j.tenant_id = sr.tenant_id
+WHERE sr.tenant_id = $1
+ORDER BY sr.created_at ASC
+`
+
+type ExportStorageRowsRow struct {
+	ID                  uuid.UUID  `json:"id"`
+	JobNumber           string     `json:"job_number"`
+	Facility            string     `json:"facility"`
+	Status              string     `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              int32      `json:"vaults"`
+	Pads                int32      `json:"pads"`
+	Items               int32      `json:"items"`
+	OversizeItems       int32      `json:"oversize_items"`
+	Volume              int32      `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents int64      `json:"storage_balance_cents"`
+	MoveBalanceCents    int64      `json:"move_balance_cents"`
+	Notes               *string    `json:"notes"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
+func (q *Queries) ExportStorageRows(ctx context.Context, tenantID uuid.UUID) ([]ExportStorageRowsRow, error) {
+	rows, err := q.db.Query(ctx, exportStorageRows, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExportStorageRowsRow{}
+	for rows.Next() {
+		var i ExportStorageRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobNumber,
+			&i.Facility,
+			&i.Status,
+			&i.DateIn,
+			&i.DateOut,
+			&i.NextBillDate,
+			&i.LotNumber,
+			&i.LocationLabel,
+			&i.Vaults,
+			&i.Pads,
+			&i.Items,
+			&i.OversizeItems,
+			&i.Volume,
+			&i.MonthlyRateCents,
+			&i.StorageBalanceCents,
+			&i.MoveBalanceCents,
+			&i.Notes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findCustomerByEmail = `-- name: FindCustomerByEmail :one
+SELECT
+  id,
+  tenant_id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = $1
+  AND lower(email) = lower($2)
+`
+
+type FindCustomerByEmailParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	Email    string    `json:"email"`
+}
+
+func (q *Queries) FindCustomerByEmail(ctx context.Context, arg FindCustomerByEmailParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, findCustomerByEmail, arg.TenantID, arg.Email)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Email,
+		&i.Phone,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const findCustomerByPhone = `-- name: FindCustomerByPhone :one
+SELECT
+  id,
+  tenant_id,
+  first_name,
+  last_name,
+  email,
+  phone,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM customers
+WHERE tenant_id = $1
+  AND phone = $2
+`
+
+type FindCustomerByPhoneParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	Phone    *string   `json:"phone"`
+}
+
+func (q *Queries) FindCustomerByPhone(ctx context.Context, arg FindCustomerByPhoneParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, findCustomerByPhone, arg.TenantID, arg.Phone)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Email,
+		&i.Phone,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCustomerByID = `-- name: GetCustomerByID :one
 SELECT
   id,
@@ -729,6 +1250,88 @@ func (q *Queries) GetEstimateByIdempotencyKey(ctx context.Context, arg GetEstima
 	return i, err
 }
 
+const getEstimateByNumber = `-- name: GetEstimateByNumber :one
+SELECT
+  id,
+  tenant_id,
+  estimate_number,
+  customer_id,
+  status,
+  customer_name,
+  primary_phone,
+  secondary_phone,
+  email,
+  origin_address_line1,
+  origin_city,
+  origin_state,
+  origin_postal_code,
+  destination_address_line1,
+  destination_city,
+  destination_state,
+  destination_postal_code,
+  move_date,
+  pickup_time,
+  lead_source,
+  move_size,
+  location_type,
+  estimated_total_cents,
+  deposit_cents,
+  notes,
+  idempotency_key,
+  idempotency_payload_hash,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM estimates
+WHERE tenant_id = $1
+  AND estimate_number = $2
+`
+
+type GetEstimateByNumberParams struct {
+	TenantID       uuid.UUID `json:"tenant_id"`
+	EstimateNumber string    `json:"estimate_number"`
+}
+
+func (q *Queries) GetEstimateByNumber(ctx context.Context, arg GetEstimateByNumberParams) (Estimate, error) {
+	row := q.db.QueryRow(ctx, getEstimateByNumber, arg.TenantID, arg.EstimateNumber)
+	var i Estimate
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateNumber,
+		&i.CustomerID,
+		&i.Status,
+		&i.CustomerName,
+		&i.PrimaryPhone,
+		&i.SecondaryPhone,
+		&i.Email,
+		&i.OriginAddressLine1,
+		&i.OriginCity,
+		&i.OriginState,
+		&i.OriginPostalCode,
+		&i.DestinationAddressLine1,
+		&i.DestinationCity,
+		&i.DestinationState,
+		&i.DestinationPostalCode,
+		&i.MoveDate,
+		&i.PickupTime,
+		&i.LeadSource,
+		&i.MoveSize,
+		&i.LocationType,
+		&i.EstimatedTotalCents,
+		&i.DepositCents,
+		&i.Notes,
+		&i.IdempotencyKey,
+		&i.IdempotencyPayloadHash,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getEstimateDetailByID = `-- name: GetEstimateDetailByID :one
 SELECT
   e.id,
@@ -847,6 +1450,84 @@ func (q *Queries) GetEstimateDetailByID(ctx context.Context, arg GetEstimateDeta
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ConvertedJobID,
+	)
+	return i, err
+}
+
+const getImportIdempotency = `-- name: GetImportIdempotency :one
+SELECT
+  tenant_id,
+  entity_type,
+  idempotency_key,
+  target_entity_id,
+  first_seen_at,
+  last_seen_at
+FROM import_idempotency
+WHERE tenant_id = $1
+  AND entity_type = $2
+  AND idempotency_key = $3
+`
+
+type GetImportIdempotencyParams struct {
+	TenantID       uuid.UUID `json:"tenant_id"`
+	EntityType     string    `json:"entity_type"`
+	IdempotencyKey string    `json:"idempotency_key"`
+}
+
+func (q *Queries) GetImportIdempotency(ctx context.Context, arg GetImportIdempotencyParams) (ImportIdempotency, error) {
+	row := q.db.QueryRow(ctx, getImportIdempotency, arg.TenantID, arg.EntityType, arg.IdempotencyKey)
+	var i ImportIdempotency
+	err := row.Scan(
+		&i.TenantID,
+		&i.EntityType,
+		&i.IdempotencyKey,
+		&i.TargetEntityID,
+		&i.FirstSeenAt,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
+
+const getImportRunByID = `-- name: GetImportRunByID :one
+SELECT
+  id,
+  tenant_id,
+  created_by_user_id,
+  source,
+  filename,
+  file_sha256,
+  mode,
+  status,
+  mapping_json,
+  summary_json,
+  created_at,
+  completed_at
+FROM import_run
+WHERE id = $1
+  AND tenant_id = $2
+`
+
+type GetImportRunByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetImportRunByID(ctx context.Context, arg GetImportRunByIDParams) (ImportRun, error) {
+	row := q.db.QueryRow(ctx, getImportRunByID, arg.ID, arg.TenantID)
+	var i ImportRun
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CreatedByUserID,
+		&i.Source,
+		&i.Filename,
+		&i.FileSha256,
+		&i.Mode,
+		&i.Status,
+		&i.MappingJson,
+		&i.SummaryJson,
+		&i.CreatedAt,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -970,6 +1651,52 @@ type GetJobByIDParams struct {
 
 func (q *Queries) GetJobByID(ctx context.Context, arg GetJobByIDParams) (Job, error) {
 	row := q.db.QueryRow(ctx, getJobByID, arg.ID, arg.TenantID)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobNumber,
+		&i.EstimateID,
+		&i.CustomerID,
+		&i.Status,
+		&i.ScheduledDate,
+		&i.PickupTime,
+		&i.ConvertIdempotencyKey,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getJobByJobNumber = `-- name: GetJobByJobNumber :one
+SELECT
+  id,
+  tenant_id,
+  job_number,
+  estimate_id,
+  customer_id,
+  status,
+  scheduled_date,
+  pickup_time,
+  convert_idempotency_key,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM jobs
+WHERE tenant_id = $1
+  AND job_number = $2
+`
+
+type GetJobByJobNumberParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	JobNumber string    `json:"job_number"`
+}
+
+func (q *Queries) GetJobByJobNumber(ctx context.Context, arg GetJobByJobNumberParams) (Job, error) {
+	row := q.db.QueryRow(ctx, getJobByJobNumber, arg.TenantID, arg.JobNumber)
 	var i Job
 	err := row.Scan(
 		&i.ID,
@@ -1539,6 +2266,135 @@ func (q *Queries) ListCalendarJobs(ctx context.Context, arg ListCalendarJobsPara
 	return items, nil
 }
 
+const listImportRowResultsByRun = `-- name: ListImportRowResultsByRun :many
+SELECT
+  id,
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id,
+  created_at
+FROM import_row_result
+WHERE tenant_id = $1
+  AND import_run_id = $2
+ORDER BY row_number ASC, created_at ASC
+`
+
+type ListImportRowResultsByRunParams struct {
+	TenantID    uuid.UUID `json:"tenant_id"`
+	ImportRunID uuid.UUID `json:"import_run_id"`
+}
+
+func (q *Queries) ListImportRowResultsByRun(ctx context.Context, arg ListImportRowResultsByRunParams) ([]ImportRowResult, error) {
+	rows, err := q.db.Query(ctx, listImportRowResultsByRun, arg.TenantID, arg.ImportRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ImportRowResult{}
+	for rows.Next() {
+		var i ImportRowResult
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ImportRunID,
+			&i.RowNumber,
+			&i.Severity,
+			&i.EntityType,
+			&i.IdempotencyKey,
+			&i.Result,
+			&i.Field,
+			&i.Message,
+			&i.RawValue,
+			&i.TargetEntityID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listImportRowResultsByRunAndSeverity = `-- name: ListImportRowResultsByRunAndSeverity :many
+SELECT
+  id,
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id,
+  created_at
+FROM import_row_result
+WHERE tenant_id = $1
+  AND import_run_id = $2
+  AND severity = $3
+ORDER BY row_number ASC, created_at ASC
+LIMIT $4
+`
+
+type ListImportRowResultsByRunAndSeverityParams struct {
+	TenantID    uuid.UUID `json:"tenant_id"`
+	ImportRunID uuid.UUID `json:"import_run_id"`
+	Severity    string    `json:"severity"`
+	LimitRows   int32     `json:"limit_rows"`
+}
+
+func (q *Queries) ListImportRowResultsByRunAndSeverity(ctx context.Context, arg ListImportRowResultsByRunAndSeverityParams) ([]ImportRowResult, error) {
+	rows, err := q.db.Query(ctx, listImportRowResultsByRunAndSeverity,
+		arg.TenantID,
+		arg.ImportRunID,
+		arg.Severity,
+		arg.LimitRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ImportRowResult{}
+	for rows.Next() {
+		var i ImportRowResult
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.ImportRunID,
+			&i.RowNumber,
+			&i.Severity,
+			&i.EntityType,
+			&i.IdempotencyKey,
+			&i.Result,
+			&i.Field,
+			&i.Message,
+			&i.RawValue,
+			&i.TargetEntityID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStorageRows = `-- name: ListStorageRows :many
 SELECT
   sr.id AS storage_record_id,
@@ -2039,6 +2895,187 @@ func (q *Queries) UpdateEstimate(ctx context.Context, arg UpdateEstimateParams) 
 	return i, err
 }
 
+const updateEstimateByNumber = `-- name: UpdateEstimateByNumber :one
+UPDATE estimates
+SET
+  customer_id = $1,
+  status = COALESCE($2, status),
+  customer_name = $3,
+  primary_phone = $4,
+  secondary_phone = $5,
+  email = $6,
+  origin_address_line1 = $7,
+  origin_city = $8,
+  origin_state = $9,
+  origin_postal_code = $10,
+  destination_address_line1 = $11,
+  destination_city = $12,
+  destination_state = $13,
+  destination_postal_code = $14,
+  move_date = $15::date,
+  pickup_time = $16,
+  lead_source = $17,
+  move_size = $18,
+  location_type = $19,
+  estimated_total_cents = $20::bigint,
+  deposit_cents = $21::bigint,
+  notes = $22,
+  updated_by = $23,
+  updated_at = NOW()
+WHERE tenant_id = $24
+  AND estimate_number = $25
+RETURNING id, tenant_id, estimate_number, customer_id, status, customer_name, primary_phone, secondary_phone, email, origin_address_line1, origin_city, origin_state, origin_postal_code, destination_address_line1, destination_city, destination_state, destination_postal_code, move_date, pickup_time, lead_source, move_size, location_type, estimated_total_cents, deposit_cents, notes, idempotency_key, idempotency_payload_hash, created_by, updated_by, created_at, updated_at
+`
+
+type UpdateEstimateByNumberParams struct {
+	CustomerID              uuid.UUID  `json:"customer_id"`
+	Status                  *string    `json:"status"`
+	CustomerName            string     `json:"customer_name"`
+	PrimaryPhone            string     `json:"primary_phone"`
+	SecondaryPhone          *string    `json:"secondary_phone"`
+	Email                   string     `json:"email"`
+	OriginAddressLine1      string     `json:"origin_address_line1"`
+	OriginCity              string     `json:"origin_city"`
+	OriginState             string     `json:"origin_state"`
+	OriginPostalCode        string     `json:"origin_postal_code"`
+	DestinationAddressLine1 string     `json:"destination_address_line1"`
+	DestinationCity         string     `json:"destination_city"`
+	DestinationState        string     `json:"destination_state"`
+	DestinationPostalCode   string     `json:"destination_postal_code"`
+	MoveDate                time.Time  `json:"move_date"`
+	PickupTime              *string    `json:"pickup_time"`
+	LeadSource              string     `json:"lead_source"`
+	MoveSize                *string    `json:"move_size"`
+	LocationType            *string    `json:"location_type"`
+	EstimatedTotalCents     *int64     `json:"estimated_total_cents"`
+	DepositCents            *int64     `json:"deposit_cents"`
+	Notes                   *string    `json:"notes"`
+	UpdatedBy               *uuid.UUID `json:"updated_by"`
+	TenantID                uuid.UUID  `json:"tenant_id"`
+	EstimateNumber          string     `json:"estimate_number"`
+}
+
+func (q *Queries) UpdateEstimateByNumber(ctx context.Context, arg UpdateEstimateByNumberParams) (Estimate, error) {
+	row := q.db.QueryRow(ctx, updateEstimateByNumber,
+		arg.CustomerID,
+		arg.Status,
+		arg.CustomerName,
+		arg.PrimaryPhone,
+		arg.SecondaryPhone,
+		arg.Email,
+		arg.OriginAddressLine1,
+		arg.OriginCity,
+		arg.OriginState,
+		arg.OriginPostalCode,
+		arg.DestinationAddressLine1,
+		arg.DestinationCity,
+		arg.DestinationState,
+		arg.DestinationPostalCode,
+		arg.MoveDate,
+		arg.PickupTime,
+		arg.LeadSource,
+		arg.MoveSize,
+		arg.LocationType,
+		arg.EstimatedTotalCents,
+		arg.DepositCents,
+		arg.Notes,
+		arg.UpdatedBy,
+		arg.TenantID,
+		arg.EstimateNumber,
+	)
+	var i Estimate
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateNumber,
+		&i.CustomerID,
+		&i.Status,
+		&i.CustomerName,
+		&i.PrimaryPhone,
+		&i.SecondaryPhone,
+		&i.Email,
+		&i.OriginAddressLine1,
+		&i.OriginCity,
+		&i.OriginState,
+		&i.OriginPostalCode,
+		&i.DestinationAddressLine1,
+		&i.DestinationCity,
+		&i.DestinationState,
+		&i.DestinationPostalCode,
+		&i.MoveDate,
+		&i.PickupTime,
+		&i.LeadSource,
+		&i.MoveSize,
+		&i.LocationType,
+		&i.EstimatedTotalCents,
+		&i.DepositCents,
+		&i.Notes,
+		&i.IdempotencyKey,
+		&i.IdempotencyPayloadHash,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateJobByJobNumber = `-- name: UpdateJobByJobNumber :one
+UPDATE jobs
+SET
+  estimate_id = COALESCE($1::uuid, estimate_id),
+  customer_id = $2,
+  status = COALESCE($3, status),
+  scheduled_date = COALESCE($4::date, scheduled_date),
+  pickup_time = COALESCE($5, pickup_time),
+  updated_by = $6,
+  updated_at = NOW()
+WHERE tenant_id = $7
+  AND job_number = $8
+RETURNING id, tenant_id, job_number, estimate_id, customer_id, status, scheduled_date, pickup_time, convert_idempotency_key, created_by, updated_by, created_at, updated_at
+`
+
+type UpdateJobByJobNumberParams struct {
+	EstimateID    *uuid.UUID `json:"estimate_id"`
+	CustomerID    uuid.UUID  `json:"customer_id"`
+	Status        *string    `json:"status"`
+	ScheduledDate *time.Time `json:"scheduled_date"`
+	PickupTime    *string    `json:"pickup_time"`
+	UpdatedBy     *uuid.UUID `json:"updated_by"`
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	JobNumber     string     `json:"job_number"`
+}
+
+func (q *Queries) UpdateJobByJobNumber(ctx context.Context, arg UpdateJobByJobNumberParams) (Job, error) {
+	row := q.db.QueryRow(ctx, updateJobByJobNumber,
+		arg.EstimateID,
+		arg.CustomerID,
+		arg.Status,
+		arg.ScheduledDate,
+		arg.PickupTime,
+		arg.UpdatedBy,
+		arg.TenantID,
+		arg.JobNumber,
+	)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobNumber,
+		&i.EstimateID,
+		&i.CustomerID,
+		&i.Status,
+		&i.ScheduledDate,
+		&i.PickupTime,
+		&i.ConvertIdempotencyKey,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateJobScheduleStatus = `-- name: UpdateJobScheduleStatus :one
 UPDATE jobs
 SET
@@ -2183,6 +3220,136 @@ func (q *Queries) UpdateStorageRecordByID(ctx context.Context, arg UpdateStorage
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertImportIdempotency = `-- name: UpsertImportIdempotency :one
+INSERT INTO import_idempotency (
+  tenant_id,
+  entity_type,
+  idempotency_key,
+  target_entity_id
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4
+)
+ON CONFLICT (tenant_id, entity_type, idempotency_key) DO UPDATE
+SET
+  target_entity_id = EXCLUDED.target_entity_id,
+  last_seen_at = NOW()
+RETURNING tenant_id, entity_type, idempotency_key, target_entity_id, first_seen_at, last_seen_at
+`
+
+type UpsertImportIdempotencyParams struct {
+	TenantID       uuid.UUID `json:"tenant_id"`
+	EntityType     string    `json:"entity_type"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	TargetEntityID uuid.UUID `json:"target_entity_id"`
+}
+
+func (q *Queries) UpsertImportIdempotency(ctx context.Context, arg UpsertImportIdempotencyParams) (ImportIdempotency, error) {
+	row := q.db.QueryRow(ctx, upsertImportIdempotency,
+		arg.TenantID,
+		arg.EntityType,
+		arg.IdempotencyKey,
+		arg.TargetEntityID,
+	)
+	var i ImportIdempotency
+	err := row.Scan(
+		&i.TenantID,
+		&i.EntityType,
+		&i.IdempotencyKey,
+		&i.TargetEntityID,
+		&i.FirstSeenAt,
+		&i.LastSeenAt,
+	)
+	return i, err
+}
+
+const upsertImportRowResult = `-- name: UpsertImportRowResult :one
+INSERT INTO import_row_result (
+  tenant_id,
+  import_run_id,
+  row_number,
+  severity,
+  entity_type,
+  idempotency_key,
+  result,
+  field,
+  message,
+  raw_value,
+  target_entity_id
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11
+)
+ON CONFLICT (tenant_id, import_run_id, entity_type, idempotency_key) DO UPDATE
+SET
+  row_number = EXCLUDED.row_number,
+  severity = EXCLUDED.severity,
+  result = EXCLUDED.result,
+  field = EXCLUDED.field,
+  message = EXCLUDED.message,
+  raw_value = EXCLUDED.raw_value,
+  target_entity_id = EXCLUDED.target_entity_id
+RETURNING id, tenant_id, import_run_id, row_number, severity, entity_type, idempotency_key, result, field, message, raw_value, target_entity_id, created_at
+`
+
+type UpsertImportRowResultParams struct {
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	ImportRunID    uuid.UUID  `json:"import_run_id"`
+	RowNumber      int32      `json:"row_number"`
+	Severity       string     `json:"severity"`
+	EntityType     string     `json:"entity_type"`
+	IdempotencyKey string     `json:"idempotency_key"`
+	Result         string     `json:"result"`
+	Field          *string    `json:"field"`
+	Message        string     `json:"message"`
+	RawValue       *string    `json:"raw_value"`
+	TargetEntityID *uuid.UUID `json:"target_entity_id"`
+}
+
+func (q *Queries) UpsertImportRowResult(ctx context.Context, arg UpsertImportRowResultParams) (ImportRowResult, error) {
+	row := q.db.QueryRow(ctx, upsertImportRowResult,
+		arg.TenantID,
+		arg.ImportRunID,
+		arg.RowNumber,
+		arg.Severity,
+		arg.EntityType,
+		arg.IdempotencyKey,
+		arg.Result,
+		arg.Field,
+		arg.Message,
+		arg.RawValue,
+		arg.TargetEntityID,
+	)
+	var i ImportRowResult
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.ImportRunID,
+		&i.RowNumber,
+		&i.Severity,
+		&i.EntityType,
+		&i.IdempotencyKey,
+		&i.Result,
+		&i.Field,
+		&i.Message,
+		&i.RawValue,
+		&i.TargetEntityID,
+		&i.CreatedAt,
 	)
 	return i, err
 }
