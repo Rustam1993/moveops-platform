@@ -446,6 +446,50 @@ LEFT JOIN estimates e
 WHERE j.id = sqlc.arg(id)
   AND j.tenant_id = sqlc.arg(tenant_id);
 
+-- name: ListCalendarJobs :many
+SELECT
+  j.id AS job_id,
+  j.job_number,
+  j.scheduled_date,
+  j.pickup_time,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), j.job_number) AS customer_name,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS origin_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS destination_short,
+  j.status,
+  FALSE AS has_storage,
+  GREATEST(COALESCE(e.estimated_total_cents, 0) - COALESCE(e.deposit_cents, 0), 0)::bigint AS balance_due_cents
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE j.tenant_id = sqlc.arg(tenant_id)
+  AND j.scheduled_date IS NOT NULL
+  AND j.scheduled_date >= sqlc.arg(from_date)::date
+  AND j.scheduled_date < sqlc.arg(to_date)::date
+  AND (sqlc.narg(phase)::text IS NULL OR j.status = sqlc.narg(phase)::text)
+  AND (
+    sqlc.narg(job_type)::text IS NULL
+    OR (
+      CASE
+        WHEN e.id IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+        WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+        ELSE 'long_distance'
+      END
+    ) = sqlc.narg(job_type)::text
+  )
+ORDER BY j.scheduled_date ASC, COALESCE(j.pickup_time, ''), j.job_number ASC;
+
 -- name: GetJobByEstimateID :one
 SELECT
   id,

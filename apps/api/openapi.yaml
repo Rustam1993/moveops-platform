@@ -217,6 +217,61 @@ paths:
                 $ref: '#/components/schemas/JobResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /calendar:
+    get:
+      operationId: GetCalendar
+      summary: List scheduled jobs for a monthly calendar range
+      description: >
+        Returns jobs where `scheduledDate` is within `[from, to)` (inclusive `from`, exclusive `to`).
+        `userId` and `departmentId` are accepted as filter placeholders but are currently ignored.
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: phase
+          required: false
+          schema:
+            type: string
+            enum: [booked, scheduled, completed, cancelled]
+        - in: query
+          name: jobType
+          required: false
+          schema:
+            type: string
+            enum: [local, long_distance, other]
+        - in: query
+          name: userId
+          required: false
+          description: Placeholder filter; accepted but currently ignored.
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: departmentId
+          required: false
+          description: Placeholder filter; accepted but currently ignored.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Calendar jobs in range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /jobs/{jobId}:
     get:
       operationId: GetJobsJobId
@@ -605,6 +660,54 @@ components:
         status:
           type: string
           enum: [booked, scheduled, completed, cancelled]
+    CalendarJobCard:
+      type: object
+      required:
+        - jobId
+        - jobNumber
+        - scheduledDate
+        - customerName
+        - originShort
+        - destinationShort
+        - status
+        - hasStorage
+        - balanceDueCents
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        jobNumber:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        pickupTime:
+          type: string
+        customerName:
+          type: string
+        originShort:
+          type: string
+        destinationShort:
+          type: string
+        status:
+          type: string
+          enum: [booked, scheduled, completed, cancelled]
+        hasStorage:
+          type: boolean
+        balanceDueCents:
+          type: integer
+          format: int64
+          minimum: 0
+    CalendarResponse:
+      type: object
+      required: [jobs, requestId]
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarJobCard'
+        requestId:
+          type: string
     Job:
       type: object
       required:

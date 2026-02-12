@@ -175,6 +175,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List scheduled jobs for a monthly calendar range
+         * @description Returns jobs where `scheduledDate` is within `[from, to)` (inclusive `from`, exclusive `to`). `userId` and `departmentId` are accepted as filter placeholders but are currently ignored.
+         *
+         */
+        get: operations["GetCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/jobs/{jobId}": {
         parameters: {
             query?: never;
@@ -344,6 +365,26 @@ export interface components {
             pickupTime?: string;
             /** @enum {string} */
             status?: "booked" | "scheduled" | "completed" | "cancelled";
+        };
+        CalendarJobCard: {
+            /** Format: uuid */
+            jobId: string;
+            jobNumber: string;
+            /** Format: date */
+            scheduledDate: string;
+            pickupTime?: string;
+            customerName: string;
+            originShort: string;
+            destinationShort: string;
+            /** @enum {string} */
+            status: "booked" | "scheduled" | "completed" | "cancelled";
+            hasStorage: boolean;
+            /** Format: int64 */
+            balanceDueCents: number;
+        };
+        CalendarResponse: {
+            jobs: components["schemas"]["CalendarJobCard"][];
+            requestId: string;
         };
         Job: {
             /** Format: uuid */
@@ -676,6 +717,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetCalendar: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                phase?: "booked" | "scheduled" | "completed" | "cancelled";
+                jobType?: "local" | "long_distance" | "other";
+                /** @description Placeholder filter; accepted but currently ignored. */
+                userId?: string;
+                /** @description Placeholder filter; accepted but currently ignored. */
+                departmentId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar jobs in range */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];

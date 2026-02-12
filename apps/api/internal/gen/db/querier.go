@@ -27,6 +27,7 @@ type Querier interface {
 	GetSessionPrincipalByTokenHash(ctx context.Context, tokenHash string) (GetSessionPrincipalByTokenHashRow, error)
 	IncrementTenantCounter(ctx context.Context, arg IncrementTenantCounterParams) (int64, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) error
+	ListCalendarJobs(ctx context.Context, arg ListCalendarJobsParams) ([]ListCalendarJobsRow, error)
 	ListUsersByEmail(ctx context.Context, email string) ([]ListUsersByEmailRow, error)
 	MarkEstimateConverted(ctx context.Context, arg MarkEstimateConvertedParams) (int64, error)
 	RevokeSessionByID(ctx context.Context, arg RevokeSessionByIDParams) (int64, error)

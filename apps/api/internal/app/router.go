@@ -129,6 +129,50 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		})
 
 		protected.With(
+			middleware.RequirePermission(q, "calendar.read"),
+		).Get("/calendar", func(w http.ResponseWriter, r *http.Request) {
+			fromDate, ok := parseDateQueryParam(w, r, "from")
+			if !ok {
+				return
+			}
+			toDate, ok := parseDateQueryParam(w, r, "to")
+			if !ok {
+				return
+			}
+			params := oapi.GetCalendarParams{
+				From: fromDate,
+				To:   toDate,
+			}
+
+			if phaseRaw := r.URL.Query().Get("phase"); phaseRaw != "" {
+				phase := oapi.GetCalendarParamsPhase(phaseRaw)
+				params.Phase = &phase
+			}
+			if jobTypeRaw := r.URL.Query().Get("jobType"); jobTypeRaw != "" {
+				jobType := oapi.GetCalendarParamsJobType(jobTypeRaw)
+				params.JobType = &jobType
+			}
+			if userIDRaw := r.URL.Query().Get("userId"); userIDRaw != "" {
+				userID, ok := parseUUIDParam(w, r, userIDRaw, "invalid_user_id", "userId must be a valid UUID")
+				if !ok {
+					return
+				}
+				typed := openapi_types.UUID(userID)
+				params.UserId = &typed
+			}
+			if departmentIDRaw := r.URL.Query().Get("departmentId"); departmentIDRaw != "" {
+				departmentID, ok := parseUUIDParam(w, r, departmentIDRaw, "invalid_department_id", "departmentId must be a valid UUID")
+				if !ok {
+					return
+				}
+				typed := openapi_types.UUID(departmentID)
+				params.DepartmentId = &typed
+			}
+
+			h.GetCalendar(w, r, params)
+		})
+
+		protected.With(
 			middleware.RequirePermission(q, "jobs.read"),
 		).Get("/jobs/{jobId}", func(w http.ResponseWriter, r *http.Request) {
 			jobID, ok := parseUUIDParam(w, r, chi.URLParam(r, "jobId"), "invalid_job_id", "Job id must be a valid UUID")
@@ -139,7 +183,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		})
 
 		protected.With(
-			middleware.RequirePermission(q, "jobs.write"),
+			middleware.RequirePermission(q, "calendar.write"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
 		).Patch("/jobs/{jobId}", func(w http.ResponseWriter, r *http.Request) {
 			jobID, ok := parseUUIDParam(w, r, chi.URLParam(r, "jobId"), "invalid_job_id", "Job id must be a valid UUID")
@@ -161,4 +205,18 @@ func parseUUIDParam(w http.ResponseWriter, r *http.Request, raw, code, message s
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func parseDateQueryParam(w http.ResponseWriter, r *http.Request, key string) (openapi_types.Date, bool) {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", key+" query parameter is required", nil)
+		return openapi_types.Date{}, false
+	}
+	parsed, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", key+" must be in YYYY-MM-DD format", nil)
+		return openapi_types.Date{}, false
+	}
+	return openapi_types.Date{Time: time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC)}, true
 }
