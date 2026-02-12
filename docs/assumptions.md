@@ -29,3 +29,9 @@
 - Phase/status naming:
   - The jobs table canonical lifecycle field remains `status` (`booked`, `scheduled`, `completed`, `cancelled`).
   - Calendar query accepts `phase` as a filter alias mapped to the same canonical `status` values.
+
+## Phase 4
+- Facility selection is required before querying storage. `GET /storage` requires `facility` and the UI keeps Storage list empty until a facility is selected.
+- Storage filters in this phase:
+  - Working: facility, search (`q`), status, delivery scheduled (`hasDateOut`), balance due (`balanceDue`), and has containers (`hasContainers`).
+  - Stubbed in UI: “Past 30 days without payment” and “Monthly invoice cycle actions”.

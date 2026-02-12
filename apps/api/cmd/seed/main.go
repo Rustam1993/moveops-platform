@@ -83,6 +83,8 @@ func main() {
 		"calendar.write":    "Update calendar schedule and phase values",
 		"jobs.read":         "Read job records",
 		"jobs.write":        "Update job scheduling and status",
+		"storage.read":      "Read storage records and list views",
+		"storage.write":     "Create and update storage records",
 	}
 
 	for perm, description := range permissionDescriptions {
@@ -101,15 +103,15 @@ func main() {
 	}{
 		"admin": {
 			description: "Tenant administrator",
-			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write"},
+			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write"},
 		},
 		"sales": {
 			description: "Sales role",
-			permissions: []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "jobs.read"},
+			permissions: []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "jobs.read", "storage.read"},
 		},
 		"ops": {
 			description: "Operations role",
-			permissions: []string{"estimates.read", "calendar.read", "calendar.write", "jobs.read", "jobs.write"},
+			permissions: []string{"estimates.read", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write"},
 		},
 	}
 

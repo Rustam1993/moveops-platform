@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -191,6 +193,109 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 				return
 			}
 			h.PatchJobsJobId(w, r, openapi_types.UUID(jobID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "storage.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/jobs/{jobId}/storage", func(w http.ResponseWriter, r *http.Request) {
+			jobID, ok := parseUUIDParam(w, r, chi.URLParam(r, "jobId"), "invalid_job_id", "Job id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostJobsJobIdStorage(w, r, openapi_types.UUID(jobID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "storage.read"),
+		).Get("/storage", func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+			facility := strings.TrimSpace(query.Get("facility"))
+			if facility == "" {
+				httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "facility query parameter is required", nil)
+				return
+			}
+
+			params := oapi.GetStorageParams{Facility: facility}
+
+			if qRaw := strings.TrimSpace(query.Get("q")); qRaw != "" {
+				params.Q = &qRaw
+			}
+
+			if statusRaw := strings.TrimSpace(query.Get("status")); statusRaw != "" {
+				status := oapi.StorageStatus(statusRaw)
+				params.Status = &status
+			}
+
+			if boolRaw := strings.TrimSpace(query.Get("hasDateOut")); boolRaw != "" {
+				parsed, err := strconv.ParseBool(boolRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "hasDateOut must be true or false", nil)
+					return
+				}
+				params.HasDateOut = &parsed
+			}
+			if boolRaw := strings.TrimSpace(query.Get("balanceDue")); boolRaw != "" {
+				parsed, err := strconv.ParseBool(boolRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "balanceDue must be true or false", nil)
+					return
+				}
+				params.BalanceDue = &parsed
+			}
+			if boolRaw := strings.TrimSpace(query.Get("hasContainers")); boolRaw != "" {
+				parsed, err := strconv.ParseBool(boolRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "hasContainers must be true or false", nil)
+					return
+				}
+				params.HasContainers = &parsed
+			}
+
+			if pastDueRaw := strings.TrimSpace(query.Get("pastDueDays")); pastDueRaw != "" {
+				parsed, err := strconv.Atoi(pastDueRaw)
+				if err != nil || parsed < 0 {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "pastDueDays must be a non-negative integer", nil)
+					return
+				}
+				params.PastDueDays = &parsed
+			}
+
+			if limitRaw := strings.TrimSpace(query.Get("limit")); limitRaw != "" {
+				parsed, err := strconv.Atoi(limitRaw)
+				if err != nil || parsed < 1 {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "limit must be a positive integer", nil)
+					return
+				}
+				params.Limit = &parsed
+			}
+
+			if cursorRaw := strings.TrimSpace(query.Get("cursor")); cursorRaw != "" {
+				params.Cursor = &cursorRaw
+			}
+
+			h.GetStorage(w, r, params)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "storage.read"),
+		).Get("/storage/{storageRecordId}", func(w http.ResponseWriter, r *http.Request) {
+			storageRecordID, ok := parseUUIDParam(w, r, chi.URLParam(r, "storageRecordId"), "invalid_storage_record_id", "Storage record id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetStorageStorageRecordId(w, r, openapi_types.UUID(storageRecordID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "storage.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/storage/{storageRecordId}", func(w http.ResponseWriter, r *http.Request) {
+			storageRecordID, ok := parseUUIDParam(w, r, chi.URLParam(r, "storageRecordId"), "invalid_storage_record_id", "Storage record id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PutStorageStorageRecordId(w, r, openapi_types.UUID(storageRecordID))
 		})
 	})
 

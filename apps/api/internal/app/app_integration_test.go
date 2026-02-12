@@ -334,6 +334,176 @@ func TestCalendarScheduleUpdateCreatesAuditLog(t *testing.T) {
 	}
 }
 
+func TestStorageTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-storage-a", "Tenant Storage A", "storage-a@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "storage.read", "storage.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-storage-b", "Tenant Storage B", "storage-b@example.com", "Password123!", []string{"storage.read"})
+
+	cookieA := login(t, env.router, "storage-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "storage-tenant-isolation-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookieA, csrfA, estimateID, "storage-tenant-isolation-convert")
+	storageID := createStorageRecord(t, env.router, cookieA, csrfA, jobID, "Main Facility")
+
+	cookieB := login(t, env.router, "storage-b@example.com", "Password123!")
+	status, body := request(t, env.router, http.MethodGet, "/api/storage?facility=Main%20Facility", nil, cookieB, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for storage list, got %d (%s)", status, string(body))
+	}
+	rows := parseStorageListItems(t, body)
+	if len(rows) != 0 {
+		t.Fatalf("expected cross-tenant storage list to be empty, got %d rows", len(rows))
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/storage/"+storageID, nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant storage record read, got %d", status)
+	}
+}
+
+func TestStorageRBACReadDenied(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-storage-rbac-read", "Tenant Storage RBAC Read", "storage-rbac-read-admin@example.com", "Password123!", []string{"storage.read"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "storage-rbac-read-denied@example.com", "Password123!", []string{"jobs.read"})
+
+	limitedCookie := login(t, env.router, "storage-rbac-read-denied@example.com", "Password123!")
+	status, _ := request(t, env.router, http.MethodGet, "/api/storage?facility=Main%20Facility", nil, limitedCookie, "")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing storage.read, got %d", status)
+	}
+}
+
+func TestStorageRBACWriteDenied(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-storage-rbac-write", "Tenant Storage RBAC Write", "storage-rbac-write-admin@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "storage.read", "storage.write"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "storage-rbac-write-denied@example.com", "Password123!", []string{"storage.read"})
+
+	adminCookie := login(t, env.router, "storage-rbac-write-admin@example.com", "Password123!")
+	adminCsrf := csrfToken(t, env.router, adminCookie)
+	estimateID := createEstimate(t, env.router, adminCookie, adminCsrf, "storage-rbac-write-estimate")
+	jobID := convertEstimateToJob(t, env.router, adminCookie, adminCsrf, estimateID, "storage-rbac-write-convert")
+	storageID := createStorageRecord(t, env.router, adminCookie, adminCsrf, jobID, "Main Facility")
+
+	limitedCookie := login(t, env.router, "storage-rbac-write-denied@example.com", "Password123!")
+	limitedCsrf := csrfToken(t, env.router, limitedCookie)
+
+	status, _ := request(t, env.router, http.MethodPost, "/api/jobs/"+jobID+"/storage", storageCreatePayload("Main Facility"), limitedCookie, limitedCsrf)
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing storage.write on create, got %d", status)
+	}
+
+	status, _ = request(t, env.router, http.MethodPut, "/api/storage/"+storageID, storageUpdatePayload("Main Facility", 4, 2, 22, 3, 140, 45000, 5000, "Updated notes"), limitedCookie, limitedCsrf)
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing storage.write on update, got %d", status)
+	}
+}
+
+func TestStorageCreateAndUpdatePersists(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-storage-persist", "Tenant Storage Persist", "storage-persist@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "storage.read", "storage.write"})
+
+	cookie := login(t, env.router, "storage-persist@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "storage-persist-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookie, csrf, estimateID, "storage-persist-convert")
+
+	status, body := request(t, env.router, http.MethodPost, "/api/jobs/"+jobID+"/storage", storageCreatePayload("Main Facility"), cookie, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 storage create, got %d (%s)", status, string(body))
+	}
+	storageID := parseStorageRecordID(t, body)
+
+	status, body = request(t, env.router, http.MethodGet, "/api/storage/"+storageID, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 storage read, got %d (%s)", status, string(body))
+	}
+	record := parseStorageRecord(t, body)
+	if record.Facility != "Main Facility" {
+		t.Fatalf("expected facility Main Facility, got %s", record.Facility)
+	}
+	if record.Status != "in_storage" {
+		t.Fatalf("expected status in_storage, got %s", record.Status)
+	}
+	if record.Vaults != 2 || record.Pads != 1 || record.Items != 18 || record.OversizeItems != 2 {
+		t.Fatalf("unexpected counts after create: %+v", record)
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/storage/"+storageID, storageUpdatePayload("Main Facility", 5, 3, 24, 4, 160, 52000, 9000, "Updated storage notes"), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 storage update, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/storage/"+storageID, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 storage read after update, got %d (%s)", status, string(body))
+	}
+	record = parseStorageRecord(t, body)
+	if record.Vaults != 5 || record.Pads != 3 || record.Items != 24 || record.OversizeItems != 4 {
+		t.Fatalf("unexpected counts after update: %+v", record)
+	}
+	if record.StorageBalanceCents != 52000 || record.MoveBalanceCents != 9000 {
+		t.Fatalf("unexpected balances after update: %+v", record)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/storage?facility=Main%20Facility&q="+record.JobNumber, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 storage list after update, got %d (%s)", status, string(body))
+	}
+	rows := parseStorageListItems(t, body)
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 storage list row, got %d", len(rows))
+	}
+	if rows[0].StorageRecordID != storageID {
+		t.Fatalf("expected list row storageRecordId %s, got %s", storageID, rows[0].StorageRecordID)
+	}
+}
+
+func TestStorageUpdateCreatesAuditLog(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-storage-audit", "Tenant Storage Audit", "storage-audit@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "storage.read", "storage.write"})
+
+	cookie := login(t, env.router, "storage-audit@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "storage-audit-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookie, csrf, estimateID, "storage-audit-convert")
+	storageID := createStorageRecord(t, env.router, cookie, csrf, jobID, "Main Facility")
+
+	status, body := request(t, env.router, http.MethodPut, "/api/storage/"+storageID, storageUpdatePayload("Main Facility", 6, 4, 26, 5, 175, 61000, 12000, "Audit update"), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 storage update, got %d (%s)", status, string(body))
+	}
+
+	storageUUID, err := uuid.Parse(storageID)
+	if err != nil {
+		t.Fatalf("parse storage id: %v", err)
+	}
+
+	var count int
+	if err := env.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM audit_log
+		WHERE tenant_id = $1
+		  AND entity_type = 'storage_record'
+		  AND entity_id = $2
+		  AND action = 'storage_record.update'
+	`, tenantID, storageUUID).Scan(&count); err != nil {
+		t.Fatalf("count storage_record.update audit rows: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 storage_record.update audit row, got %d", count)
+	}
+}
+
 type testEnv struct {
 	pool   *pgxpool.Pool
 	router http.Handler
@@ -579,6 +749,105 @@ func parseCalendarJobs(t *testing.T, body []byte) []calendarJobPayload {
 		t.Fatalf("parse calendar body: %v", err)
 	}
 	return payload.Jobs
+}
+
+type storageRecordPayload struct {
+	ID                  string `json:"id"`
+	JobNumber           string `json:"jobNumber"`
+	Facility            string `json:"facility"`
+	Status              string `json:"status"`
+	Vaults              int    `json:"vaults"`
+	Pads                int    `json:"pads"`
+	Items               int    `json:"items"`
+	OversizeItems       int    `json:"oversizeItems"`
+	StorageBalanceCents int64  `json:"storageBalanceCents"`
+	MoveBalanceCents    int64  `json:"moveBalanceCents"`
+}
+
+type storageListItemPayload struct {
+	StorageRecordID string `json:"storageRecordId"`
+}
+
+func parseStorageRecordID(t *testing.T, body []byte) string {
+	t.Helper()
+	record := parseStorageRecord(t, body)
+	if record.ID == "" {
+		t.Fatalf("storage id missing")
+	}
+	return record.ID
+}
+
+func parseStorageRecord(t *testing.T, body []byte) storageRecordPayload {
+	t.Helper()
+	var payload struct {
+		Storage storageRecordPayload `json:"storage"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse storage body: %v", err)
+	}
+	return payload.Storage
+}
+
+func parseStorageListItems(t *testing.T, body []byte) []storageListItemPayload {
+	t.Helper()
+	var payload struct {
+		Items []storageListItemPayload `json:"items"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse storage list body: %v", err)
+	}
+	return payload.Items
+}
+
+func createStorageRecord(t *testing.T, router http.Handler, session *http.Cookie, csrf, jobID, facility string) string {
+	t.Helper()
+	status, body := request(t, router, http.MethodPost, "/api/jobs/"+jobID+"/storage", storageCreatePayload(facility), session, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("create storage record expected 201, got %d (%s)", status, string(body))
+	}
+	return parseStorageRecordID(t, body)
+}
+
+func storageCreatePayload(facility string) []byte {
+	payload, _ := json.Marshal(map[string]any{
+		"facility":            facility,
+		"status":              "in_storage",
+		"dateIn":              "2026-03-21",
+		"nextBillDate":        "2026-04-21",
+		"lotNumber":           "LOT-12",
+		"locationLabel":       "Aisle 4",
+		"vaults":              2,
+		"pads":                1,
+		"items":               18,
+		"oversizeItems":       2,
+		"volume":              120,
+		"monthlyRateCents":    32900,
+		"storageBalanceCents": 28000,
+		"moveBalanceCents":    7000,
+		"notes":               "Initial intake",
+	})
+	return payload
+}
+
+func storageUpdatePayload(facility string, vaults, pads, items, oversize, volume int, storageBalanceCents, moveBalanceCents int64, notes string) []byte {
+	payload, _ := json.Marshal(map[string]any{
+		"facility":            facility,
+		"status":              "in_storage",
+		"dateIn":              "2026-03-21",
+		"nextBillDate":        "2026-05-21",
+		"lotNumber":           "LOT-99",
+		"locationLabel":       "Aisle 8",
+		"vaults":              vaults,
+		"pads":                pads,
+		"items":               items,
+		"oversizeItems":       oversize,
+		"volume":              volume,
+		"monthlyRateCents":    47900,
+		"storageBalanceCents": storageBalanceCents,
+		"moveBalanceCents":    moveBalanceCents,
+		"notes":               notes,
+	})
+	return payload
 }
 
 func convertEstimateToJob(t *testing.T, router http.Handler, session *http.Cookie, csrf, estimateID, idempotencyKey string) string {

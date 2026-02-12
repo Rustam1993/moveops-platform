@@ -317,6 +317,141 @@ paths:
                 $ref: '#/components/schemas/JobResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /jobs/{jobId}/storage:
+    post:
+      operationId: PostJobsJobIdStorage
+      summary: Create a storage record for a job
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStorageRecordRequest'
+      responses:
+        '201':
+          description: Storage record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageRecordResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /storage:
+    get:
+      operationId: GetStorage
+      summary: List storage rows for a facility
+      parameters:
+        - in: query
+          name: facility
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: '#/components/schemas/StorageStatus'
+        - in: query
+          name: hasDateOut
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: balanceDue
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: pastDueDays
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: hasContainers
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Storage rows
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /storage/{storageRecordId}:
+    get:
+      operationId: GetStorageStorageRecordId
+      summary: Get storage record by id
+      parameters:
+        - in: path
+          name: storageRecordId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Storage record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageRecordResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutStorageStorageRecordId
+      summary: Replace editable storage record fields
+      parameters:
+        - in: path
+          name: storageRecordId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStorageRecordRequest'
+      responses:
+        '200':
+          description: Storage record updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageRecordResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
 components:
   parameters:
     IdempotencyKey:
@@ -763,6 +898,326 @@ components:
       properties:
         job:
           $ref: '#/components/schemas/Job'
+        requestId:
+          type: string
+    StorageStatus:
+      type: string
+      enum: [in_storage, sit, out]
+    CreateStorageRecordRequest:
+      type: object
+      required: [facility]
+      properties:
+        facility:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/StorageStatus'
+        dateIn:
+          type: string
+          format: date
+        dateOut:
+          type: string
+          format: date
+        nextBillDate:
+          type: string
+          format: date
+        lotNumber:
+          type: string
+        locationLabel:
+          type: string
+        vaults:
+          type: integer
+          minimum: 0
+        pads:
+          type: integer
+          minimum: 0
+        items:
+          type: integer
+          minimum: 0
+        oversizeItems:
+          type: integer
+          minimum: 0
+        volume:
+          type: integer
+          minimum: 0
+        monthlyRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+        storageBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        moveBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        lastPaymentAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+    UpdateStorageRecordRequest:
+      type: object
+      required:
+        - facility
+        - status
+        - vaults
+        - pads
+        - items
+        - oversizeItems
+        - volume
+        - storageBalanceCents
+        - moveBalanceCents
+      properties:
+        facility:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/StorageStatus'
+        dateIn:
+          type: string
+          format: date
+        dateOut:
+          type: string
+          format: date
+        nextBillDate:
+          type: string
+          format: date
+        lotNumber:
+          type: string
+        locationLabel:
+          type: string
+        vaults:
+          type: integer
+          minimum: 0
+        pads:
+          type: integer
+          minimum: 0
+        items:
+          type: integer
+          minimum: 0
+        oversizeItems:
+          type: integer
+          minimum: 0
+        volume:
+          type: integer
+          minimum: 0
+        monthlyRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+        storageBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        moveBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        lastPaymentAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+    StorageListItem:
+      type: object
+      required:
+        - jobId
+        - jobNumber
+        - customerName
+        - fromShort
+        - toShort
+        - vaults
+        - pads
+        - items
+        - oversizeItems
+        - volume
+        - storageBalanceCents
+        - moveBalanceCents
+        - facility
+      properties:
+        storageRecordId:
+          type: string
+          format: uuid
+          nullable: true
+        jobId:
+          type: string
+          format: uuid
+        jobNumber:
+          type: string
+        customerName:
+          type: string
+        moveType:
+          type: string
+          nullable: true
+        fromShort:
+          type: string
+        toShort:
+          type: string
+        status:
+          type: string
+          enum: [in_storage, sit, out]
+          nullable: true
+        dateIn:
+          type: string
+          format: date
+          nullable: true
+        dateOut:
+          type: string
+          format: date
+          nullable: true
+        nextBillDate:
+          type: string
+          format: date
+          nullable: true
+        lotNumber:
+          type: string
+          nullable: true
+        locationLabel:
+          type: string
+          nullable: true
+        vaults:
+          type: integer
+          minimum: 0
+        pads:
+          type: integer
+          minimum: 0
+        items:
+          type: integer
+          minimum: 0
+        oversizeItems:
+          type: integer
+          minimum: 0
+        volume:
+          type: integer
+          minimum: 0
+        monthlyRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        storageBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        moveBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        facility:
+          type: string
+    StorageListResponse:
+      type: object
+      required: [items, requestId]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageListItem'
+        nextCursor:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+    StorageRecord:
+      type: object
+      required:
+        - id
+        - jobId
+        - jobNumber
+        - customerName
+        - fromShort
+        - toShort
+        - facility
+        - status
+        - vaults
+        - pads
+        - items
+        - oversizeItems
+        - volume
+        - storageBalanceCents
+        - moveBalanceCents
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        jobNumber:
+          type: string
+        customerName:
+          type: string
+        moveType:
+          type: string
+        fromShort:
+          type: string
+        toShort:
+          type: string
+        facility:
+          type: string
+        status:
+          $ref: '#/components/schemas/StorageStatus'
+        dateIn:
+          type: string
+          format: date
+        dateOut:
+          type: string
+          format: date
+        nextBillDate:
+          type: string
+          format: date
+        lotNumber:
+          type: string
+        locationLabel:
+          type: string
+        vaults:
+          type: integer
+          minimum: 0
+        pads:
+          type: integer
+          minimum: 0
+        items:
+          type: integer
+          minimum: 0
+        oversizeItems:
+          type: integer
+          minimum: 0
+        volume:
+          type: integer
+          minimum: 0
+        monthlyRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+        storageBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        moveBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        lastPaymentAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    StorageRecordResponse:
+      type: object
+      required: [storage, requestId]
+      properties:
+        storage:
+          $ref: '#/components/schemas/StorageRecord'
         requestId:
           type: string
     ErrorEnvelope:
