@@ -19,3 +19,13 @@
 - `POST /estimates` requires `Idempotency-Key` in the request header; body-level idempotency keys are not used.
 - New estimate required fields: `customerName`, `primaryPhone`, `email`, origin address/city/state/postal code, destination address/city/state/postal code, `moveDate`, and `leadSource`.
 - Optional estimate fields (`pickupTime`, `secondaryPhone`, `moveSize`, `locationType`, pricing fields, and notes) are stored when provided and omitted otherwise.
+
+## Phase 3
+- Calendar defaults:
+  - UI defaults to `phase=booked` and `jobType=all`.
+  - Month navigation drives query range as the first day of the month to the first day of the next month.
+- Calendar date range semantics:
+  - `GET /calendar` uses `[from, to)` (inclusive `from`, exclusive `to`).
+- Phase/status naming:
+  - The jobs table canonical lifecycle field remains `status` (`booked`, `scheduled`, `completed`, `cancelled`).
+  - Calendar query accepts `phase` as a filter alias mapped to the same canonical `status` values.

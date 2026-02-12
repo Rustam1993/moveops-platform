@@ -79,6 +79,8 @@ func main() {
 		"estimates.read":    "Read estimate records",
 		"estimates.write":   "Create and update estimate records",
 		"estimates.convert": "Convert estimates into jobs",
+		"calendar.read":     "Read calendar and schedule views",
+		"calendar.write":    "Update calendar schedule and phase values",
 		"jobs.read":         "Read job records",
 		"jobs.write":        "Update job scheduling and status",
 	}
@@ -99,15 +101,15 @@ func main() {
 	}{
 		"admin": {
 			description: "Tenant administrator",
-			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "jobs.read", "jobs.write"},
+			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write"},
 		},
 		"sales": {
 			description: "Sales role",
-			permissions: []string{"estimates.read", "estimates.write", "estimates.convert", "jobs.read"},
+			permissions: []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "jobs.read"},
 		},
 		"ops": {
 			description: "Operations role",
-			permissions: []string{"estimates.read", "jobs.read", "jobs.write"},
+			permissions: []string{"estimates.read", "calendar.read", "calendar.write", "jobs.read", "jobs.write"},
 		},
 	}
 

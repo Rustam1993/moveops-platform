@@ -459,6 +459,67 @@ func (s *Server) PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *http.R
 	s.writeJobResponse(w, r, tenantID, jobID, statusCode)
 }
 
+func (s *Server) GetCalendar(w http.ResponseWriter, r *http.Request, params oapi.GetCalendarParams) {
+	_, tenantID, _, ok := requireActorIDs(w, r)
+	if !ok {
+		return
+	}
+
+	fromDate := dateOnly(params.From.Time).Time
+	toDate := dateOnly(params.To.Time).Time
+	if !toDate.After(fromDate) {
+		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "`to` must be after `from`", nil)
+		return
+	}
+
+	var phase *string
+	if params.Phase != nil {
+		v := string(*params.Phase)
+		phase = &v
+	}
+	var jobType *string
+	if params.JobType != nil {
+		v := string(*params.JobType)
+		jobType = &v
+	}
+
+	rows, err := s.Q.ListCalendarJobs(r.Context(), gen.ListCalendarJobsParams{
+		TenantID: tenantID,
+		FromDate: fromDate,
+		ToDate:   toDate,
+		Phase:    phase,
+		JobType:  jobType,
+	})
+	if err != nil {
+		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "Failed to load calendar jobs", nil)
+		return
+	}
+
+	jobs := make([]oapi.CalendarJobCard, 0, len(rows))
+	for _, row := range rows {
+		if row.ScheduledDate == nil {
+			continue
+		}
+		jobs = append(jobs, oapi.CalendarJobCard{
+			JobId:            row.JobID,
+			JobNumber:        row.JobNumber,
+			ScheduledDate:    dateOnly(*row.ScheduledDate),
+			PickupTime:       row.PickupTime,
+			CustomerName:     row.CustomerName,
+			OriginShort:      row.OriginShort,
+			DestinationShort: row.DestinationShort,
+			Status:           oapi.CalendarJobCardStatus(row.Status),
+			HasStorage:       row.HasStorage,
+			BalanceDueCents:  row.BalanceDueCents,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, oapi.CalendarResponse{
+		Jobs:      jobs,
+		RequestId: middleware.RequestIDFromContext(r.Context()),
+	})
+}
+
 func (s *Server) GetJobsJobId(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
 	_, tenantID, _, ok := requireActorIDs(w, r)
 	if !ok {
@@ -513,18 +574,37 @@ func (s *Server) PatchJobsJobId(w http.ResponseWriter, r *http.Request, jobId op
 	}
 
 	jobID := updated.ID
-	_ = s.Audit.Log(r.Context(), audit.Entry{
-		TenantID:   tenantID,
-		UserID:     &userID,
-		Action:     "job.update_schedule",
-		EntityType: "job",
-		EntityID:   &jobID,
-		RequestID:  middleware.RequestIDFromContext(r.Context()),
-		Metadata: map[string]any{
-			"from": compactJobSchedule(before),
-			"to":   compactJobSchedule(updated),
-		},
-	})
+	scheduleChanged := !timePtrEqual(before.ScheduledDate, updated.ScheduledDate) || !strPtrEqual(before.PickupTime, updated.PickupTime)
+	phaseChanged := before.Status != updated.Status
+
+	if scheduleChanged {
+		_ = s.Audit.Log(r.Context(), audit.Entry{
+			TenantID:   tenantID,
+			UserID:     &userID,
+			Action:     "job.schedule_update",
+			EntityType: "job",
+			EntityID:   &jobID,
+			RequestID:  middleware.RequestIDFromContext(r.Context()),
+			Metadata: map[string]any{
+				"before": compactJobSchedule(before),
+				"after":  compactJobSchedule(updated),
+			},
+		})
+	}
+	if phaseChanged {
+		_ = s.Audit.Log(r.Context(), audit.Entry{
+			TenantID:   tenantID,
+			UserID:     &userID,
+			Action:     "job.phase_update",
+			EntityType: "job",
+			EntityID:   &jobID,
+			RequestID:  middleware.RequestIDFromContext(r.Context()),
+			Metadata: map[string]any{
+				"before": before.Status,
+				"after":  updated.Status,
+			},
+		})
+	}
 
 	s.writeJobResponse(w, r, tenantID, updated.ID, http.StatusOK)
 }
@@ -761,7 +841,7 @@ func estimateChangedFields(before, after gen.Estimate) []string {
 }
 
 func compactJobSchedule(job gen.Job) map[string]any {
-	out := map[string]any{"status": job.Status}
+	out := map[string]any{}
 	if job.ScheduledDate != nil {
 		out["scheduledDate"] = job.ScheduledDate.Format("2006-01-02")
 	}
@@ -867,6 +947,13 @@ func int64PtrEqual(a, b *int64) bool {
 		return a == nil && b == nil
 	}
 	return *a == *b
+}
+
+func timePtrEqual(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
 }
 
 func ptr[T any](v T) *T {

@@ -205,6 +205,135 @@ func TestEstimateConvertIdempotencyAndSingleJob(t *testing.T) {
 	}
 }
 
+func TestCalendarTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-calendar-a", "Tenant Calendar A", "calendar-a@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-calendar-b", "Tenant Calendar B", "calendar-b@example.com", "Password123!", []string{"calendar.read"})
+
+	cookieA := login(t, env.router, "calendar-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "calendar-tenant-isolation")
+	_ = convertEstimateToJob(t, env.router, cookieA, csrfA, estimateID, "calendar-tenant-isolation-convert")
+
+	cookieB := login(t, env.router, "calendar-b@example.com", "Password123!")
+	status, body := request(t, env.router, http.MethodGet, "/api/calendar?from=2026-03-01&to=2026-04-01", nil, cookieB, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for calendar read, got %d (%s)", status, string(body))
+	}
+
+	jobs := parseCalendarJobs(t, body)
+	if len(jobs) != 0 {
+		t.Fatalf("expected cross-tenant calendar list to be empty, got %d jobs", len(jobs))
+	}
+}
+
+func TestCalendarRBACReadDenied(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-calendar-read", "Tenant Calendar Read", "calendar-read-admin@example.com", "Password123!", []string{"calendar.read"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "calendar-read-denied@example.com", "Password123!", []string{"jobs.read"})
+
+	limitedCookie := login(t, env.router, "calendar-read-denied@example.com", "Password123!")
+	status, _ := request(t, env.router, http.MethodGet, "/api/calendar?from=2026-03-01&to=2026-04-01", nil, limitedCookie, "")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing calendar.read, got %d", status)
+	}
+}
+
+func TestCalendarRBACWriteDeniedOnJobPatch(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-calendar-write", "Tenant Calendar Write", "calendar-write-admin@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantID, "calendar-write-denied@example.com", "Password123!", []string{"jobs.read", "jobs.write"})
+
+	adminCookie := login(t, env.router, "calendar-write-admin@example.com", "Password123!")
+	adminCsrf := csrfToken(t, env.router, adminCookie)
+	estimateID := createEstimate(t, env.router, adminCookie, adminCsrf, "calendar-write-denied-estimate")
+	jobID := convertEstimateToJob(t, env.router, adminCookie, adminCsrf, estimateID, "calendar-write-denied-convert")
+
+	limitedCookie := login(t, env.router, "calendar-write-denied@example.com", "Password123!")
+	limitedCsrf := csrfToken(t, env.router, limitedCookie)
+	payload, _ := json.Marshal(map[string]any{
+		"scheduledDate": "2026-03-25",
+	})
+	status, _ := request(t, env.router, http.MethodPatch, "/api/jobs/"+jobID, payload, limitedCookie, limitedCsrf)
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for missing calendar.write, got %d", status)
+	}
+}
+
+func TestCalendarListIncludesJobInRange(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-calendar-range", "Tenant Calendar Range", "calendar-range@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read"})
+
+	cookie := login(t, env.router, "calendar-range@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "calendar-range-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookie, csrf, estimateID, "calendar-range-convert")
+
+	status, body := request(t, env.router, http.MethodGet, "/api/calendar?from=2026-03-01&to=2026-04-01", nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for calendar list, got %d (%s)", status, string(body))
+	}
+	jobs := parseCalendarJobs(t, body)
+	if len(jobs) != 1 {
+		t.Fatalf("expected exactly 1 job in range, got %d", len(jobs))
+	}
+	if jobs[0].JobID != jobID {
+		t.Fatalf("expected job %s in calendar, got %s", jobID, jobs[0].JobID)
+	}
+	if jobs[0].ScheduledDate != "2026-03-20" {
+		t.Fatalf("expected scheduledDate 2026-03-20, got %s", jobs[0].ScheduledDate)
+	}
+}
+
+func TestCalendarScheduleUpdateCreatesAuditLog(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-calendar-audit", "Tenant Calendar Audit", "calendar-audit@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read"})
+
+	cookie := login(t, env.router, "calendar-audit@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "calendar-audit-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookie, csrf, estimateID, "calendar-audit-convert")
+
+	payload, _ := json.Marshal(map[string]any{
+		"scheduledDate": "2026-03-26",
+		"pickupTime":    "13:45",
+	})
+	status, body := request(t, env.router, http.MethodPatch, "/api/jobs/"+jobID, payload, cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 job patch, got %d (%s)", status, string(body))
+	}
+
+	jobUUID, err := uuid.Parse(jobID)
+	if err != nil {
+		t.Fatalf("parse job id: %v", err)
+	}
+
+	var count int
+	if err := env.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM audit_log
+		WHERE tenant_id = $1
+		  AND entity_type = 'job'
+		  AND entity_id = $2
+		  AND action = 'job.schedule_update'
+	`, tenantID, jobUUID).Scan(&count); err != nil {
+		t.Fatalf("count job.schedule_update audit rows: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 job.schedule_update audit row, got %d", count)
+	}
+}
+
 type testEnv struct {
 	pool   *pgxpool.Pool
 	router http.Handler
@@ -434,6 +563,31 @@ func parseJobID(t *testing.T, body []byte) string {
 		t.Fatalf("job id missing")
 	}
 	return payload.Job.ID
+}
+
+type calendarJobPayload struct {
+	JobID         string `json:"jobId"`
+	ScheduledDate string `json:"scheduledDate"`
+}
+
+func parseCalendarJobs(t *testing.T, body []byte) []calendarJobPayload {
+	t.Helper()
+	var payload struct {
+		Jobs []calendarJobPayload `json:"jobs"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse calendar body: %v", err)
+	}
+	return payload.Jobs
+}
+
+func convertEstimateToJob(t *testing.T, router http.Handler, session *http.Cookie, csrf, estimateID, idempotencyKey string) string {
+	t.Helper()
+	status, body := request(t, router, http.MethodPost, "/api/estimates/"+estimateID+"/convert", nil, session, csrf, withIdempotency(idempotencyKey))
+	if status != http.StatusCreated && status != http.StatusOK {
+		t.Fatalf("convert estimate expected 201/200, got %d (%s)", status, string(body))
+	}
+	return parseJobID(t, body)
 }
 
 func withIdempotency(key string) map[string]string {

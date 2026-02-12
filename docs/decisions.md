@@ -36,3 +36,16 @@
     - `estimates.idempotency_key` with unique index `(tenant_id, idempotency_key)` when present.
     - `jobs.convert_idempotency_key` with unique index `(tenant_id, convert_idempotency_key)` when present.
   - Store `estimates.idempotency_payload_hash` to detect key reuse with different payloads and return `409 IDEMPOTENCY_KEY_REUSE`.
+
+## Phase 3
+- Permission model for calendar flows:
+  - Introduce explicit `calendar.read` and `calendar.write` permissions.
+  - `GET /calendar` requires `calendar.read`.
+  - `PATCH /jobs/{jobId}` schedule/phase edits now require `calendar.write` (instead of `jobs.write`) so calendar access can be controlled independently.
+  - Seed role mapping:
+    - `admin`: all existing permissions plus `calendar.read` and `calendar.write`.
+    - `ops`: `calendar.read`, `calendar.write`, `jobs.read`, `jobs.write`, and `estimates.read`.
+    - `sales`: `calendar.read`, `jobs.read`, and existing estimate permissions.
+- Canonical lifecycle field:
+  - Keep `jobs.status` as canonical; no separate `phase` DB column was added.
+  - Calendar filters expose `phase` as API-level naming, mapped directly to `jobs.status` values.

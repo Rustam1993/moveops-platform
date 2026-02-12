@@ -9,6 +9,14 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for CalendarJobCardStatus.
+const (
+	CalendarJobCardStatusBooked    CalendarJobCardStatus = "booked"
+	CalendarJobCardStatusCancelled CalendarJobCardStatus = "cancelled"
+	CalendarJobCardStatusCompleted CalendarJobCardStatus = "completed"
+	CalendarJobCardStatusScheduled CalendarJobCardStatus = "scheduled"
+)
+
 // Defines values for EstimateStatus.
 const (
 	Converted EstimateStatus = "converted"
@@ -31,10 +39,48 @@ const (
 	UpdateJobRequestStatusScheduled UpdateJobRequestStatus = "scheduled"
 )
 
+// Defines values for GetCalendarParamsPhase.
+const (
+	GetCalendarParamsPhaseBooked    GetCalendarParamsPhase = "booked"
+	GetCalendarParamsPhaseCancelled GetCalendarParamsPhase = "cancelled"
+	GetCalendarParamsPhaseCompleted GetCalendarParamsPhase = "completed"
+	GetCalendarParamsPhaseScheduled GetCalendarParamsPhase = "scheduled"
+)
+
+// Defines values for GetCalendarParamsJobType.
+const (
+	Local        GetCalendarParamsJobType = "local"
+	LongDistance GetCalendarParamsJobType = "long_distance"
+	Other        GetCalendarParamsJobType = "other"
+)
+
 // AuthSessionResponse defines model for AuthSessionResponse.
 type AuthSessionResponse struct {
 	Tenant Tenant `json:"tenant"`
 	User   User   `json:"user"`
+}
+
+// CalendarJobCard defines model for CalendarJobCard.
+type CalendarJobCard struct {
+	BalanceDueCents  int64                 `json:"balanceDueCents"`
+	CustomerName     string                `json:"customerName"`
+	DestinationShort string                `json:"destinationShort"`
+	HasStorage       bool                  `json:"hasStorage"`
+	JobId            openapi_types.UUID    `json:"jobId"`
+	JobNumber        string                `json:"jobNumber"`
+	OriginShort      string                `json:"originShort"`
+	PickupTime       *string               `json:"pickupTime,omitempty"`
+	ScheduledDate    openapi_types.Date    `json:"scheduledDate"`
+	Status           CalendarJobCardStatus `json:"status"`
+}
+
+// CalendarJobCardStatus defines model for CalendarJobCard.Status.
+type CalendarJobCardStatus string
+
+// CalendarResponse defines model for CalendarResponse.
+type CalendarResponse struct {
+	Jobs      []CalendarJobCard `json:"jobs"`
+	RequestId string            `json:"requestId"`
 }
 
 // CreateCustomerRequest defines model for CreateCustomerRequest.
@@ -217,6 +263,26 @@ type IdempotencyKey = string
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse = ErrorEnvelope
+
+// GetCalendarParams defines parameters for GetCalendar.
+type GetCalendarParams struct {
+	From    openapi_types.Date        `form:"from" json:"from"`
+	To      openapi_types.Date        `form:"to" json:"to"`
+	Phase   *GetCalendarParamsPhase   `form:"phase,omitempty" json:"phase,omitempty"`
+	JobType *GetCalendarParamsJobType `form:"jobType,omitempty" json:"jobType,omitempty"`
+
+	// UserId Placeholder filter; accepted but currently ignored.
+	UserId *openapi_types.UUID `form:"userId,omitempty" json:"userId,omitempty"`
+
+	// DepartmentId Placeholder filter; accepted but currently ignored.
+	DepartmentId *openapi_types.UUID `form:"departmentId,omitempty" json:"departmentId,omitempty"`
+}
+
+// GetCalendarParamsPhase defines parameters for GetCalendar.
+type GetCalendarParamsPhase string
+
+// GetCalendarParamsJobType defines parameters for GetCalendar.
+type GetCalendarParamsJobType string
 
 // PostEstimatesParams defines parameters for PostEstimates.
 type PostEstimatesParams struct {
