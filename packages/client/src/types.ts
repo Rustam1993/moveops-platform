@@ -266,6 +266,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/imports/dry-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload import file and run dry-run validation */
+        post: operations["PostImportsDryRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload import file and apply upserts */
+        post: operations["PostImportsApply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{importRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get import run status and summary */
+        get: operations["GetImportsImportRunId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{importRunId}/errors.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download import run errors CSV */
+        get: operations["GetImportsImportRunIdErrorsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{importRunId}/report.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download full import report JSON */
+        get: operations["GetImportsImportRunIdReportJson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/templates/{template}.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download canonical import template CSV */
+        get: operations["GetImportsTemplatesTemplateCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/customers.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export tenant customers CSV */
+        get: operations["GetExportsCustomersCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/estimates.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export tenant estimates CSV */
+        get: operations["GetExportsEstimatesCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/jobs.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export tenant jobs CSV */
+        get: operations["GetExportsJobsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/storage.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export tenant storage CSV */
+        get: operations["GetExportsStorageCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -599,6 +769,86 @@ export interface components {
         };
         StorageRecordResponse: {
             storage: components["schemas"]["StorageRecord"];
+            requestId: string;
+        };
+        /** @enum {string} */
+        ImportMode: "dry_run" | "apply";
+        /** @enum {string} */
+        ImportSource: "granot" | "generic";
+        /** @enum {string} */
+        ImportRunStatus: "completed" | "failed";
+        /** @enum {string} */
+        ImportTemplate: "customers" | "estimates" | "jobs" | "storage" | "combined";
+        ImportUploadRequest: {
+            /**
+             * Format: binary
+             * @description CSV file. XLSX is currently rejected with XLSX_NOT_SUPPORTED.
+             */
+            file: string;
+            options: components["schemas"]["ImportOptions"];
+        };
+        ImportOptions: {
+            source: components["schemas"]["ImportSource"];
+            /** @default true */
+            hasHeader: boolean;
+            mapping: {
+                [key: string]: string | number;
+            };
+        };
+        ImportResultCounts: {
+            created: number;
+            updated: number;
+            skipped: number;
+            error: number;
+        };
+        ImportSummary: {
+            rowsTotal: number;
+            rowsValid: number;
+            rowsError: number;
+            customer: components["schemas"]["ImportResultCounts"];
+            estimate: components["schemas"]["ImportResultCounts"];
+            job: components["schemas"]["ImportResultCounts"];
+            storageRecord: components["schemas"]["ImportResultCounts"];
+        };
+        ImportRowMessage: {
+            rowNumber: number;
+            /** @enum {string} */
+            severity: "error" | "warn" | "info";
+            /** @enum {string} */
+            entityType: "customer" | "estimate" | "job" | "storage_record";
+            /** @enum {string} */
+            result: "created" | "updated" | "skipped" | "error";
+            idempotencyKey: string;
+            field?: string;
+            message: string;
+            rawValue?: string;
+            /** Format: uuid */
+            targetEntityId?: string;
+        };
+        ImportDownloadUrls: {
+            errorsCsv: string;
+            reportJson: string;
+        };
+        ImportRunResponse: {
+            /** Format: uuid */
+            importRunId: string;
+            mode: components["schemas"]["ImportMode"];
+            status: components["schemas"]["ImportRunStatus"];
+            source: components["schemas"]["ImportSource"];
+            filename: string;
+            summary: components["schemas"]["ImportSummary"];
+            topWarnings: components["schemas"]["ImportRowMessage"][];
+            topErrors: components["schemas"]["ImportRowMessage"][];
+            downloadUrls: components["schemas"]["ImportDownloadUrls"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+            requestId: string;
+        };
+        ImportRunReportResponse: {
+            run: components["schemas"]["ImportRunResponse"];
+            rows: components["schemas"]["ImportRowMessage"][];
             requestId: string;
         };
         ErrorEnvelope: {
@@ -1092,6 +1342,232 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageRecordResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostImportsDryRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImportUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Dry-run completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostImportsApply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImportUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Import apply completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetImportsImportRunId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importRunId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import run details */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetImportsImportRunIdErrorsCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importRunId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV of row-level warnings and errors */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetImportsImportRunIdReportJson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                importRunId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full report payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunReportResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetImportsTemplatesTemplateCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template: components["schemas"]["ImportTemplate"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Template CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetExportsCustomersCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customers CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetExportsEstimatesCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimates CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetExportsJobsCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Jobs CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetExportsStorageCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Storage CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             default: components["responses"]["ErrorResponse"];

@@ -69,6 +69,46 @@ type Estimate struct {
 	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
+type ImportIdempotency struct {
+	TenantID       uuid.UUID `json:"tenant_id"`
+	EntityType     string    `json:"entity_type"`
+	IdempotencyKey string    `json:"idempotency_key"`
+	TargetEntityID uuid.UUID `json:"target_entity_id"`
+	FirstSeenAt    time.Time `json:"first_seen_at"`
+	LastSeenAt     time.Time `json:"last_seen_at"`
+}
+
+type ImportRowResult struct {
+	ID             uuid.UUID  `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	ImportRunID    uuid.UUID  `json:"import_run_id"`
+	RowNumber      int32      `json:"row_number"`
+	Severity       string     `json:"severity"`
+	EntityType     string     `json:"entity_type"`
+	IdempotencyKey string     `json:"idempotency_key"`
+	Result         string     `json:"result"`
+	Field          *string    `json:"field"`
+	Message        string     `json:"message"`
+	RawValue       *string    `json:"raw_value"`
+	TargetEntityID *uuid.UUID `json:"target_entity_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type ImportRun struct {
+	ID              uuid.UUID  `json:"id"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	CreatedByUserID *uuid.UUID `json:"created_by_user_id"`
+	Source          string     `json:"source"`
+	Filename        string     `json:"filename"`
+	FileSha256      string     `json:"file_sha256"`
+	Mode            string     `json:"mode"`
+	Status          string     `json:"status"`
+	MappingJson     []byte     `json:"mapping_json"`
+	SummaryJson     []byte     `json:"summary_json"`
+	CreatedAt       time.Time  `json:"created_at"`
+	CompletedAt     *time.Time `json:"completed_at"`
+}
+
 type Job struct {
 	ID                    uuid.UUID  `json:"id"`
 	TenantID              uuid.UUID  `json:"tenant_id"`

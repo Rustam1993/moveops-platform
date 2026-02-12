@@ -4,8 +4,10 @@
 package oapi
 
 import (
+	"encoding/json"
 	"time"
 
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -21,6 +23,56 @@ const (
 const (
 	Converted EstimateStatus = "converted"
 	Draft     EstimateStatus = "draft"
+)
+
+// Defines values for ImportMode.
+const (
+	Apply  ImportMode = "apply"
+	DryRun ImportMode = "dry_run"
+)
+
+// Defines values for ImportRowMessageEntityType.
+const (
+	ImportRowMessageEntityTypeCustomer      ImportRowMessageEntityType = "customer"
+	ImportRowMessageEntityTypeEstimate      ImportRowMessageEntityType = "estimate"
+	ImportRowMessageEntityTypeJob           ImportRowMessageEntityType = "job"
+	ImportRowMessageEntityTypeStorageRecord ImportRowMessageEntityType = "storage_record"
+)
+
+// Defines values for ImportRowMessageResult.
+const (
+	ImportRowMessageResultCreated ImportRowMessageResult = "created"
+	ImportRowMessageResultError   ImportRowMessageResult = "error"
+	ImportRowMessageResultSkipped ImportRowMessageResult = "skipped"
+	ImportRowMessageResultUpdated ImportRowMessageResult = "updated"
+)
+
+// Defines values for ImportRowMessageSeverity.
+const (
+	ImportRowMessageSeverityError ImportRowMessageSeverity = "error"
+	ImportRowMessageSeverityInfo  ImportRowMessageSeverity = "info"
+	ImportRowMessageSeverityWarn  ImportRowMessageSeverity = "warn"
+)
+
+// Defines values for ImportRunStatus.
+const (
+	ImportRunStatusCompleted ImportRunStatus = "completed"
+	ImportRunStatusFailed    ImportRunStatus = "failed"
+)
+
+// Defines values for ImportSource.
+const (
+	Generic ImportSource = "generic"
+	Granot  ImportSource = "granot"
+)
+
+// Defines values for ImportTemplate.
+const (
+	Combined  ImportTemplate = "combined"
+	Customers ImportTemplate = "customers"
+	Estimates ImportTemplate = "estimates"
+	Jobs      ImportTemplate = "jobs"
+	Storage   ImportTemplate = "storage"
 )
 
 // Defines values for JobStatus.
@@ -55,10 +107,10 @@ const (
 
 // Defines values for GetCalendarParamsPhase.
 const (
-	GetCalendarParamsPhaseBooked    GetCalendarParamsPhase = "booked"
-	GetCalendarParamsPhaseCancelled GetCalendarParamsPhase = "cancelled"
-	GetCalendarParamsPhaseCompleted GetCalendarParamsPhase = "completed"
-	GetCalendarParamsPhaseScheduled GetCalendarParamsPhase = "scheduled"
+	Booked    GetCalendarParamsPhase = "booked"
+	Cancelled GetCalendarParamsPhase = "cancelled"
+	Completed GetCalendarParamsPhase = "completed"
+	Scheduled GetCalendarParamsPhase = "scheduled"
 )
 
 // Defines values for GetCalendarParamsJobType.
@@ -211,6 +263,113 @@ type EstimateStatus string
 type EstimateResponse struct {
 	Estimate  Estimate `json:"estimate"`
 	RequestId string   `json:"requestId"`
+}
+
+// ImportDownloadUrls defines model for ImportDownloadUrls.
+type ImportDownloadUrls struct {
+	ErrorsCsv  string `json:"errorsCsv"`
+	ReportJson string `json:"reportJson"`
+}
+
+// ImportMode defines model for ImportMode.
+type ImportMode string
+
+// ImportOptions defines model for ImportOptions.
+type ImportOptions struct {
+	HasHeader *bool                                                 `json:"hasHeader,omitempty"`
+	Mapping   map[string]ImportOptions_Mapping_AdditionalProperties `json:"mapping"`
+	Source    ImportSource                                          `json:"source"`
+}
+
+// ImportOptionsMapping0 defines model for .
+type ImportOptionsMapping0 = string
+
+// ImportOptionsMapping1 defines model for .
+type ImportOptionsMapping1 = int
+
+// ImportOptions_Mapping_AdditionalProperties defines model for ImportOptions.mapping.AdditionalProperties.
+type ImportOptions_Mapping_AdditionalProperties struct {
+	union json.RawMessage
+}
+
+// ImportResultCounts defines model for ImportResultCounts.
+type ImportResultCounts struct {
+	Created int `json:"created"`
+	Error   int `json:"error"`
+	Skipped int `json:"skipped"`
+	Updated int `json:"updated"`
+}
+
+// ImportRowMessage defines model for ImportRowMessage.
+type ImportRowMessage struct {
+	EntityType     ImportRowMessageEntityType `json:"entityType"`
+	Field          *string                    `json:"field,omitempty"`
+	IdempotencyKey string                     `json:"idempotencyKey"`
+	Message        string                     `json:"message"`
+	RawValue       *string                    `json:"rawValue,omitempty"`
+	Result         ImportRowMessageResult     `json:"result"`
+	RowNumber      int                        `json:"rowNumber"`
+	Severity       ImportRowMessageSeverity   `json:"severity"`
+	TargetEntityId *openapi_types.UUID        `json:"targetEntityId,omitempty"`
+}
+
+// ImportRowMessageEntityType defines model for ImportRowMessage.EntityType.
+type ImportRowMessageEntityType string
+
+// ImportRowMessageResult defines model for ImportRowMessage.Result.
+type ImportRowMessageResult string
+
+// ImportRowMessageSeverity defines model for ImportRowMessage.Severity.
+type ImportRowMessageSeverity string
+
+// ImportRunReportResponse defines model for ImportRunReportResponse.
+type ImportRunReportResponse struct {
+	RequestId string             `json:"requestId"`
+	Rows      []ImportRowMessage `json:"rows"`
+	Run       ImportRunResponse  `json:"run"`
+}
+
+// ImportRunResponse defines model for ImportRunResponse.
+type ImportRunResponse struct {
+	CompletedAt  *time.Time         `json:"completedAt,omitempty"`
+	CreatedAt    time.Time          `json:"createdAt"`
+	DownloadUrls ImportDownloadUrls `json:"downloadUrls"`
+	Filename     string             `json:"filename"`
+	ImportRunId  openapi_types.UUID `json:"importRunId"`
+	Mode         ImportMode         `json:"mode"`
+	RequestId    string             `json:"requestId"`
+	Source       ImportSource       `json:"source"`
+	Status       ImportRunStatus    `json:"status"`
+	Summary      ImportSummary      `json:"summary"`
+	TopErrors    []ImportRowMessage `json:"topErrors"`
+	TopWarnings  []ImportRowMessage `json:"topWarnings"`
+}
+
+// ImportRunStatus defines model for ImportRunStatus.
+type ImportRunStatus string
+
+// ImportSource defines model for ImportSource.
+type ImportSource string
+
+// ImportSummary defines model for ImportSummary.
+type ImportSummary struct {
+	Customer      ImportResultCounts `json:"customer"`
+	Estimate      ImportResultCounts `json:"estimate"`
+	Job           ImportResultCounts `json:"job"`
+	RowsError     int                `json:"rowsError"`
+	RowsTotal     int                `json:"rowsTotal"`
+	RowsValid     int                `json:"rowsValid"`
+	StorageRecord ImportResultCounts `json:"storageRecord"`
+}
+
+// ImportTemplate defines model for ImportTemplate.
+type ImportTemplate string
+
+// ImportUploadRequest defines model for ImportUploadRequest.
+type ImportUploadRequest struct {
+	// File CSV file. XLSX is currently rejected with XLSX_NOT_SUPPORTED.
+	File    openapi_types.File `json:"file"`
+	Options ImportOptions      `json:"options"`
 }
 
 // Job defines model for Job.
@@ -450,6 +609,12 @@ type PostEstimatesJSONRequestBody = CreateEstimateRequest
 // PatchEstimatesEstimateIdJSONRequestBody defines body for PatchEstimatesEstimateId for application/json ContentType.
 type PatchEstimatesEstimateIdJSONRequestBody = UpdateEstimateRequest
 
+// PostImportsApplyMultipartRequestBody defines body for PostImportsApply for multipart/form-data ContentType.
+type PostImportsApplyMultipartRequestBody = ImportUploadRequest
+
+// PostImportsDryRunMultipartRequestBody defines body for PostImportsDryRun for multipart/form-data ContentType.
+type PostImportsDryRunMultipartRequestBody = ImportUploadRequest
+
 // PatchJobsJobIdJSONRequestBody defines body for PatchJobsJobId for application/json ContentType.
 type PatchJobsJobIdJSONRequestBody = UpdateJobRequest
 
@@ -458,3 +623,65 @@ type PostJobsJobIdStorageJSONRequestBody = CreateStorageRecordRequest
 
 // PutStorageStorageRecordIdJSONRequestBody defines body for PutStorageStorageRecordId for application/json ContentType.
 type PutStorageStorageRecordIdJSONRequestBody = UpdateStorageRecordRequest
+
+// AsImportOptionsMapping0 returns the union data inside the ImportOptions_Mapping_AdditionalProperties as a ImportOptionsMapping0
+func (t ImportOptions_Mapping_AdditionalProperties) AsImportOptionsMapping0() (ImportOptionsMapping0, error) {
+	var body ImportOptionsMapping0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImportOptionsMapping0 overwrites any union data inside the ImportOptions_Mapping_AdditionalProperties as the provided ImportOptionsMapping0
+func (t *ImportOptions_Mapping_AdditionalProperties) FromImportOptionsMapping0(v ImportOptionsMapping0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImportOptionsMapping0 performs a merge with any union data inside the ImportOptions_Mapping_AdditionalProperties, using the provided ImportOptionsMapping0
+func (t *ImportOptions_Mapping_AdditionalProperties) MergeImportOptionsMapping0(v ImportOptionsMapping0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsImportOptionsMapping1 returns the union data inside the ImportOptions_Mapping_AdditionalProperties as a ImportOptionsMapping1
+func (t ImportOptions_Mapping_AdditionalProperties) AsImportOptionsMapping1() (ImportOptionsMapping1, error) {
+	var body ImportOptionsMapping1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromImportOptionsMapping1 overwrites any union data inside the ImportOptions_Mapping_AdditionalProperties as the provided ImportOptionsMapping1
+func (t *ImportOptions_Mapping_AdditionalProperties) FromImportOptionsMapping1(v ImportOptionsMapping1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeImportOptionsMapping1 performs a merge with any union data inside the ImportOptions_Mapping_AdditionalProperties, using the provided ImportOptionsMapping1
+func (t *ImportOptions_Mapping_AdditionalProperties) MergeImportOptionsMapping1(v ImportOptionsMapping1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ImportOptions_Mapping_AdditionalProperties) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ImportOptions_Mapping_AdditionalProperties) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}

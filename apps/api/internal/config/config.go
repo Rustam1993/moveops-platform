@@ -19,6 +19,8 @@ type Config struct {
 	CSRFEnforce        bool
 	CORSAllowedOrigins []string
 	Env                string
+	ImportMaxFileBytes int64
+	ImportMaxRows      int
 }
 
 func Load() (Config, error) {
@@ -35,7 +37,9 @@ func Load() (Config, error) {
 			"http://localhost:3000",
 			"http://127.0.0.1:3000",
 		}),
-		Env: getEnv("APP_ENV", "dev"),
+		Env:                getEnv("APP_ENV", "dev"),
+		ImportMaxFileBytes: int64(getEnvInt("IMPORT_MAX_FILE_MB", 15)) * 1024 * 1024,
+		ImportMaxRows:      getEnvInt("IMPORT_MAX_ROWS", 5000),
 	}
 
 	if cfg.DatabaseURL == "" {

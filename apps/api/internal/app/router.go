@@ -64,6 +64,8 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 	authMW := middleware.AuthMiddleware{Queries: q, CookieName: cfg.SessionCookieName}
 	loginLimiter := middleware.NewLoginRateLimiter(10, time.Minute)
+	importRateLimiter := middleware.NewIPRateLimiter(8, time.Minute)
+	exportRateLimiter := middleware.NewIPRateLimiter(30, time.Minute)
 
 	api.Group(func(public chi.Router) {
 		public.With(loginLimiter.Middleware).Post("/auth/login", h.PostAuthLogin)
@@ -297,6 +299,81 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 			}
 			h.PutStorageStorageRecordId(w, r, openapi_types.UUID(storageRecordID))
 		})
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequirePermission(q, "imports.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+			middleware.LimitBodyBytes(cfg.ImportMaxFileBytes),
+		).Post("/imports/dry-run", h.PostImportsDryRun)
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequirePermission(q, "imports.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+			middleware.LimitBodyBytes(cfg.ImportMaxFileBytes),
+		).Post("/imports/apply", h.PostImportsApply)
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequirePermission(q, "imports.read"),
+		).Get("/imports/{importRunId}", func(w http.ResponseWriter, r *http.Request) {
+			importRunID, ok := parseUUIDParam(w, r, chi.URLParam(r, "importRunId"), "invalid_import_run_id", "Import run id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetImportsImportRunId(w, r, openapi_types.UUID(importRunID))
+		})
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequirePermission(q, "imports.read"),
+		).Get("/imports/{importRunId}/errors.csv", func(w http.ResponseWriter, r *http.Request) {
+			importRunID, ok := parseUUIDParam(w, r, chi.URLParam(r, "importRunId"), "invalid_import_run_id", "Import run id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetImportsImportRunIdErrorsCsv(w, r, openapi_types.UUID(importRunID))
+		})
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequirePermission(q, "imports.read"),
+		).Get("/imports/{importRunId}/report.json", func(w http.ResponseWriter, r *http.Request) {
+			importRunID, ok := parseUUIDParam(w, r, chi.URLParam(r, "importRunId"), "invalid_import_run_id", "Import run id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetImportsImportRunIdReportJson(w, r, openapi_types.UUID(importRunID))
+		})
+
+		protected.With(
+			importRateLimiter.Middleware("Too many import requests"),
+			middleware.RequireAnyPermission(q, "imports.read", "exports.read"),
+		).Get("/imports/templates/{template}.csv", func(w http.ResponseWriter, r *http.Request) {
+			template := oapi.ImportTemplate(strings.TrimSpace(chi.URLParam(r, "template")))
+			h.GetImportsTemplatesTemplateCsv(w, r, template)
+		})
+
+		protected.With(
+			exportRateLimiter.Middleware("Too many export requests"),
+			middleware.RequirePermission(q, "exports.read"),
+		).Get("/exports/customers.csv", h.GetExportsCustomersCsv)
+
+		protected.With(
+			exportRateLimiter.Middleware("Too many export requests"),
+			middleware.RequirePermission(q, "exports.read"),
+		).Get("/exports/estimates.csv", h.GetExportsEstimatesCsv)
+
+		protected.With(
+			exportRateLimiter.Middleware("Too many export requests"),
+			middleware.RequirePermission(q, "exports.read"),
+		).Get("/exports/jobs.csv", h.GetExportsJobsCsv)
+
+		protected.With(
+			exportRateLimiter.Middleware("Too many export requests"),
+			middleware.RequirePermission(q, "exports.read"),
+		).Get("/exports/storage.csv", h.GetExportsStorageCsv)
 	})
 
 	r.Mount("/api", api)
