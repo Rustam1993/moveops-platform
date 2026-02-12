@@ -31,6 +31,20 @@ const (
 	JobStatusScheduled JobStatus = "scheduled"
 )
 
+// Defines values for StorageListItemStatus.
+const (
+	StorageListItemStatusInStorage StorageListItemStatus = "in_storage"
+	StorageListItemStatusOut       StorageListItemStatus = "out"
+	StorageListItemStatusSit       StorageListItemStatus = "sit"
+)
+
+// Defines values for StorageStatus.
+const (
+	StorageStatusInStorage StorageStatus = "in_storage"
+	StorageStatusOut       StorageStatus = "out"
+	StorageStatusSit       StorageStatus = "sit"
+)
+
 // Defines values for UpdateJobRequestStatus.
 const (
 	UpdateJobRequestStatusBooked    UpdateJobRequestStatus = "booked"
@@ -113,6 +127,27 @@ type CreateEstimateRequest struct {
 	PickupTime              *string             `json:"pickupTime,omitempty"`
 	PrimaryPhone            string              `json:"primaryPhone"`
 	SecondaryPhone          *string             `json:"secondaryPhone,omitempty"`
+}
+
+// CreateStorageRecordRequest defines model for CreateStorageRecordRequest.
+type CreateStorageRecordRequest struct {
+	DateIn              *openapi_types.Date `json:"dateIn,omitempty"`
+	DateOut             *openapi_types.Date `json:"dateOut,omitempty"`
+	Facility            string              `json:"facility"`
+	Items               *int                `json:"items,omitempty"`
+	LastPaymentAt       *time.Time          `json:"lastPaymentAt,omitempty"`
+	LocationLabel       *string             `json:"locationLabel,omitempty"`
+	LotNumber           *string             `json:"lotNumber,omitempty"`
+	MonthlyRateCents    *int64              `json:"monthlyRateCents,omitempty"`
+	MoveBalanceCents    *int64              `json:"moveBalanceCents,omitempty"`
+	NextBillDate        *openapi_types.Date `json:"nextBillDate,omitempty"`
+	Notes               *string             `json:"notes,omitempty"`
+	OversizeItems       *int                `json:"oversizeItems,omitempty"`
+	Pads                *int                `json:"pads,omitempty"`
+	Status              *StorageStatus      `json:"status,omitempty"`
+	StorageBalanceCents *int64              `json:"storageBalanceCents,omitempty"`
+	Vaults              *int                `json:"vaults,omitempty"`
+	Volume              *int                `json:"volume,omitempty"`
 }
 
 // Customer defines model for Customer.
@@ -210,6 +245,81 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// StorageListItem defines model for StorageListItem.
+type StorageListItem struct {
+	CustomerName        string                 `json:"customerName"`
+	DateIn              *openapi_types.Date    `json:"dateIn"`
+	DateOut             *openapi_types.Date    `json:"dateOut"`
+	Facility            string                 `json:"facility"`
+	FromShort           string                 `json:"fromShort"`
+	Items               int                    `json:"items"`
+	JobId               openapi_types.UUID     `json:"jobId"`
+	JobNumber           string                 `json:"jobNumber"`
+	LocationLabel       *string                `json:"locationLabel"`
+	LotNumber           *string                `json:"lotNumber"`
+	MonthlyRateCents    *int64                 `json:"monthlyRateCents"`
+	MoveBalanceCents    int64                  `json:"moveBalanceCents"`
+	MoveType            *string                `json:"moveType"`
+	NextBillDate        *openapi_types.Date    `json:"nextBillDate"`
+	OversizeItems       int                    `json:"oversizeItems"`
+	Pads                int                    `json:"pads"`
+	Status              *StorageListItemStatus `json:"status"`
+	StorageBalanceCents int64                  `json:"storageBalanceCents"`
+	StorageRecordId     *openapi_types.UUID    `json:"storageRecordId"`
+	ToShort             string                 `json:"toShort"`
+	Vaults              int                    `json:"vaults"`
+	Volume              int                    `json:"volume"`
+}
+
+// StorageListItemStatus defines model for StorageListItem.Status.
+type StorageListItemStatus string
+
+// StorageListResponse defines model for StorageListResponse.
+type StorageListResponse struct {
+	Items      []StorageListItem `json:"items"`
+	NextCursor *string           `json:"nextCursor"`
+	RequestId  string            `json:"requestId"`
+}
+
+// StorageRecord defines model for StorageRecord.
+type StorageRecord struct {
+	CreatedAt           time.Time           `json:"createdAt"`
+	CustomerName        string              `json:"customerName"`
+	DateIn              *openapi_types.Date `json:"dateIn,omitempty"`
+	DateOut             *openapi_types.Date `json:"dateOut,omitempty"`
+	Facility            string              `json:"facility"`
+	FromShort           string              `json:"fromShort"`
+	Id                  openapi_types.UUID  `json:"id"`
+	Items               int                 `json:"items"`
+	JobId               openapi_types.UUID  `json:"jobId"`
+	JobNumber           string              `json:"jobNumber"`
+	LastPaymentAt       *time.Time          `json:"lastPaymentAt,omitempty"`
+	LocationLabel       *string             `json:"locationLabel,omitempty"`
+	LotNumber           *string             `json:"lotNumber,omitempty"`
+	MonthlyRateCents    *int64              `json:"monthlyRateCents,omitempty"`
+	MoveBalanceCents    int64               `json:"moveBalanceCents"`
+	MoveType            *string             `json:"moveType,omitempty"`
+	NextBillDate        *openapi_types.Date `json:"nextBillDate,omitempty"`
+	Notes               *string             `json:"notes,omitempty"`
+	OversizeItems       int                 `json:"oversizeItems"`
+	Pads                int                 `json:"pads"`
+	Status              StorageStatus       `json:"status"`
+	StorageBalanceCents int64               `json:"storageBalanceCents"`
+	ToShort             string              `json:"toShort"`
+	UpdatedAt           time.Time           `json:"updatedAt"`
+	Vaults              int                 `json:"vaults"`
+	Volume              int                 `json:"volume"`
+}
+
+// StorageRecordResponse defines model for StorageRecordResponse.
+type StorageRecordResponse struct {
+	RequestId string        `json:"requestId"`
+	Storage   StorageRecord `json:"storage"`
+}
+
+// StorageStatus defines model for StorageStatus.
+type StorageStatus string
+
 // Tenant defines model for Tenant.
 type Tenant struct {
 	Id   openapi_types.UUID `json:"id"`
@@ -250,6 +360,27 @@ type UpdateJobRequest struct {
 
 // UpdateJobRequestStatus defines model for UpdateJobRequest.Status.
 type UpdateJobRequestStatus string
+
+// UpdateStorageRecordRequest defines model for UpdateStorageRecordRequest.
+type UpdateStorageRecordRequest struct {
+	DateIn              *openapi_types.Date `json:"dateIn,omitempty"`
+	DateOut             *openapi_types.Date `json:"dateOut,omitempty"`
+	Facility            string              `json:"facility"`
+	Items               int                 `json:"items"`
+	LastPaymentAt       *time.Time          `json:"lastPaymentAt,omitempty"`
+	LocationLabel       *string             `json:"locationLabel,omitempty"`
+	LotNumber           *string             `json:"lotNumber,omitempty"`
+	MonthlyRateCents    *int64              `json:"monthlyRateCents,omitempty"`
+	MoveBalanceCents    int64               `json:"moveBalanceCents"`
+	NextBillDate        *openapi_types.Date `json:"nextBillDate,omitempty"`
+	Notes               *string             `json:"notes,omitempty"`
+	OversizeItems       int                 `json:"oversizeItems"`
+	Pads                int                 `json:"pads"`
+	Status              StorageStatus       `json:"status"`
+	StorageBalanceCents int64               `json:"storageBalanceCents"`
+	Vaults              int                 `json:"vaults"`
+	Volume              int                 `json:"volume"`
+}
 
 // User defines model for User.
 type User struct {
@@ -294,6 +425,19 @@ type PostEstimatesEstimateIdConvertParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// GetStorageParams defines parameters for GetStorage.
+type GetStorageParams struct {
+	Facility      string         `form:"facility" json:"facility"`
+	Q             *string        `form:"q,omitempty" json:"q,omitempty"`
+	Status        *StorageStatus `form:"status,omitempty" json:"status,omitempty"`
+	HasDateOut    *bool          `form:"hasDateOut,omitempty" json:"hasDateOut,omitempty"`
+	BalanceDue    *bool          `form:"balanceDue,omitempty" json:"balanceDue,omitempty"`
+	PastDueDays   *int           `form:"pastDueDays,omitempty" json:"pastDueDays,omitempty"`
+	HasContainers *bool          `form:"hasContainers,omitempty" json:"hasContainers,omitempty"`
+	Limit         *int           `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string        `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest
 
@@ -308,3 +452,9 @@ type PatchEstimatesEstimateIdJSONRequestBody = UpdateEstimateRequest
 
 // PatchJobsJobIdJSONRequestBody defines body for PatchJobsJobId for application/json ContentType.
 type PatchJobsJobIdJSONRequestBody = UpdateJobRequest
+
+// PostJobsJobIdStorageJSONRequestBody defines body for PostJobsJobIdStorage for application/json ContentType.
+type PostJobsJobIdStorageJSONRequestBody = CreateStorageRecordRequest
+
+// PutStorageStorageRecordIdJSONRequestBody defines body for PutStorageStorageRecordId for application/json ContentType.
+type PutStorageStorageRecordIdJSONRequestBody = UpdateStorageRecordRequest

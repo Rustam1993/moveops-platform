@@ -408,6 +408,123 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 	return i, err
 }
 
+const createStorageRecord = `-- name: CreateStorageRecord :one
+INSERT INTO storage_record (
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes
+) VALUES (
+  $1,
+  $2,
+  $3,
+  COALESCE($4::text, 'in_storage'),
+  $5::date,
+  $6::date,
+  $7::date,
+  $8,
+  $9,
+  COALESCE($10::int, 0),
+  COALESCE($11::int, 0),
+  COALESCE($12::int, 0),
+  COALESCE($13::int, 0),
+  COALESCE($14::int, 0),
+  $15::bigint,
+  COALESCE($16::bigint, 0),
+  COALESCE($17::bigint, 0),
+  $18::timestamptz,
+  $19
+)
+RETURNING id, tenant_id, job_id, facility, status, date_in, date_out, next_bill_date, lot_number, location_label, vaults, pads, items, oversize_items, volume, monthly_rate_cents, storage_balance_cents, move_balance_cents, last_payment_at, notes, created_at, updated_at
+`
+
+type CreateStorageRecordParams struct {
+	TenantID            uuid.UUID  `json:"tenant_id"`
+	JobID               uuid.UUID  `json:"job_id"`
+	Facility            string     `json:"facility"`
+	Status              *string    `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              *int32     `json:"vaults"`
+	Pads                *int32     `json:"pads"`
+	Items               *int32     `json:"items"`
+	OversizeItems       *int32     `json:"oversize_items"`
+	Volume              *int32     `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents *int64     `json:"storage_balance_cents"`
+	MoveBalanceCents    *int64     `json:"move_balance_cents"`
+	LastPaymentAt       *time.Time `json:"last_payment_at"`
+	Notes               *string    `json:"notes"`
+}
+
+func (q *Queries) CreateStorageRecord(ctx context.Context, arg CreateStorageRecordParams) (StorageRecord, error) {
+	row := q.db.QueryRow(ctx, createStorageRecord,
+		arg.TenantID,
+		arg.JobID,
+		arg.Facility,
+		arg.Status,
+		arg.DateIn,
+		arg.DateOut,
+		arg.NextBillDate,
+		arg.LotNumber,
+		arg.LocationLabel,
+		arg.Vaults,
+		arg.Pads,
+		arg.Items,
+		arg.OversizeItems,
+		arg.Volume,
+		arg.MonthlyRateCents,
+		arg.StorageBalanceCents,
+		arg.MoveBalanceCents,
+		arg.LastPaymentAt,
+		arg.Notes,
+	)
+	var i StorageRecord
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobID,
+		&i.Facility,
+		&i.Status,
+		&i.DateIn,
+		&i.DateOut,
+		&i.NextBillDate,
+		&i.LotNumber,
+		&i.LocationLabel,
+		&i.Vaults,
+		&i.Pads,
+		&i.Items,
+		&i.OversizeItems,
+		&i.Volume,
+		&i.MonthlyRateCents,
+		&i.StorageBalanceCents,
+		&i.MoveBalanceCents,
+		&i.LastPaymentAt,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCustomerByID = `-- name: GetCustomerByID :one
 SELECT
   id,
@@ -1001,6 +1118,259 @@ func (q *Queries) GetSessionPrincipalByTokenHash(ctx context.Context, tokenHash 
 	return i, err
 }
 
+const getStorageRecordByID = `-- name: GetStorageRecordByID :one
+SELECT
+  id,
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes,
+  created_at,
+  updated_at
+FROM storage_record
+WHERE id = $1
+  AND tenant_id = $2
+`
+
+type GetStorageRecordByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetStorageRecordByID(ctx context.Context, arg GetStorageRecordByIDParams) (StorageRecord, error) {
+	row := q.db.QueryRow(ctx, getStorageRecordByID, arg.ID, arg.TenantID)
+	var i StorageRecord
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobID,
+		&i.Facility,
+		&i.Status,
+		&i.DateIn,
+		&i.DateOut,
+		&i.NextBillDate,
+		&i.LotNumber,
+		&i.LocationLabel,
+		&i.Vaults,
+		&i.Pads,
+		&i.Items,
+		&i.OversizeItems,
+		&i.Volume,
+		&i.MonthlyRateCents,
+		&i.StorageBalanceCents,
+		&i.MoveBalanceCents,
+		&i.LastPaymentAt,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getStorageRecordByJobID = `-- name: GetStorageRecordByJobID :one
+SELECT
+  id,
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes,
+  created_at,
+  updated_at
+FROM storage_record
+WHERE job_id = $1
+  AND tenant_id = $2
+`
+
+type GetStorageRecordByJobIDParams struct {
+	JobID    uuid.UUID `json:"job_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetStorageRecordByJobID(ctx context.Context, arg GetStorageRecordByJobIDParams) (StorageRecord, error) {
+	row := q.db.QueryRow(ctx, getStorageRecordByJobID, arg.JobID, arg.TenantID)
+	var i StorageRecord
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobID,
+		&i.Facility,
+		&i.Status,
+		&i.DateIn,
+		&i.DateOut,
+		&i.NextBillDate,
+		&i.LotNumber,
+		&i.LocationLabel,
+		&i.Vaults,
+		&i.Pads,
+		&i.Items,
+		&i.OversizeItems,
+		&i.Volume,
+		&i.MonthlyRateCents,
+		&i.StorageBalanceCents,
+		&i.MoveBalanceCents,
+		&i.LastPaymentAt,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getStorageRecordDetailByID = `-- name: GetStorageRecordDetailByID :one
+SELECT
+  sr.id,
+  sr.tenant_id,
+  sr.job_id,
+  j.job_number,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, j.job_number))::text AS customer_name,
+  CASE
+    WHEN e.id IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+    WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+    ELSE 'long_distance'
+  END::text AS move_type,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS from_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS to_short,
+  sr.facility,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  sr.vaults,
+  sr.pads,
+  sr.items,
+  sr.oversize_items,
+  sr.volume,
+  sr.monthly_rate_cents,
+  sr.storage_balance_cents,
+  sr.move_balance_cents,
+  sr.last_payment_at,
+  sr.notes,
+  sr.created_at,
+  sr.updated_at
+FROM storage_record sr
+JOIN jobs j
+  ON j.id = sr.job_id
+  AND j.tenant_id = sr.tenant_id
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE sr.id = $1
+  AND sr.tenant_id = $2
+`
+
+type GetStorageRecordDetailByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+type GetStorageRecordDetailByIDRow struct {
+	ID                  uuid.UUID  `json:"id"`
+	TenantID            uuid.UUID  `json:"tenant_id"`
+	JobID               uuid.UUID  `json:"job_id"`
+	JobNumber           string     `json:"job_number"`
+	CustomerName        string     `json:"customer_name"`
+	MoveType            string     `json:"move_type"`
+	FromShort           string     `json:"from_short"`
+	ToShort             string     `json:"to_short"`
+	Facility            string     `json:"facility"`
+	Status              string     `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              int32      `json:"vaults"`
+	Pads                int32      `json:"pads"`
+	Items               int32      `json:"items"`
+	OversizeItems       int32      `json:"oversize_items"`
+	Volume              int32      `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents int64      `json:"storage_balance_cents"`
+	MoveBalanceCents    int64      `json:"move_balance_cents"`
+	LastPaymentAt       *time.Time `json:"last_payment_at"`
+	Notes               *string    `json:"notes"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
+func (q *Queries) GetStorageRecordDetailByID(ctx context.Context, arg GetStorageRecordDetailByIDParams) (GetStorageRecordDetailByIDRow, error) {
+	row := q.db.QueryRow(ctx, getStorageRecordDetailByID, arg.ID, arg.TenantID)
+	var i GetStorageRecordDetailByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobID,
+		&i.JobNumber,
+		&i.CustomerName,
+		&i.MoveType,
+		&i.FromShort,
+		&i.ToShort,
+		&i.Facility,
+		&i.Status,
+		&i.DateIn,
+		&i.DateOut,
+		&i.NextBillDate,
+		&i.LotNumber,
+		&i.LocationLabel,
+		&i.Vaults,
+		&i.Pads,
+		&i.Items,
+		&i.OversizeItems,
+		&i.Volume,
+		&i.MonthlyRateCents,
+		&i.StorageBalanceCents,
+		&i.MoveBalanceCents,
+		&i.LastPaymentAt,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const incrementTenantCounter = `-- name: IncrementTenantCounter :one
 INSERT INTO tenant_counters (tenant_id, counter_type, next_value)
 VALUES ($1, $2, 2)
@@ -1158,6 +1528,210 @@ func (q *Queries) ListCalendarJobs(ctx context.Context, arg ListCalendarJobsPara
 			&i.Status,
 			&i.HasStorage,
 			&i.BalanceDueCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStorageRows = `-- name: ListStorageRows :many
+SELECT
+  sr.id AS storage_record_id,
+  j.id AS job_id,
+  j.job_number,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, j.job_number))::text AS customer_name,
+  CASE
+    WHEN e.id IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+    WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+    ELSE 'long_distance'
+  END::text AS move_type,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS from_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS to_short,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  COALESCE(sr.vaults, 0)::int AS vaults,
+  COALESCE(sr.pads, 0)::int AS pads,
+  COALESCE(sr.items, 0)::int AS items,
+  COALESCE(sr.oversize_items, 0)::int AS oversize_items,
+  COALESCE(sr.volume, 0)::int AS volume,
+  sr.monthly_rate_cents,
+  COALESCE(sr.storage_balance_cents, 0)::bigint AS storage_balance_cents,
+  COALESCE(sr.move_balance_cents, 0)::bigint AS move_balance_cents,
+  COALESCE(sr.facility, $1)::text AS facility,
+  COALESCE(sr.updated_at, j.updated_at) AS sort_updated_at,
+  j.id AS sort_job_id
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+LEFT JOIN storage_record sr
+  ON sr.job_id = j.id
+  AND sr.tenant_id = j.tenant_id
+WHERE j.tenant_id = $2
+  AND (sr.id IS NULL OR sr.facility = $1)
+  AND (
+    $3::text IS NULL
+    OR j.job_number ILIKE '%' || $3::text || '%'
+    OR COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, '')) ILIKE '%' || $3::text || '%'
+  )
+  AND ($4::text IS NULL OR sr.status = $4::text)
+  AND (
+    $5::boolean IS NULL
+    OR ($5::boolean = TRUE AND sr.date_out IS NOT NULL)
+    OR ($5::boolean = FALSE AND sr.date_out IS NULL)
+  )
+  AND (
+    $6::boolean IS NULL
+    OR ($6::boolean = TRUE AND COALESCE(sr.storage_balance_cents, 0) > 0)
+    OR ($6::boolean = FALSE AND COALESCE(sr.storage_balance_cents, 0) <= 0)
+  )
+  AND (
+    $7::boolean IS NULL
+    OR (
+      $7::boolean = TRUE
+      AND (
+        COALESCE(sr.vaults, 0) > 0
+        OR COALESCE(sr.pads, 0) > 0
+        OR COALESCE(sr.items, 0) > 0
+        OR COALESCE(sr.oversize_items, 0) > 0
+      )
+    )
+    OR (
+      $7::boolean = FALSE
+      AND COALESCE(sr.vaults, 0) = 0
+      AND COALESCE(sr.pads, 0) = 0
+      AND COALESCE(sr.items, 0) = 0
+      AND COALESCE(sr.oversize_items, 0) = 0
+    )
+  )
+  AND (
+    $8::int IS NULL
+    OR (
+      sr.last_payment_at IS NOT NULL
+      AND sr.last_payment_at <= NOW() - make_interval(days => $8::int)
+    )
+  )
+  AND (
+    $9::timestamptz IS NULL
+    OR (
+      COALESCE(sr.updated_at, j.updated_at) < $9::timestamptz
+      OR (
+        COALESCE(sr.updated_at, j.updated_at) = $9::timestamptz
+        AND j.id < $10::uuid
+      )
+    )
+  )
+ORDER BY COALESCE(sr.updated_at, j.updated_at) DESC, j.id DESC
+LIMIT $11
+`
+
+type ListStorageRowsParams struct {
+	Facility        string     `json:"facility"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	SearchQ         *string    `json:"search_q"`
+	Status          *string    `json:"status"`
+	HasDateOut      *bool      `json:"has_date_out"`
+	BalanceDue      *bool      `json:"balance_due"`
+	HasContainers   *bool      `json:"has_containers"`
+	PastDueDays     *int32     `json:"past_due_days"`
+	CursorUpdatedAt *time.Time `json:"cursor_updated_at"`
+	CursorJobID     *uuid.UUID `json:"cursor_job_id"`
+	LimitRows       int32      `json:"limit_rows"`
+}
+
+type ListStorageRowsRow struct {
+	StorageRecordID     *uuid.UUID `json:"storage_record_id"`
+	JobID               uuid.UUID  `json:"job_id"`
+	JobNumber           string     `json:"job_number"`
+	CustomerName        string     `json:"customer_name"`
+	MoveType            string     `json:"move_type"`
+	FromShort           string     `json:"from_short"`
+	ToShort             string     `json:"to_short"`
+	Status              *string    `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              int32      `json:"vaults"`
+	Pads                int32      `json:"pads"`
+	Items               int32      `json:"items"`
+	OversizeItems       int32      `json:"oversize_items"`
+	Volume              int32      `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents int64      `json:"storage_balance_cents"`
+	MoveBalanceCents    int64      `json:"move_balance_cents"`
+	Facility            string     `json:"facility"`
+	SortUpdatedAt       time.Time  `json:"sort_updated_at"`
+	SortJobID           uuid.UUID  `json:"sort_job_id"`
+}
+
+func (q *Queries) ListStorageRows(ctx context.Context, arg ListStorageRowsParams) ([]ListStorageRowsRow, error) {
+	rows, err := q.db.Query(ctx, listStorageRows,
+		arg.Facility,
+		arg.TenantID,
+		arg.SearchQ,
+		arg.Status,
+		arg.HasDateOut,
+		arg.BalanceDue,
+		arg.HasContainers,
+		arg.PastDueDays,
+		arg.CursorUpdatedAt,
+		arg.CursorJobID,
+		arg.LimitRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStorageRowsRow{}
+	for rows.Next() {
+		var i ListStorageRowsRow
+		if err := rows.Scan(
+			&i.StorageRecordID,
+			&i.JobID,
+			&i.JobNumber,
+			&i.CustomerName,
+			&i.MoveType,
+			&i.FromShort,
+			&i.ToShort,
+			&i.Status,
+			&i.DateIn,
+			&i.DateOut,
+			&i.NextBillDate,
+			&i.LotNumber,
+			&i.LocationLabel,
+			&i.Vaults,
+			&i.Pads,
+			&i.Items,
+			&i.OversizeItems,
+			&i.Volume,
+			&i.MonthlyRateCents,
+			&i.StorageBalanceCents,
+			&i.MoveBalanceCents,
+			&i.Facility,
+			&i.SortUpdatedAt,
+			&i.SortJobID,
 		); err != nil {
 			return nil, err
 		}
@@ -1509,6 +2083,104 @@ func (q *Queries) UpdateJobScheduleStatus(ctx context.Context, arg UpdateJobSche
 		&i.ConvertIdempotencyKey,
 		&i.CreatedBy,
 		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateStorageRecordByID = `-- name: UpdateStorageRecordByID :one
+UPDATE storage_record
+SET
+  facility = $1,
+  status = $2,
+  date_in = $3::date,
+  date_out = $4::date,
+  next_bill_date = $5::date,
+  lot_number = $6,
+  location_label = $7,
+  vaults = $8,
+  pads = $9,
+  items = $10,
+  oversize_items = $11,
+  volume = $12,
+  monthly_rate_cents = $13::bigint,
+  storage_balance_cents = $14,
+  move_balance_cents = $15,
+  last_payment_at = $16::timestamptz,
+  notes = $17,
+  updated_at = NOW()
+WHERE id = $18
+  AND tenant_id = $19
+RETURNING id, tenant_id, job_id, facility, status, date_in, date_out, next_bill_date, lot_number, location_label, vaults, pads, items, oversize_items, volume, monthly_rate_cents, storage_balance_cents, move_balance_cents, last_payment_at, notes, created_at, updated_at
+`
+
+type UpdateStorageRecordByIDParams struct {
+	Facility            string     `json:"facility"`
+	Status              string     `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              int32      `json:"vaults"`
+	Pads                int32      `json:"pads"`
+	Items               int32      `json:"items"`
+	OversizeItems       int32      `json:"oversize_items"`
+	Volume              int32      `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents int64      `json:"storage_balance_cents"`
+	MoveBalanceCents    int64      `json:"move_balance_cents"`
+	LastPaymentAt       *time.Time `json:"last_payment_at"`
+	Notes               *string    `json:"notes"`
+	ID                  uuid.UUID  `json:"id"`
+	TenantID            uuid.UUID  `json:"tenant_id"`
+}
+
+func (q *Queries) UpdateStorageRecordByID(ctx context.Context, arg UpdateStorageRecordByIDParams) (StorageRecord, error) {
+	row := q.db.QueryRow(ctx, updateStorageRecordByID,
+		arg.Facility,
+		arg.Status,
+		arg.DateIn,
+		arg.DateOut,
+		arg.NextBillDate,
+		arg.LotNumber,
+		arg.LocationLabel,
+		arg.Vaults,
+		arg.Pads,
+		arg.Items,
+		arg.OversizeItems,
+		arg.Volume,
+		arg.MonthlyRateCents,
+		arg.StorageBalanceCents,
+		arg.MoveBalanceCents,
+		arg.LastPaymentAt,
+		arg.Notes,
+		arg.ID,
+		arg.TenantID,
+	)
+	var i StorageRecord
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.JobID,
+		&i.Facility,
+		&i.Status,
+		&i.DateIn,
+		&i.DateOut,
+		&i.NextBillDate,
+		&i.LotNumber,
+		&i.LocationLabel,
+		&i.Vaults,
+		&i.Pads,
+		&i.Items,
+		&i.OversizeItems,
+		&i.Volume,
+		&i.MonthlyRateCents,
+		&i.StorageBalanceCents,
+		&i.MoveBalanceCents,
+		&i.LastPaymentAt,
+		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

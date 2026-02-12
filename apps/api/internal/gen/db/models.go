@@ -117,6 +117,31 @@ type Session struct {
 	RevokedAt  *time.Time `json:"revoked_at"`
 }
 
+type StorageRecord struct {
+	ID                  uuid.UUID  `json:"id"`
+	TenantID            uuid.UUID  `json:"tenant_id"`
+	JobID               uuid.UUID  `json:"job_id"`
+	Facility            string     `json:"facility"`
+	Status              string     `json:"status"`
+	DateIn              *time.Time `json:"date_in"`
+	DateOut             *time.Time `json:"date_out"`
+	NextBillDate        *time.Time `json:"next_bill_date"`
+	LotNumber           *string    `json:"lot_number"`
+	LocationLabel       *string    `json:"location_label"`
+	Vaults              int32      `json:"vaults"`
+	Pads                int32      `json:"pads"`
+	Items               int32      `json:"items"`
+	OversizeItems       int32      `json:"oversize_items"`
+	Volume              int32      `json:"volume"`
+	MonthlyRateCents    *int64     `json:"monthly_rate_cents"`
+	StorageBalanceCents int64      `json:"storage_balance_cents"`
+	MoveBalanceCents    int64      `json:"move_balance_cents"`
+	LastPaymentAt       *time.Time `json:"last_payment_at"`
+	Notes               *string    `json:"notes"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
 type Tenant struct {
 	ID        uuid.UUID `json:"id"`
 	Slug      string    `json:"slug"`

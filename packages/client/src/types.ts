@@ -214,6 +214,58 @@ export interface paths {
         patch: operations["PatchJobsJobId"];
         trace?: never;
     };
+    "/jobs/{jobId}/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a storage record for a job */
+        post: operations["PostJobsJobIdStorage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List storage rows for a facility */
+        get: operations["GetStorage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage/{storageRecordId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get storage record by id */
+        get: operations["GetStorageStorageRecordId"];
+        /** Replace editable storage record fields */
+        put: operations["PutStorageStorageRecordId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -412,6 +464,141 @@ export interface components {
         };
         JobResponse: {
             job: components["schemas"]["Job"];
+            requestId: string;
+        };
+        /** @enum {string} */
+        StorageStatus: "in_storage" | "sit" | "out";
+        CreateStorageRecordRequest: {
+            facility: string;
+            status?: components["schemas"]["StorageStatus"];
+            /** Format: date */
+            dateIn?: string;
+            /** Format: date */
+            dateOut?: string;
+            /** Format: date */
+            nextBillDate?: string;
+            lotNumber?: string;
+            locationLabel?: string;
+            vaults?: number;
+            pads?: number;
+            items?: number;
+            oversizeItems?: number;
+            volume?: number;
+            /** Format: int64 */
+            monthlyRateCents?: number;
+            /** Format: int64 */
+            storageBalanceCents?: number;
+            /** Format: int64 */
+            moveBalanceCents?: number;
+            /** Format: date-time */
+            lastPaymentAt?: string;
+            notes?: string;
+        };
+        UpdateStorageRecordRequest: {
+            facility: string;
+            status: components["schemas"]["StorageStatus"];
+            /** Format: date */
+            dateIn?: string;
+            /** Format: date */
+            dateOut?: string;
+            /** Format: date */
+            nextBillDate?: string;
+            lotNumber?: string;
+            locationLabel?: string;
+            vaults: number;
+            pads: number;
+            items: number;
+            oversizeItems: number;
+            volume: number;
+            /** Format: int64 */
+            monthlyRateCents?: number;
+            /** Format: int64 */
+            storageBalanceCents: number;
+            /** Format: int64 */
+            moveBalanceCents: number;
+            /** Format: date-time */
+            lastPaymentAt?: string;
+            notes?: string;
+        };
+        StorageListItem: {
+            /** Format: uuid */
+            storageRecordId?: string | null;
+            /** Format: uuid */
+            jobId: string;
+            jobNumber: string;
+            customerName: string;
+            moveType?: string | null;
+            fromShort: string;
+            toShort: string;
+            /** @enum {string|null} */
+            status?: "in_storage" | "sit" | "out" | null;
+            /** Format: date */
+            dateIn?: string | null;
+            /** Format: date */
+            dateOut?: string | null;
+            /** Format: date */
+            nextBillDate?: string | null;
+            lotNumber?: string | null;
+            locationLabel?: string | null;
+            vaults: number;
+            pads: number;
+            items: number;
+            oversizeItems: number;
+            volume: number;
+            /** Format: int64 */
+            monthlyRateCents?: number | null;
+            /** Format: int64 */
+            storageBalanceCents: number;
+            /** Format: int64 */
+            moveBalanceCents: number;
+            facility: string;
+        };
+        StorageListResponse: {
+            items: components["schemas"]["StorageListItem"][];
+            nextCursor?: string | null;
+            requestId: string;
+        };
+        StorageRecord: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            jobId: string;
+            jobNumber: string;
+            customerName: string;
+            moveType?: string;
+            fromShort: string;
+            toShort: string;
+            facility: string;
+            status: components["schemas"]["StorageStatus"];
+            /** Format: date */
+            dateIn?: string;
+            /** Format: date */
+            dateOut?: string;
+            /** Format: date */
+            nextBillDate?: string;
+            lotNumber?: string;
+            locationLabel?: string;
+            vaults: number;
+            pads: number;
+            items: number;
+            oversizeItems: number;
+            volume: number;
+            /** Format: int64 */
+            monthlyRateCents?: number;
+            /** Format: int64 */
+            storageBalanceCents: number;
+            /** Format: int64 */
+            moveBalanceCents: number;
+            /** Format: date-time */
+            lastPaymentAt?: string;
+            notes?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        StorageRecordResponse: {
+            storage: components["schemas"]["StorageRecord"];
             requestId: string;
         };
         ErrorEnvelope: {
@@ -797,6 +984,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostJobsJobIdStorage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStorageRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Storage record created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageRecordResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetStorage: {
+        parameters: {
+            query: {
+                facility: string;
+                q?: string;
+                status?: components["schemas"]["StorageStatus"];
+                hasDateOut?: boolean;
+                balanceDue?: boolean;
+                pastDueDays?: number;
+                hasContainers?: boolean;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Storage rows */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetStorageStorageRecordId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storageRecordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Storage record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageRecordResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutStorageStorageRecordId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storageRecordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStorageRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Storage record updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageRecordResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];

@@ -16,6 +16,7 @@ type Querier interface {
 	CreateEstimate(ctx context.Context, arg CreateEstimateParams) (Estimate, error)
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
+	CreateStorageRecord(ctx context.Context, arg CreateStorageRecordParams) (StorageRecord, error)
 	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
 	GetEstimateByID(ctx context.Context, arg GetEstimateByIDParams) (Estimate, error)
 	GetEstimateByIdempotencyKey(ctx context.Context, arg GetEstimateByIdempotencyKeyParams) (Estimate, error)
@@ -25,9 +26,13 @@ type Querier interface {
 	GetJobByID(ctx context.Context, arg GetJobByIDParams) (Job, error)
 	GetJobDetailByID(ctx context.Context, arg GetJobDetailByIDParams) (GetJobDetailByIDRow, error)
 	GetSessionPrincipalByTokenHash(ctx context.Context, tokenHash string) (GetSessionPrincipalByTokenHashRow, error)
+	GetStorageRecordByID(ctx context.Context, arg GetStorageRecordByIDParams) (StorageRecord, error)
+	GetStorageRecordByJobID(ctx context.Context, arg GetStorageRecordByJobIDParams) (StorageRecord, error)
+	GetStorageRecordDetailByID(ctx context.Context, arg GetStorageRecordDetailByIDParams) (GetStorageRecordDetailByIDRow, error)
 	IncrementTenantCounter(ctx context.Context, arg IncrementTenantCounterParams) (int64, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) error
 	ListCalendarJobs(ctx context.Context, arg ListCalendarJobsParams) ([]ListCalendarJobsRow, error)
+	ListStorageRows(ctx context.Context, arg ListStorageRowsParams) ([]ListStorageRowsRow, error)
 	ListUsersByEmail(ctx context.Context, email string) ([]ListUsersByEmailRow, error)
 	MarkEstimateConverted(ctx context.Context, arg MarkEstimateConvertedParams) (int64, error)
 	RevokeSessionByID(ctx context.Context, arg RevokeSessionByIDParams) (int64, error)
@@ -36,6 +41,7 @@ type Querier interface {
 	UpdateCustomerForEstimate(ctx context.Context, arg UpdateCustomerForEstimateParams) (Customer, error)
 	UpdateEstimate(ctx context.Context, arg UpdateEstimateParams) (Estimate, error)
 	UpdateJobScheduleStatus(ctx context.Context, arg UpdateJobScheduleStatusParams) (Job, error)
+	UpdateStorageRecordByID(ctx context.Context, arg UpdateStorageRecordByIDParams) (StorageRecord, error)
 	UserHasPermission(ctx context.Context, arg UserHasPermissionParams) (bool, error)
 }
 

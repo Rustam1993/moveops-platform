@@ -49,3 +49,18 @@
 - Canonical lifecycle field:
   - Keep `jobs.status` as canonical; no separate `phase` DB column was added.
   - Calendar filters expose `phase` as API-level naming, mapped directly to `jobs.status` values.
+
+## Phase 4
+- Storage endpoint style:
+  - `POST /jobs/{jobId}/storage` creates the single storage record for a job (0/1 model).
+  - `PUT /storage/{storageRecordId}` performs full editable-field updates for an existing record (no implicit upsert).
+  - `GET /storage/{storageRecordId}` returns the canonical drawer payload.
+- Storage list pagination cursor strategy:
+  - Keyset pagination ordered by `COALESCE(storage_record.updated_at, jobs.updated_at) DESC, jobs.id DESC`.
+  - Cursor is base64url-encoded `updatedAt|jobId` and returned as `nextCursor`.
+- Storage permission mapping:
+  - Added permissions: `storage.read`, `storage.write`.
+  - Seeded role mapping:
+    - `admin`: both `storage.read` and `storage.write`.
+    - `ops`: both `storage.read` and `storage.write`.
+    - `sales`: `storage.read` only.

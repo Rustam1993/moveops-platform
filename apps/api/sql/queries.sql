@@ -540,6 +540,290 @@ WHERE id = sqlc.arg(id)
   AND tenant_id = sqlc.arg(tenant_id)
 RETURNING *;
 
+-- name: GetStorageRecordByID :one
+SELECT
+  id,
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes,
+  created_at,
+  updated_at
+FROM storage_record
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: GetStorageRecordByJobID :one
+SELECT
+  id,
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes,
+  created_at,
+  updated_at
+FROM storage_record
+WHERE job_id = sqlc.arg(job_id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: CreateStorageRecord :one
+INSERT INTO storage_record (
+  tenant_id,
+  job_id,
+  facility,
+  status,
+  date_in,
+  date_out,
+  next_bill_date,
+  lot_number,
+  location_label,
+  vaults,
+  pads,
+  items,
+  oversize_items,
+  volume,
+  monthly_rate_cents,
+  storage_balance_cents,
+  move_balance_cents,
+  last_payment_at,
+  notes
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(job_id),
+  sqlc.arg(facility),
+  COALESCE(sqlc.narg(status)::text, 'in_storage'),
+  sqlc.narg(date_in)::date,
+  sqlc.narg(date_out)::date,
+  sqlc.narg(next_bill_date)::date,
+  sqlc.narg(lot_number),
+  sqlc.narg(location_label),
+  COALESCE(sqlc.narg(vaults)::int, 0),
+  COALESCE(sqlc.narg(pads)::int, 0),
+  COALESCE(sqlc.narg(items)::int, 0),
+  COALESCE(sqlc.narg(oversize_items)::int, 0),
+  COALESCE(sqlc.narg(volume)::int, 0),
+  sqlc.narg(monthly_rate_cents)::bigint,
+  COALESCE(sqlc.narg(storage_balance_cents)::bigint, 0),
+  COALESCE(sqlc.narg(move_balance_cents)::bigint, 0),
+  sqlc.narg(last_payment_at)::timestamptz,
+  sqlc.narg(notes)
+)
+RETURNING *;
+
+-- name: UpdateStorageRecordByID :one
+UPDATE storage_record
+SET
+  facility = sqlc.arg(facility),
+  status = sqlc.arg(status),
+  date_in = sqlc.narg(date_in)::date,
+  date_out = sqlc.narg(date_out)::date,
+  next_bill_date = sqlc.narg(next_bill_date)::date,
+  lot_number = sqlc.narg(lot_number),
+  location_label = sqlc.narg(location_label),
+  vaults = sqlc.arg(vaults),
+  pads = sqlc.arg(pads),
+  items = sqlc.arg(items),
+  oversize_items = sqlc.arg(oversize_items),
+  volume = sqlc.arg(volume),
+  monthly_rate_cents = sqlc.narg(monthly_rate_cents)::bigint,
+  storage_balance_cents = sqlc.arg(storage_balance_cents),
+  move_balance_cents = sqlc.arg(move_balance_cents),
+  last_payment_at = sqlc.narg(last_payment_at)::timestamptz,
+  notes = sqlc.narg(notes),
+  updated_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+RETURNING *;
+
+-- name: GetStorageRecordDetailByID :one
+SELECT
+  sr.id,
+  sr.tenant_id,
+  sr.job_id,
+  j.job_number,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, j.job_number))::text AS customer_name,
+  CASE
+    WHEN e.id IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+    WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+    ELSE 'long_distance'
+  END::text AS move_type,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS from_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS to_short,
+  sr.facility,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  sr.vaults,
+  sr.pads,
+  sr.items,
+  sr.oversize_items,
+  sr.volume,
+  sr.monthly_rate_cents,
+  sr.storage_balance_cents,
+  sr.move_balance_cents,
+  sr.last_payment_at,
+  sr.notes,
+  sr.created_at,
+  sr.updated_at
+FROM storage_record sr
+JOIN jobs j
+  ON j.id = sr.job_id
+  AND j.tenant_id = sr.tenant_id
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE sr.id = sqlc.arg(id)
+  AND sr.tenant_id = sqlc.arg(tenant_id);
+
+-- name: ListStorageRows :many
+SELECT
+  sr.id AS storage_record_id,
+  j.id AS job_id,
+  j.job_number,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, j.job_number))::text AS customer_name,
+  CASE
+    WHEN e.id IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+    WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+    WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+    ELSE 'long_distance'
+  END::text AS move_type,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS from_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS to_short,
+  sr.status,
+  sr.date_in,
+  sr.date_out,
+  sr.next_bill_date,
+  sr.lot_number,
+  sr.location_label,
+  COALESCE(sr.vaults, 0)::int AS vaults,
+  COALESCE(sr.pads, 0)::int AS pads,
+  COALESCE(sr.items, 0)::int AS items,
+  COALESCE(sr.oversize_items, 0)::int AS oversize_items,
+  COALESCE(sr.volume, 0)::int AS volume,
+  sr.monthly_rate_cents,
+  COALESCE(sr.storage_balance_cents, 0)::bigint AS storage_balance_cents,
+  COALESCE(sr.move_balance_cents, 0)::bigint AS move_balance_cents,
+  COALESCE(sr.facility, sqlc.arg(facility))::text AS facility,
+  COALESCE(sr.updated_at, j.updated_at) AS sort_updated_at,
+  j.id AS sort_job_id
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+LEFT JOIN storage_record sr
+  ON sr.job_id = j.id
+  AND sr.tenant_id = j.tenant_id
+WHERE j.tenant_id = sqlc.arg(tenant_id)
+  AND (sr.id IS NULL OR sr.facility = sqlc.arg(facility))
+  AND (
+    sqlc.narg(search_q)::text IS NULL
+    OR j.job_number ILIKE '%' || sqlc.narg(search_q)::text || '%'
+    OR COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), COALESCE(e.customer_name, '')) ILIKE '%' || sqlc.narg(search_q)::text || '%'
+  )
+  AND (sqlc.narg(status)::text IS NULL OR sr.status = sqlc.narg(status)::text)
+  AND (
+    sqlc.narg(has_date_out)::boolean IS NULL
+    OR (sqlc.narg(has_date_out)::boolean = TRUE AND sr.date_out IS NOT NULL)
+    OR (sqlc.narg(has_date_out)::boolean = FALSE AND sr.date_out IS NULL)
+  )
+  AND (
+    sqlc.narg(balance_due)::boolean IS NULL
+    OR (sqlc.narg(balance_due)::boolean = TRUE AND COALESCE(sr.storage_balance_cents, 0) > 0)
+    OR (sqlc.narg(balance_due)::boolean = FALSE AND COALESCE(sr.storage_balance_cents, 0) <= 0)
+  )
+  AND (
+    sqlc.narg(has_containers)::boolean IS NULL
+    OR (
+      sqlc.narg(has_containers)::boolean = TRUE
+      AND (
+        COALESCE(sr.vaults, 0) > 0
+        OR COALESCE(sr.pads, 0) > 0
+        OR COALESCE(sr.items, 0) > 0
+        OR COALESCE(sr.oversize_items, 0) > 0
+      )
+    )
+    OR (
+      sqlc.narg(has_containers)::boolean = FALSE
+      AND COALESCE(sr.vaults, 0) = 0
+      AND COALESCE(sr.pads, 0) = 0
+      AND COALESCE(sr.items, 0) = 0
+      AND COALESCE(sr.oversize_items, 0) = 0
+    )
+  )
+  AND (
+    sqlc.narg(past_due_days)::int IS NULL
+    OR (
+      sr.last_payment_at IS NOT NULL
+      AND sr.last_payment_at <= NOW() - make_interval(days => sqlc.narg(past_due_days)::int)
+    )
+  )
+  AND (
+    sqlc.narg(cursor_updated_at)::timestamptz IS NULL
+    OR (
+      COALESCE(sr.updated_at, j.updated_at) < sqlc.narg(cursor_updated_at)::timestamptz
+      OR (
+        COALESCE(sr.updated_at, j.updated_at) = sqlc.narg(cursor_updated_at)::timestamptz
+        AND j.id < sqlc.narg(cursor_job_id)::uuid
+      )
+    )
+  )
+ORDER BY COALESCE(sr.updated_at, j.updated_at) DESC, j.id DESC
+LIMIT sqlc.arg(limit_rows);
+
 -- name: InsertAuditLog :exec
 INSERT INTO audit_log (
   tenant_id,

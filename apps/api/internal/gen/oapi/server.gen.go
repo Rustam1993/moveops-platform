@@ -56,6 +56,18 @@ type ServerInterface interface {
 	// Update minimal job scheduling fields
 	// (PATCH /jobs/{jobId})
 	PatchJobsJobId(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
+	// Create a storage record for a job
+	// (POST /jobs/{jobId}/storage)
+	PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
+	// List storage rows for a facility
+	// (GET /storage)
+	GetStorage(w http.ResponseWriter, r *http.Request, params GetStorageParams)
+	// Get storage record by id
+	// (GET /storage/{storageRecordId})
+	GetStorageStorageRecordId(w http.ResponseWriter, r *http.Request, storageRecordId openapi_types.UUID)
+	// Replace editable storage record fields
+	// (PUT /storage/{storageRecordId})
+	PutStorageStorageRecordId(w http.ResponseWriter, r *http.Request, storageRecordId openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -143,6 +155,30 @@ func (_ Unimplemented) GetJobsJobId(w http.ResponseWriter, r *http.Request, jobI
 // Update minimal job scheduling fields
 // (PATCH /jobs/{jobId})
 func (_ Unimplemented) PatchJobsJobId(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a storage record for a job
+// (POST /jobs/{jobId}/storage)
+func (_ Unimplemented) PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List storage rows for a facility
+// (GET /storage)
+func (_ Unimplemented) GetStorage(w http.ResponseWriter, r *http.Request, params GetStorageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get storage record by id
+// (GET /storage/{storageRecordId})
+func (_ Unimplemented) GetStorageStorageRecordId(w http.ResponseWriter, r *http.Request, storageRecordId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace editable storage record fields
+// (PUT /storage/{storageRecordId})
+func (_ Unimplemented) PutStorageStorageRecordId(w http.ResponseWriter, r *http.Request, storageRecordId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -542,6 +578,179 @@ func (siw *ServerInterfaceWrapper) PatchJobsJobId(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// PostJobsJobIdStorage operation middleware
+func (siw *ServerInterfaceWrapper) PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "jobId" -------------
+	var jobId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "jobId", chi.URLParam(r, "jobId"), &jobId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "jobId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostJobsJobIdStorage(w, r, jobId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStorage operation middleware
+func (siw *ServerInterfaceWrapper) GetStorage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetStorageParams
+
+	// ------------- Required query parameter "facility" -------------
+
+	if paramValue := r.URL.Query().Get("facility"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "facility"})
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "facility", r.URL.Query(), &params.Facility)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "facility", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "q", r.URL.Query(), &params.Q)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "hasDateOut" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "hasDateOut", r.URL.Query(), &params.HasDateOut)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hasDateOut", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "balanceDue" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "balanceDue", r.URL.Query(), &params.BalanceDue)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "balanceDue", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pastDueDays" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pastDueDays", r.URL.Query(), &params.PastDueDays)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pastDueDays", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "hasContainers" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "hasContainers", r.URL.Query(), &params.HasContainers)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hasContainers", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", r.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStorage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStorageStorageRecordId operation middleware
+func (siw *ServerInterfaceWrapper) GetStorageStorageRecordId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "storageRecordId" -------------
+	var storageRecordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "storageRecordId", chi.URLParam(r, "storageRecordId"), &storageRecordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "storageRecordId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStorageStorageRecordId(w, r, storageRecordId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutStorageStorageRecordId operation middleware
+func (siw *ServerInterfaceWrapper) PutStorageStorageRecordId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "storageRecordId" -------------
+	var storageRecordId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "storageRecordId", chi.URLParam(r, "storageRecordId"), &storageRecordId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "storageRecordId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutStorageStorageRecordId(w, r, storageRecordId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -696,6 +905,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/jobs/{jobId}", wrapper.PatchJobsJobId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/jobs/{jobId}/storage", wrapper.PostJobsJobIdStorage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/storage", wrapper.GetStorage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/storage/{storageRecordId}", wrapper.GetStorageStorageRecordId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/storage/{storageRecordId}", wrapper.PutStorageStorageRecordId)
 	})
 
 	return r
