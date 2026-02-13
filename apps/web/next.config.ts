@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
+const apiURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+
+function apiOriginFromURL(value: string) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "http://localhost:8080";
+  }
+}
+
+const apiOrigin = apiOriginFromURL(apiURL);
 
 const cspDirectives = isProd
   ? [
@@ -13,7 +24,7 @@ const cspDirectives = isProd
       // Next.js runtime currently emits inline bootstrap scripts; keep this minimal exception.
       "script-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      `connect-src 'self' ${apiOrigin}`,
       "form-action 'self'",
     ]
   : [
@@ -25,7 +36,7 @@ const cspDirectives = isProd
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "font-src 'self' data:",
-      "connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 http://localhost:8080 http://127.0.0.1:8080 ws://localhost:3000 ws://127.0.0.1:3000 ws://localhost:8080 ws://127.0.0.1:8080",
+      `connect-src 'self' ${apiOrigin} http://localhost:3000 http://127.0.0.1:3000 http://localhost:8080 http://127.0.0.1:8080 ws://localhost:3000 ws://127.0.0.1:3000 ws://localhost:8080 ws://127.0.0.1:8080`,
       "form-action 'self'",
     ];
 

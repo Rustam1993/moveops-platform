@@ -16,12 +16,16 @@ test("MVP smoke: login -> estimate -> job -> calendar -> storage", async ({ page
   await page.goto("/login");
   await page.getByLabel("Email").fill("admin@local.moveops");
   await page.getByLabel("Password").fill("Admin12345!");
-  await Promise.all([
-    page.waitForURL("**/"),
-    page.getByRole("button", { name: "Sign in" }).click(),
-  ]);
+  const loginResponsePromise = page.waitForResponse((response) => {
+    return response.request().method() === "POST" && response.url().includes("/api/auth/login");
+  });
+  await page.getByRole("button", { name: "Sign in" }).click();
+  const loginResponse = await loginResponsePromise;
+  expect(loginResponse.ok()).toBeTruthy();
+  await page.waitForURL(/\/$/);
 
   await page.goto("/estimates/new");
+  await page.waitForURL(/\/estimates\/new$/);
   await expect(page.getByRole("heading", { name: "New Estimate" })).toBeVisible();
   await page.locator("#customerName").fill(customerName);
   await page.locator("#email").fill(email);
