@@ -1,6 +1,12 @@
 #!/bin/sh
 set -e
 
-migrate -dir /app/migrations
-seed
-api
+if [ "${MIGRATE_ON_START:-false}" = "true" ]; then
+  migrate -dir /app/migrations
+fi
+
+if [ "${SEED_ON_START:-false}" = "true" ]; then
+  seed
+fi
+
+exec api

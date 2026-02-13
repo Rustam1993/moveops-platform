@@ -98,7 +98,7 @@
   - `Referrer-Policy: strict-origin-when-cross-origin`
   - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()`
   - API CSP: `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`
-  - HSTS enabled only when `APP_ENV=prod`: `max-age=31536000; includeSubDomains`.
+  - HSTS enabled only when `APP_ENV=prod` or `APP_ENV=production`: `max-age=31536000; includeSubDomains`.
 - Web CSP decision:
   - Production CSP is strict baseline with `default-src 'self'`, `frame-ancestors 'none'`, and blocked plugin/object sources.
   - `style-src 'unsafe-inline'` is allowed for Tailwind runtime styles.
@@ -111,3 +111,20 @@
 - Tenant isolation response policy:
   - Same-tenant permission failures return `403`.
   - Cross-tenant entity access returns `404` to avoid existence disclosure.
+
+## Phase 7
+- IaC tool:
+  - Use OpenTofu as the Terraform-compatible engine for Azure IaC.
+  - Remote state uses existing Storage Account backend (`moveopsstate1993/tfstate`, key `azure/mvp.tfstate`) with Azure AD + OIDC auth.
+- Container Apps ingress:
+  - `web` is external ingress (public).
+  - `api` is internal ingress only (not publicly reachable).
+- API access strategy:
+  - Browser calls to the API are proxied through the web app (`NEXT_PUBLIC_API_URL=/api`).
+  - Web server proxies to `API_INTERNAL_URL` inside the Container Apps environment boundary.
+- Migrations strategy:
+  - Database migrations are executed via a Container Apps Job (`moveops-db-migrate`) triggered by the deploy workflow.
+  - API startup does not perform migrations in production (`MIGRATE_ON_START=false`).
+- ACR posture:
+  - ACR is pre-existing and not created by IaC.
+  - ACR RBAC is not managed by IaC; Container Apps managed identities must be granted `AcrPull` as a one-time ops step.

@@ -1,0 +1,36 @@
+name: Build and Push (ACR)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name moveacr
+
+      - name: Build and push API
+        run: |
+          docker build -f apps/api/Dockerfile -t moveacr.azurecr.io/moveops/api:${GITHUB_SHA} .
+          docker push moveacr.azurecr.io/moveops/api:${GITHUB_SHA}
+
+      - name: Build and push Web
+        run: |
+          docker build -f apps/web/Dockerfile -t moveacr.azurecr.io/moveops/web:${GITHUB_SHA} .
+          docker push moveacr.azurecr.io/moveops/web:${GITHUB_SHA}

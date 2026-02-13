@@ -23,6 +23,8 @@ services:
       APP_ENV: dev
       API_ADDR: :8080
       DATABASE_URL: postgres://moveops:moveops@db:5432/moveops?sslmode=disable
+      MIGRATE_ON_START: "true"
+      SEED_ON_START: "true"
       SESSION_COOKIE_NAME: mo_sess
       SESSION_TTL_HOURS: "12"
       COOKIE_SECURE: "false"

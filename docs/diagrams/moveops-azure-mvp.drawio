@@ -1,0 +1,112 @@
+<mxfile host="app.diagrams.net" modified="2026-02-13T00:00:00.000Z" agent="Codex" version="24.8.6" type="device">
+  <diagram id="moveops-azure-mvp" name="Azure MVP">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Trust boundaries -->
+        <mxCell id="b_public" value="Public Internet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff7ed;strokeColor=#fb923c;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="1120" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_aca" value="Azure Container Apps Environment (eastus)\nTrust boundary: internal environment network" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eff6ff;strokeColor=#60a5fa;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="170" width="1120" height="420" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_db" value="Data Store Boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ecfdf5;strokeColor=#34d399;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="20" y="610" width="1120" height="190" as="geometry" />
+        </mxCell>
+
+        <!-- Users -->
+        <mxCell id="users" value="Users\n(browsers)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="60" y="55" width="140" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Web app -->
+        <mxCell id="web" value="Web (Container App)\nExternal ingress (HTTPS)\n- CSP + security headers\n- Cookie session flags (HttpOnly/Secure/SameSite)\n- Proxies browser API calls" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2563eb;" vertex="1" parent="1">
+          <mxGeometry x="260" y="240" width="320" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- API app -->
+        <mxCell id="api" value="API (Container App)\nInternal ingress only\n- RBAC + tenant scoping\n- CSRF enforcement\n- OpenAPI request validation\n- Rate limiting + audit logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2563eb;" vertex="1" parent="1">
+          <mxGeometry x="660" y="240" width="360" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- Migrate job -->
+        <mxCell id="job" value="DB Migrate Job (Container Apps Job)\n- Runs goose up using API image\n- Triggered by deploy workflow\n- Uses DATABASE_URL secret" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2563eb;" vertex="1" parent="1">
+          <mxGeometry x="260" y="430" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Postgres -->
+        <mxCell id="pg" value="Postgres Flexible Server\n- TLS required\n- Firewall: allow Azure services (MVP) + optional explicit IP ranges\n- Backups/retention" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#059669;" vertex="1" parent="1">
+          <mxGeometry x="260" y="655" width="360" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- Log analytics -->
+        <mxCell id="logs" value="Log Analytics\n- Web/API logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0f766e;" vertex="1" parent="1">
+          <mxGeometry x="660" y="655" width="240" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- GitHub + ACR -->
+        <mxCell id="gh" value="GitHub Actions\n- OIDC auth (no long-lived secrets)\n- CI checks + scans\n- Triggers migrations job" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="720" y="55" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="acr" value="Existing ACR\nmoveacr.azurecr.io\n(not managed by IaC)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="960" y="55" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="state" value="OpenTofu State Backend\nStorage: moveopsstate1993/tfstate\nkey: azure/mvp.tfstate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="720" y="430" width="420" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Flows -->
+        <mxCell id="e_users_web" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="users" target="web">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_web_api" value="Internal HTTP\n(proxy)" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="web" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_api_pg" value="TLS" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="api" target="pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_job_pg" value="TLS" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="job" target="pg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_api_logs" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="api" target="logs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_web_logs" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="web" target="logs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_gh_acr" value="docker push\n(api/web images)" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="gh" target="acr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_gh_state" value="tofu init/apply" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="gh" target="state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_acr_web" value="AcrPull\n(managed identity)" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="acr" target="web">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_acr_api" value="AcrPull\n(managed identity)" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="acr" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_gh_job" value="start + wait" style="endArrow=block;html=1;strokeColor=#111827;" edge="1" parent="1" source="gh" target="job">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
