@@ -46,7 +46,7 @@ test("MVP smoke: login -> estimate -> job -> calendar -> storage", async ({ page
     page.getByRole("button", { name: "Convert to job" }).click(),
   ]);
 
-  const headingText = await page.getByRole("heading", { name: /Job / }).innerText();
+  const headingText = await page.getByRole("heading", { name: /^Job J-/ }).first().innerText();
   const jobNumber = headingText.replace("Job ", "").trim();
   expect(jobNumber).toMatch(/^J-/);
 
