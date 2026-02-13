@@ -1,0 +1,11 @@
+# No secrets in this file. Provide secret variables via environment / CI (TF_VAR_*).
+
+api_image = "moveacr.azurecr.io/moveops/api:<tag>"
+web_image = "moveacr.azurecr.io/moveops/web:<tag>"
+
+pg_db_name = "moveops"
+
+# db_allow_azure_services = true
+# db_allowed_ip_ranges = [
+#   { name = "office", start = "1.2.3.4", end = "1.2.3.4" },
+# ]
