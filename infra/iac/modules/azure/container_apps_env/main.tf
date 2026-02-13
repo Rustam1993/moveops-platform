@@ -3,6 +3,6 @@ resource "azurerm_container_app_environment" "this" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  log_analytics_workspace_id  = var.log_analytics_workspace_id
-  log_analytics_workspace_key = var.log_analytics_workspace_key
+  # azurerm ~>4.x no longer accepts a workspace key here.
+  log_analytics_workspace_id = var.log_analytics_workspace_id
 }
