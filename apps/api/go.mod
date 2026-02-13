@@ -1,6 +1,6 @@
 module github.com/moveops-platform/apps/api
 
-go 1.24.12
+go 1.24.13
 
 require (
 	github.com/getkin/kin-openapi v0.132.0

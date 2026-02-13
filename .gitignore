@@ -9,6 +9,7 @@ apps/web/.env
 # Build/cache
 bin/
 **/.cache/
+.worktrees/
 
 # Node
 **/node_modules/
