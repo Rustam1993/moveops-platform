@@ -1,9 +1,7 @@
-import type { NextConfig } from "next";
-
 const isProd = process.env.NODE_ENV === "production";
 const apiURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
-function apiOriginFromURL(value: string) {
+function apiOriginFromURL(value) {
   try {
     return new URL(value).origin;
   } catch {
@@ -42,7 +40,8 @@ const cspDirectives = isProd
       "form-action 'self'",
     ];
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     optimizePackageImports: ["@moveops/client"],
   },
@@ -63,3 +62,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
