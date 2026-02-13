@@ -11,7 +11,15 @@ function joinURL(base: string, path: string) {
 function upstreamBase() {
   // API_INTERNAL_URL is required in Azure because API has internal ingress only.
   // In local dev, it can be omitted (falls back to direct API at localhost).
-  return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+  const base = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+  // Guard against accidental self-referential config like `/api`, which would recurse.
+  if (base.startsWith("/")) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Invalid upstream base URL: must be absolute (set API_INTERNAL_URL).");
+    }
+    return "http://localhost:8080/api";
+  }
+  return base;
 }
 
 async function proxy(req: NextRequest, pathParts: string[]) {
@@ -74,4 +82,3 @@ export async function OPTIONS(req: NextRequest, ctx: { params: Promise<{ path: s
   const { path } = await ctx.params;
   return proxy(req, path);
 }
-
