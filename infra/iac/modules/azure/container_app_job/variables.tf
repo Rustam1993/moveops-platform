@@ -22,6 +22,16 @@ variable "registry_server" {
   type = string
 }
 
+variable "cpu" {
+  type    = number
+  default = 0.25
+}
+
+variable "memory" {
+  type    = string
+  default = "0.5Gi"
+}
+
 variable "command" {
   type = list(string)
 }
