@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EstimateForm } from "@/components/estimates/estimate-form";
+import { NotAuthorizedState } from "@/components/layout/not-authorized-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   updateEstimate,
   type Estimate,
 } from "@/lib/phase2-api";
+import { isForbiddenError } from "@/lib/api";
 
 export default function EstimateDetailPage() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function EstimateDetailPage() {
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [values, setValues] = useState<EstimateFormValues | null>(null);
   const [errors, setErrors] = useState<EstimateFormErrors>({});
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     if (!estimateId) return;
@@ -49,9 +52,14 @@ export default function EstimateDetailPage() {
         if (cancelled) return;
         setEstimate(response.estimate);
         setValues(estimateToFormValues(response.estimate));
+        setForbidden(false);
       })
       .catch((error) => {
         if (cancelled) return;
+        if (isForbiddenError(error)) {
+          setForbidden(true);
+          return;
+        }
         toast.error(getApiErrorMessage(error));
       })
       .finally(() => {
@@ -117,6 +125,15 @@ export default function EstimateDetailPage() {
     } finally {
       setConverting(false);
     }
+  }
+
+  if (forbidden) {
+    return (
+      <div className="space-y-6 pb-8">
+        <PageHeader title="Estimate" description="Review and update estimate details." />
+        <NotAuthorizedState message="You need estimate permissions to view this page." />
+      </div>
+    );
   }
 
   if (loading || !values || !estimate) {

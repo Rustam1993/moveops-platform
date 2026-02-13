@@ -38,7 +38,7 @@
 
 ## Phase 5
 - Upload constraints:
-  - `IMPORT_MAX_FILE_MB` defaults to `15` MB.
+  - `IMPORT_MAX_FILE_MB` defaults to `25` MB.
   - `IMPORT_MAX_ROWS` defaults to `5000` rows.
 - Import file support:
   - CSV is required for this phase.
@@ -49,3 +49,15 @@
 - `job_number` stance:
   - strongly recommended for deterministic job idempotency.
   - if missing, system generates a deterministic import job number and emits a warning.
+
+## Phase 6
+- CSRF is mandatory for all state-changing API routes except `POST /auth/login`.
+- API body limits:
+  - default API requests: `API_MAX_BODY_MB` (default `2` MB).
+  - import uploads: `IMPORT_MAX_FILE_MB` (default `25` MB).
+- CSP differences:
+  - production uses strict baseline CSP.
+  - development keeps required Next.js allowances (`unsafe-eval` for dev tooling).
+- Authorization response policy:
+  - missing permission on same-tenant endpoint returns `403`.
+  - cross-tenant resource access returns `404` to avoid resource existence leaks.

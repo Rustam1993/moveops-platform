@@ -10,9 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
-
-type CsrfResponse = { csrfToken: string };
+import { api, primeCsrfToken } from "@/lib/api";
 type LoginRequest = { email: string; password: string };
 
 export default function LoginPage() {
@@ -32,9 +30,7 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password } satisfies LoginRequest),
       });
-
-      const csrf = await api.request<CsrfResponse>("/auth/csrf");
-      sessionStorage.setItem("csrfToken", csrf.csrfToken);
+      await primeCsrfToken();
       toast.success("Welcome back");
       router.push("/");
       router.refresh();
