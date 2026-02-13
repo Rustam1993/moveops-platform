@@ -26,6 +26,8 @@ resource "azurerm_container_app_job" "this" {
       image = var.image
 
       command = var.command
+      cpu     = var.cpu
+      memory  = var.memory
 
       dynamic "env" {
         for_each = var.env
