@@ -31,7 +31,7 @@ jobs:
       - if: matrix.language == 'go'
         uses: actions/setup-go@v5
         with:
-          go-version-file: apps/api/go.mod
+          go-version: "1.24.12"
 
       - if: matrix.language == 'go'
         name: Build Go sources
