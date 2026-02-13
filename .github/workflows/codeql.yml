@@ -1,0 +1,56 @@
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - go
+          - javascript-typescript
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.13"
+
+      - if: matrix.language == 'go'
+        name: Build Go sources
+        run: cd apps/api && go build ./...
+
+      - if: matrix.language == 'javascript-typescript'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - if: matrix.language == 'javascript-typescript'
+        name: Build web sources
+        run: |
+          cd packages/client
+          npm install
+          npm run gen
+          npm run build
+          cd ../../apps/web
+          npm install
+          npm run build
+
+      - uses: github/codeql-action/analyze@v3

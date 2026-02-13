@@ -85,3 +85,29 @@
     - `admin`: all three permissions.
     - `ops`: none by default.
     - `sales`: none by default.
+
+## Phase 6
+- CSRF mechanism:
+  - Synchronizer token tied to session row (`sessions.csrf_token`).
+  - `GET /auth/csrf` returns the active session token.
+  - All mutating endpoints (`POST/PUT/PATCH/DELETE`) require `X-CSRF-Token`, except `POST /auth/login`.
+  - Invalid or missing token returns `403` with code `CSRF_INVALID`.
+- API security headers:
+  - `X-Frame-Options: DENY`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()`
+  - API CSP: `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`
+  - HSTS enabled only when `APP_ENV=prod`: `max-age=31536000; includeSubDomains`.
+- Web CSP decision:
+  - Production CSP is strict baseline with `default-src 'self'`, `frame-ancestors 'none'`, and blocked plugin/object sources.
+  - `style-src 'unsafe-inline'` is allowed for Tailwind runtime styles.
+  - `script-src 'unsafe-inline'` remains as a minimal compatibility exception for current Next runtime bootstrap; no third-party script origins are allowed.
+  - Development CSP allows `unsafe-eval` plus local HTTP/WS origins required by Next dev tooling.
+- Rate limit strategy:
+  - Keep endpoint-specific limiters (login/search/import/export) and add a global baseline API limiter.
+  - Use bounded in-memory limiter state (`RATE_LIMIT_MAX_IPS`) with periodic cleanup + oldest-entry eviction to avoid unbounded growth.
+  - Return `429` with `RATE_LIMITED` for limiter denials.
+- Tenant isolation response policy:
+  - Same-tenant permission failures return `403`.
+  - Cross-tenant entity access returns `404` to avoid existence disclosure.

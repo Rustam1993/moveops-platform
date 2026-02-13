@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000"
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "1.1.2",
@@ -28,6 +30,7 @@
     "tailwind-merge": "2.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.51.0",
     "@types/node": "22.13.4",
     "@types/react": "19.0.8",
     "autoprefixer": "10.4.20",

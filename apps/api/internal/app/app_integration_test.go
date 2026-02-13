@@ -63,6 +63,77 @@ func TestRBACDeniesRead(t *testing.T) {
 	}
 }
 
+func TestCSRFRequiredForCustomersCreate(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-csrf-customers", "Tenant CSRF Customers", "csrf-customers@example.com", "Password123!", []string{"customers.write"})
+
+	cookie := login(t, env.router, "csrf-customers@example.com", "Password123!")
+	payload, _ := json.Marshal(map[string]string{
+		"firstName": "CSRF",
+		"lastName":  "Check",
+	})
+
+	status, body := request(t, env.router, http.MethodPost, "/api/customers", payload, cookie, "")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 without CSRF token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "CSRF_INVALID" {
+		t.Fatalf("expected CSRF_INVALID error code, got %s", code)
+	}
+
+	csrf := csrfToken(t, env.router, cookie)
+	status, body = request(t, env.router, http.MethodPost, "/api/customers", payload, cookie, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 with valid CSRF token, got %d (%s)", status, string(body))
+	}
+}
+
+func TestCSRFRequiredForLogout(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-csrf-logout", "Tenant CSRF Logout", "csrf-logout@example.com", "Password123!", []string{"customers.read"})
+
+	cookie := login(t, env.router, "csrf-logout@example.com", "Password123!")
+	status, body := request(t, env.router, http.MethodPost, "/api/auth/logout", nil, cookie, "")
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 logout without CSRF token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "CSRF_INVALID" {
+		t.Fatalf("expected CSRF_INVALID error code, got %s", code)
+	}
+
+	csrf := csrfToken(t, env.router, cookie)
+	status, body = request(t, env.router, http.MethodPost, "/api/auth/logout", nil, cookie, csrf)
+	if status != http.StatusNoContent {
+		t.Fatalf("expected 204 logout with valid CSRF token, got %d (%s)", status, string(body))
+	}
+}
+
+func TestLoginRateLimit(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-rate-limit", "Tenant Rate Limit", "rate-limit@example.com", "Password123!", []string{"customers.read"})
+
+	for i := 0; i < 10; i++ {
+		status, body := request(t, env.router, http.MethodPost, "/api/auth/login", []byte(`{"email":"rate-limit@example.com","password":"wrong-password"}`), nil, "")
+		if status != http.StatusUnauthorized {
+			t.Fatalf("expected 401 before limit is exceeded, got %d (%s)", status, string(body))
+		}
+	}
+
+	status, body := request(t, env.router, http.MethodPost, "/api/auth/login", []byte(`{"email":"rate-limit@example.com","password":"wrong-password"}`), nil, "")
+	if status != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 after login rate limit, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "RATE_LIMITED" {
+		t.Fatalf("expected RATE_LIMITED error code, got %s", code)
+	}
+}
+
 func TestLogoutRevokesSession(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
@@ -102,6 +173,25 @@ func TestEstimateTenantIsolation(t *testing.T) {
 	status, _ := request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID, nil, cookieB, "")
 	if status != http.StatusNotFound {
 		t.Fatalf("expected 404 for cross-tenant estimate read, got %d", status)
+	}
+}
+
+func TestEstimateTenantIsolationOnUpdate(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-estimate-update-a", "Tenant Estimate Update A", "estimate-update-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-estimate-update-b", "Tenant Estimate Update B", "estimate-update-b@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookieA := login(t, env.router, "estimate-update-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-estimate-update-a")
+
+	cookieB := login(t, env.router, "estimate-update-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+	status, body := request(t, env.router, http.MethodPatch, "/api/estimates/"+estimateID, estimateUpdatePayload("Cross Tenant Attempt"), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant estimate update, got %d (%s)", status, string(body))
 	}
 }
 
@@ -230,6 +320,36 @@ func TestCalendarTenantIsolation(t *testing.T) {
 	jobs := parseCalendarJobs(t, body)
 	if len(jobs) != 0 {
 		t.Fatalf("expected cross-tenant calendar list to be empty, got %d jobs", len(jobs))
+	}
+}
+
+func TestJobTenantIsolationReadAndUpdate(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-job-isolation-a", "Tenant Job Isolation A", "job-isolation-a@example.com", "Password123!", []string{"estimates.read", "estimates.write", "estimates.convert", "jobs.read", "calendar.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-job-isolation-b", "Tenant Job Isolation B", "job-isolation-b@example.com", "Password123!", []string{"jobs.read", "calendar.write"})
+
+	cookieA := login(t, env.router, "job-isolation-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "job-tenant-isolation-estimate")
+	jobID := convertEstimateToJob(t, env.router, cookieA, csrfA, estimateID, "job-tenant-isolation-convert")
+
+	cookieB := login(t, env.router, "job-isolation-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+
+	status, _ := request(t, env.router, http.MethodGet, "/api/jobs/"+jobID, nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant job read, got %d", status)
+	}
+
+	payload, _ := json.Marshal(map[string]any{
+		"scheduledDate": "2026-03-29",
+		"status":        "scheduled",
+	})
+	status, body := request(t, env.router, http.MethodPatch, "/api/jobs/"+jobID, payload, cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant job update, got %d (%s)", status, string(body))
 	}
 }
 
@@ -555,6 +675,14 @@ func TestImportRunTenantIsolationAndExportTenantScope(t *testing.T) {
 	if status != http.StatusNotFound {
 		t.Fatalf("expected 404 for cross-tenant import run fetch, got %d", status)
 	}
+	status, _ = request(t, env.router, http.MethodGet, "/api/imports/"+runA.ImportRunID+"/errors.csv", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant import errors download, got %d", status)
+	}
+	status, _ = request(t, env.router, http.MethodGet, "/api/imports/"+runA.ImportRunID+"/report.json", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant import report download, got %d", status)
+	}
 
 	status, body = request(t, env.router, http.MethodGet, "/api/exports/jobs.csv", nil, cookieA, "")
 	if status != http.StatusOK {
@@ -675,8 +803,14 @@ func setupTestEnv(t *testing.T) testEnv {
 		SessionTTL:         12 * time.Hour,
 		SecureCookies:      false,
 		CSRFEnforce:        true,
-		ImportMaxFileBytes: 15 * 1024 * 1024,
+		APIMaxBodyBytes:    2 * 1024 * 1024,
+		ImportMaxFileBytes: 25 * 1024 * 1024,
 		ImportMaxRows:      5000,
+		ReadHeaderTimeout:  5 * time.Second,
+		ReadTimeout:        15 * time.Second,
+		WriteTimeout:       30 * time.Second,
+		IdleTimeout:        60 * time.Second,
+		RateLimitMaxIPs:    10000,
 		Env:                "test",
 	}
 
@@ -845,6 +979,26 @@ func estimatePayload(customerName string) []byte {
 	return payload
 }
 
+func estimateUpdatePayload(customerName string) []byte {
+	payload, _ := json.Marshal(map[string]any{
+		"customerName":            customerName,
+		"primaryPhone":            "+1-555-0101",
+		"email":                   "customer@example.com",
+		"originAddressLine1":      "100 Origin St",
+		"originCity":              "Austin",
+		"originState":             "TX",
+		"originPostalCode":        "78701",
+		"destinationAddressLine1": "900 Destination Ave",
+		"destinationCity":         "Dallas",
+		"destinationState":        "TX",
+		"destinationPostalCode":   "75001",
+		"moveDate":                "2026-03-21",
+		"leadSource":              "Website",
+		"pickupTime":              "10:00",
+	})
+	return payload
+}
+
 func parseEstimateID(t *testing.T, body []byte) string {
 	t.Helper()
 	var payload struct {
@@ -1003,6 +1157,19 @@ func convertEstimateToJob(t *testing.T, router http.Handler, session *http.Cooki
 
 func withIdempotency(key string) map[string]string {
 	return map[string]string{"Idempotency-Key": key}
+}
+
+func parseErrorCode(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse error payload: %v", err)
+	}
+	return payload.Error.Code
 }
 
 type importRunResponsePayload struct {

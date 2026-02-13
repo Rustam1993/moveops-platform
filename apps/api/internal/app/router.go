@@ -44,10 +44,16 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.CORS(cfg.CORSAllowedOrigins))
-	r.Use(middleware.SecurityHeaders)
+	r.Use(middleware.SecurityHeaders(cfg.Env))
 	r.Use(middleware.Logging(logger))
 
 	api := chi.NewRouter()
+	globalLimiter := middleware.NewIPRateLimiterWithMaxEntries(300, time.Minute, cfg.RateLimitMaxIPs)
+	api.Use(globalLimiter.Middleware("Too many requests"))
+	api.Use(middleware.LimitBodyBytesWithOverrides(cfg.APIMaxBodyBytes, []middleware.BodyLimitOverride{
+		{PathPrefix: "/imports/dry-run", MaxBytes: cfg.ImportMaxFileBytes},
+		{PathPrefix: "/imports/apply", MaxBytes: cfg.ImportMaxFileBytes},
+	}))
 	api.Use(openapimiddleware.OapiRequestValidatorWithOptions(doc, &openapimiddleware.Options{
 		SilenceServersWarning: true,
 		ErrorHandler: func(w http.ResponseWriter, message string, statusCode int) {
@@ -63,9 +69,10 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 	h := handlers.NewServer(cfg, q, auditLogger, logger, pool)
 
 	authMW := middleware.AuthMiddleware{Queries: q, CookieName: cfg.SessionCookieName}
-	loginLimiter := middleware.NewLoginRateLimiter(10, time.Minute)
-	importRateLimiter := middleware.NewIPRateLimiter(8, time.Minute)
-	exportRateLimiter := middleware.NewIPRateLimiter(30, time.Minute)
+	loginLimiter := middleware.NewLoginRateLimiterWithMaxEntries(10, time.Minute, cfg.RateLimitMaxIPs)
+	searchRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(90, time.Minute, cfg.RateLimitMaxIPs)
+	importRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(8, time.Minute, cfg.RateLimitMaxIPs)
+	exportRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(30, time.Minute, cfg.RateLimitMaxIPs)
 
 	api.Group(func(public chi.Router) {
 		public.With(loginLimiter.Middleware).Post("/auth/login", h.PostAuthLogin)
@@ -133,6 +140,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		})
 
 		protected.With(
+			searchRateLimiter.Middleware("Too many search requests"),
 			middleware.RequirePermission(q, "calendar.read"),
 		).Get("/calendar", func(w http.ResponseWriter, r *http.Request) {
 			fromDate, ok := parseDateQueryParam(w, r, "from")
@@ -209,6 +217,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		})
 
 		protected.With(
+			searchRateLimiter.Middleware("Too many search requests"),
 			middleware.RequirePermission(q, "storage.read"),
 		).Get("/storage", func(w http.ResponseWriter, r *http.Request) {
 			query := r.URL.Query()
@@ -304,14 +313,12 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 			importRateLimiter.Middleware("Too many import requests"),
 			middleware.RequirePermission(q, "imports.write"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
-			middleware.LimitBodyBytes(cfg.ImportMaxFileBytes),
 		).Post("/imports/dry-run", h.PostImportsDryRun)
 
 		protected.With(
 			importRateLimiter.Middleware("Too many import requests"),
 			middleware.RequirePermission(q, "imports.write"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
-			middleware.LimitBodyBytes(cfg.ImportMaxFileBytes),
 		).Post("/imports/apply", h.PostImportsApply)
 
 		protected.With(

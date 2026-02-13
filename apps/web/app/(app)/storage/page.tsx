@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type 
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { NotAuthorizedState } from "@/components/layout/not-authorized-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +25,7 @@ import {
   type StorageStatus,
   type UpdateStorageRecordRequest,
 } from "@/lib/storage-api";
+import { isForbiddenError } from "@/lib/api";
 
 const facilities = ["Main Facility", "North Warehouse", "South Annex"];
 const statusOptions: Array<{ label: string; value: StorageStatus | "all" }> = [
@@ -67,6 +69,7 @@ export default function StoragePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [items, setItems] = useState<StorageListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
@@ -109,8 +112,13 @@ export default function StoragePage() {
 
         setItems((prev) => (append ? [...prev, ...response.items] : response.items));
         setNextCursor(response.nextCursor ?? null);
+        setForbidden(false);
       } catch (error) {
-        toast.error(getApiErrorMessage(error));
+        if (isForbiddenError(error)) {
+          setForbidden(true);
+        } else {
+          toast.error(getApiErrorMessage(error));
+        }
       } finally {
         if (append) {
           setLoadingMore(false);
@@ -275,6 +283,13 @@ export default function StoragePage() {
 
   return (
     <div className="space-y-6 pb-8">
+      {forbidden ? (
+        <>
+          <PageHeader title="Storage" description="Track storage occupancy, balances, and container counts by facility." />
+          <NotAuthorizedState message="You need storage permissions to view this page." />
+        </>
+      ) : (
+        <>
       <PageHeader
         title="Storage"
         description="Track storage occupancy, balances, and container counts by facility."
@@ -609,6 +624,8 @@ export default function StoragePage() {
           )}
         </SheetContent>
       </Sheet>
+        </>
+      )}
     </div>
   );
 }

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Download, Loader2, ShieldAlert, Upload } from "lucide-react";
+import { Download, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
+import { NotAuthorizedState } from "@/components/layout/not-authorized-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -291,15 +292,7 @@ export default function ImportExportPage() {
     return (
       <div className="space-y-6 pb-8">
         <PageHeader title="Import / Export" description="Admin migration tools with dry-run validation and tenant-scoped CSV exports." />
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ShieldAlert className="h-5 w-5 text-destructive" />
-              Not authorized
-            </CardTitle>
-            <CardDescription>Import and export tools require `imports.*` and `exports.read` permissions.</CardDescription>
-          </CardHeader>
-        </Card>
+        <NotAuthorizedState message="Import and export tools require `imports.*` and `exports.read` permissions." />
       </div>
     );
   }
@@ -339,7 +332,7 @@ export default function ImportExportPage() {
                 accept=".csv,.xlsx"
                 onChange={(event) => void onFileSelected(event.target.files?.[0] ?? null)}
               />
-              <p className="text-xs text-muted-foreground">Max upload size is configured server-side. Default is 15MB.</p>
+              <p className="text-xs text-muted-foreground">Max upload size is configured server-side. Default is 25MB.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="import-source">Source</Label>

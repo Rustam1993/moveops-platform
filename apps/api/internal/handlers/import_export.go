@@ -307,7 +307,7 @@ func (s *Server) processImportRows(
 				Result:         outcome.result,
 				Field:          outcome.field,
 				Message:        truncateText(outcome.message, 500),
-				RawValue:       outcome.rawValue,
+				RawValue:       truncateStringPtr(outcome.rawValue, 160),
 				TargetEntityID: targetEntityID,
 			})
 			if err != nil {
@@ -1895,6 +1895,14 @@ func truncateText(value string, max int) string {
 		return value
 	}
 	return value[:max]
+}
+
+func truncateStringPtr(value *string, max int) *string {
+	if value == nil {
+		return nil
+	}
+	truncated := truncateText(*value, max)
+	return &truncated
 }
 
 func shortHash(value string, size int) string {

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { NotAuthorizedState } from "@/components/layout/not-authorized-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import {
   type Job,
   type UpdateJobRequest,
 } from "@/lib/phase2-api";
+import { isForbiddenError } from "@/lib/api";
 
 type JobFormState = {
   scheduledDate: string;
@@ -35,6 +37,7 @@ export default function JobDetailPage() {
   const [saving, setSaving] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [form, setForm] = useState<JobFormState | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
@@ -51,9 +54,14 @@ export default function JobDetailPage() {
           pickupTime: response.job.pickupTime ?? "",
           status: response.job.status,
         });
+        setForbidden(false);
       })
       .catch((error) => {
         if (cancelled) return;
+        if (isForbiddenError(error)) {
+          setForbidden(true);
+          return;
+        }
         toast.error(getApiErrorMessage(error));
       })
       .finally(() => {
@@ -91,6 +99,15 @@ export default function JobDetailPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (forbidden) {
+    return (
+      <div className="space-y-6 pb-8">
+        <PageHeader title="Job" description="Review and update scheduling information." />
+        <NotAuthorizedState message="You need job permissions to view this page." />
+      </div>
+    );
   }
 
   if (loading || !job || !form) {
