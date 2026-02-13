@@ -16,7 +16,6 @@ module "cae" {
   location                   = var.location
   resource_group_name        = data.azurerm_resource_group.rg.name
   log_analytics_workspace_id  = module.logs.id
-  log_analytics_workspace_key = module.logs.primary_shared_key
 }
 
 module "postgres" {

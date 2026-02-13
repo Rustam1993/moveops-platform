@@ -13,8 +13,3 @@ variable "resource_group_name" {
 variable "log_analytics_workspace_id" {
   type = string
 }
-
-variable "log_analytics_workspace_key" {
-  type      = string
-  sensitive = true
-}
