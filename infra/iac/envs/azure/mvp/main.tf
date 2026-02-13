@@ -3,7 +3,7 @@ data "azurerm_resource_group" "rg" {
 }
 
 module "logs" {
-  source              = "../../../../modules/azure/log_analytics"
+  source              = "../../../modules/azure/log_analytics"
   name                = "${var.app_prefix}-logs"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -11,7 +11,7 @@ module "logs" {
 }
 
 module "cae" {
-  source                     = "../../../../modules/azure/container_apps_env"
+  source                     = "../../../modules/azure/container_apps_env"
   name                       = "${var.app_prefix}-cae"
   location                   = var.location
   resource_group_name        = data.azurerm_resource_group.rg.name
@@ -20,7 +20,7 @@ module "cae" {
 }
 
 module "postgres" {
-  source              = "../../../../modules/azure/postgres_flexible"
+  source              = "../../../modules/azure/postgres_flexible"
   name                = "${var.app_prefix}-pg"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -54,7 +54,7 @@ locals {
 }
 
 module "api" {
-  source              = "../../../../modules/azure/container_app"
+  source              = "../../../modules/azure/container_app"
   name                = "${var.app_prefix}-api"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -97,7 +97,7 @@ module "api" {
 }
 
 module "web" {
-  source              = "../../../../modules/azure/container_app"
+  source              = "../../../modules/azure/container_app"
   name                = "${var.app_prefix}-web"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -130,7 +130,7 @@ module "web" {
 }
 
 module "db_migrate" {
-  source              = "../../../../modules/azure/container_app_job"
+  source              = "../../../modules/azure/container_app_job"
   name                = "${var.app_prefix}-db-migrate"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
