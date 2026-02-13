@@ -72,7 +72,8 @@ variable "db_allowed_ip_ranges" {
 # Budget defaults
 variable "log_retention_days" {
   type    = number
-  default = 7
+  # Azure Log Analytics retention must be between 30 and 730 days.
+  default = 30
 }
 
 variable "pg_sku_name" {

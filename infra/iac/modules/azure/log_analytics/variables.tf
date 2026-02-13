@@ -12,5 +12,6 @@ variable "resource_group_name" {
 
 variable "retention_in_days" {
   type    = number
-  default = 7
+  # Azure Log Analytics retention must be between 30 and 730 days.
+  default = 30
 }
