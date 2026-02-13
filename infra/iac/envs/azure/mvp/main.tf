@@ -38,11 +38,16 @@ module "postgres" {
 }
 
 locals {
-  # Internal base URL that the web app uses for server-side proxying.
-  api_internal_base_url = "http://${module.api.ingress_fqdn}/api"
+  # Container Apps ingress FQDNs are deterministic under the environment default domain.
+  # Using these avoids a dependency cycle between web<->api config.
+  web_fqdn = "${var.app_prefix}-web.${module.cae.default_domain}"
+  api_fqdn = "${var.app_prefix}-api.${module.cae.default_domain}"
 
-  # Public URL for callers; output from web app after creation.
-  web_public_url = "https://${module.web.ingress_fqdn}"
+  # Internal base URL that the web app uses for server-side proxying.
+  api_internal_base_url = "http://${local.api_fqdn}/api"
+
+  # Public URL for callers.
+  web_public_url = "https://${local.web_fqdn}"
 
   # TLS required for Flexible Server.
   database_url = "postgresql://${var.pg_admin_user}:${var.pg_admin_password}@${module.postgres.fqdn}:5432/${var.pg_db_name}?sslmode=require"
@@ -68,7 +73,7 @@ module "api" {
   registry_server = var.acr_server
 
   env = {
-    APP_ENV            = "prod"
+    APP_ENV            = "production"
     API_ADDR           = ":8080"
     SESSION_COOKIE_NAME = "mo_sess"
     SESSION_TTL_HOURS   = "12"

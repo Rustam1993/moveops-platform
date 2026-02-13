@@ -58,7 +58,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	if cfg.Env == "prod" {
+	if cfg.Env == "prod" || cfg.Env == "production" {
 		cfg.SecureCookies = true
 	}
 

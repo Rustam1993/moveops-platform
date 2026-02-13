@@ -1,0 +1,119 @@
+name: Deploy Azure (OpenTofu)
+
+on:
+  workflow_run:
+    workflows: ["Build and Push (ACR)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (defaults to current sha)."
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      TF_VAR_pg_admin_user: ${{ secrets.TF_VAR_pg_admin_user }}
+      TF_VAR_pg_admin_password: ${{ secrets.TF_VAR_pg_admin_password }}
+      TF_VAR_pg_db_name: ${{ secrets.TF_VAR_pg_db_name }}
+      TF_VAR_session_secret: ${{ secrets.TF_VAR_session_secret }}
+      TF_VAR_csrf_secret: ${{ secrets.TF_VAR_csrf_secret }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.10.3"
+
+      - name: Tofu init
+        working-directory: infra/iac/envs/azure/mvp
+        run: tofu init -input=false
+
+      - name: Tofu plan
+        working-directory: infra/iac/envs/azure/mvp
+        env:
+          TF_VAR_api_image: moveacr.azurecr.io/moveops/api:${{ steps.tag.outputs.tag }}
+          TF_VAR_web_image: moveacr.azurecr.io/moveops/web:${{ steps.tag.outputs.tag }}
+        run: tofu plan -input=false
+
+      - name: Tofu apply
+        working-directory: infra/iac/envs/azure/mvp
+        env:
+          TF_VAR_api_image: moveacr.azurecr.io/moveops/api:${{ steps.tag.outputs.tag }}
+          TF_VAR_web_image: moveacr.azurecr.io/moveops/web:${{ steps.tag.outputs.tag }}
+        run: tofu apply -auto-approve -input=false
+
+      - name: Run migrations job
+        run: |
+          az extension add --name containerapp --upgrade
+          exec_name=$(az containerapp job start -n moveops-db-migrate -g rg-moveops-mvp --query name -o tsv)
+          echo "Started job execution: ${exec_name}"
+
+          for i in {1..120}; do
+            status=$(az containerapp job execution list -n moveops-db-migrate -g rg-moveops-mvp --query "[?name=='${exec_name}'].properties.status | [0]" -o tsv)
+            echo "status=${status}"
+            if [ "${status}" = "Succeeded" ]; then
+              exit 0
+            fi
+            if [ "${status}" = "Failed" ]; then
+              echo "Migration job failed"
+              az containerapp job execution show -n moveops-db-migrate -g rg-moveops-mvp --execution ${exec_name} -o json || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "Timed out waiting for migration job"
+          exit 1
+
+      - name: Smoke checks
+        working-directory: infra/iac/envs/azure/mvp
+        run: |
+          web_url=$(tofu output -raw web_url)
+          api_fqdn=$(tofu output -raw api_internal_fqdn)
+
+          echo "web_url=${web_url}"
+          echo "api_internal_fqdn=${api_fqdn}"
+
+          curl -fsS --max-time 10 "${web_url}/login" >/dev/null
+          curl -fsS --max-time 10 "${web_url}/api/health" >/dev/null
+
+          # API must not be reachable from public internet. Internal FQDN should fail from GitHub runner.
+          if curl -fsS --max-time 5 "https://${api_fqdn}/api/health" >/dev/null; then
+            echo "API was reachable publicly (unexpected)"
+            exit 1
+          fi

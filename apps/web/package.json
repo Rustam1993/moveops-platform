@@ -30,7 +30,7 @@
     "tailwind-merge": "2.6.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.51.0",
+    "@playwright/test": "1.58.2",
     "@types/node": "22.13.4",
     "@types/react": "19.0.8",
     "autoprefixer": "10.4.20",

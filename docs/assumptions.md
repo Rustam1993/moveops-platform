@@ -61,3 +61,10 @@
 - Authorization response policy:
   - missing permission on same-tenant endpoint returns `403`.
   - cross-tenant resource access returns `404` to avoid resource existence leaks.
+
+## Phase 7
+- ACR (`moveacr.azurecr.io`) exists outside IaC and is not created or RBAC-managed by OpenTofu.
+- API is deployed with internal ingress only; browser traffic reaches API through the web proxy (`NEXT_PUBLIC_API_URL=/api`).
+- Migrations run via a Container Apps Job on deploy; API startup does not run migrations in production.
+- Postgres is public-networked for MVP, with a safe firewall default (allow Azure services + optional explicit IP ranges; not open to `0.0.0.0/0`).
+- Budget defaults are intentionally minimal (consumption Container Apps, small CPU/mem, smallest Burstable Postgres).
