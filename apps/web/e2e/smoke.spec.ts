@@ -22,19 +22,20 @@ test("MVP smoke: login -> estimate -> job -> calendar -> storage", async ({ page
   ]);
 
   await page.goto("/estimates/new");
-  await page.getByLabel("Customer name").fill(customerName);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Primary phone").fill("5125550200");
-  await page.getByLabel("Address").first().fill("100 Smoke Origin St");
-  await page.getByLabel("City").first().fill("Austin");
-  await page.getByLabel("State").first().fill("TX");
-  await page.getByLabel("Postal code").first().fill("78701");
-  await page.getByLabel("Address").nth(1).fill("900 Smoke Destination Ave");
-  await page.getByLabel("City").nth(1).fill("Dallas");
-  await page.getByLabel("State").nth(1).fill("TX");
-  await page.getByLabel("Postal code").nth(1).fill("75001");
-  await page.getByLabel("Move date").fill(moveDate);
-  await page.getByLabel("Lead source").selectOption("Website");
+  await expect(page.getByRole("heading", { name: "New Estimate" })).toBeVisible();
+  await page.locator("#customerName").fill(customerName);
+  await page.locator("#email").fill(email);
+  await page.locator("#primaryPhone").fill("5125550200");
+  await page.locator("#originAddressLine1").fill("100 Smoke Origin St");
+  await page.locator("#originCity").fill("Austin");
+  await page.locator("#originState").fill("TX");
+  await page.locator("#originPostalCode").fill("78701");
+  await page.locator("#destinationAddressLine1").fill("900 Smoke Destination Ave");
+  await page.locator("#destinationCity").fill("Dallas");
+  await page.locator("#destinationState").fill("TX");
+  await page.locator("#destinationPostalCode").fill("75001");
+  await page.locator("#moveDate").fill(moveDate);
+  await page.locator("#leadSource").selectOption("Website");
 
   await Promise.all([
     page.waitForURL(/\/jobs\/.+/),
