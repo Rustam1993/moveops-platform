@@ -26,11 +26,29 @@ jobs:
         shell: bash
         run: |
           # This registry has AAD auth-as-ARM enabled.
-          # Use an ARM access token for docker login; `az acr login --expose-token` returns an ACR refresh token
-          # that still requires an extra exchange step and has been failing with `insufficient_scope` in CI.
+          # Azure CLI's `az acr login` / `--expose-token` emits an ACR *refresh* token (see warning in logs).
+          # Refresh tokens can't be used directly for registry API calls like docker push/pull; they must be
+          # exchanged for an ACR access token scoped to the repositories.
           set -euo pipefail
-          token="$(az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv)"
-          printf '%s' "$token" | docker login moveacr.azurecr.io \
+          registry="moveacr.azurecr.io"
+
+          refresh_token="$(az acr login --name moveacr --expose-token --query accessToken -o tsv)"
+
+          # Request a single access token that can push both images.
+          scope="repository:moveops/api:push,pull repository:moveops/web:push,pull"
+          access_token="$(curl -fsS -X POST \
+            -d grant_type=refresh_token \
+            -d service=${registry} \
+            -d scope=${scope} \
+            -d refresh_token=${refresh_token} \
+            https://${registry}/oauth2/token | jq -r '.access_token // .accessToken')"
+
+          if [ -z "${access_token}" ] || [ "${access_token}" = "null" ]; then
+            echo "Failed to obtain ACR access token"
+            exit 1
+          fi
+
+          printf '%s' "$access_token" | docker login "${registry}" \
             --username 00000000-0000-0000-0000-000000000000 \
             --password-stdin
 
