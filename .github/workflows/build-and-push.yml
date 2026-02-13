@@ -25,9 +25,11 @@ jobs:
       - name: ACR login
         shell: bash
         run: |
-          # This registry has AAD auth-as-ARM enabled; use an exposed access token for docker login.
+          # This registry has AAD auth-as-ARM enabled.
+          # Use an ARM access token for docker login; `az acr login --expose-token` returns an ACR refresh token
+          # that still requires an extra exchange step and has been failing with `insufficient_scope` in CI.
           set -euo pipefail
-          token="$(az acr login --name moveacr --expose-token --output tsv --query accessToken)"
+          token="$(az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv)"
           printf '%s' "$token" | docker login moveacr.azurecr.io \
             --username 00000000-0000-0000-0000-000000000000 \
             --password-stdin
