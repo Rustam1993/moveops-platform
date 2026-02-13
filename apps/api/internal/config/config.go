@@ -19,8 +19,14 @@ type Config struct {
 	CSRFEnforce        bool
 	CORSAllowedOrigins []string
 	Env                string
+	APIMaxBodyBytes    int64
 	ImportMaxFileBytes int64
 	ImportMaxRows      int
+	ReadHeaderTimeout  time.Duration
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
+	IdleTimeout        time.Duration
+	RateLimitMaxIPs    int
 }
 
 func Load() (Config, error) {
@@ -38,8 +44,14 @@ func Load() (Config, error) {
 			"http://127.0.0.1:3000",
 		}),
 		Env:                getEnv("APP_ENV", "dev"),
-		ImportMaxFileBytes: int64(getEnvInt("IMPORT_MAX_FILE_MB", 15)) * 1024 * 1024,
+		APIMaxBodyBytes:    int64(getEnvInt("API_MAX_BODY_MB", 2)) * 1024 * 1024,
+		ImportMaxFileBytes: int64(getEnvInt("IMPORT_MAX_FILE_MB", 25)) * 1024 * 1024,
 		ImportMaxRows:      getEnvInt("IMPORT_MAX_ROWS", 5000),
+		ReadHeaderTimeout:  time.Duration(getEnvInt("API_READ_HEADER_TIMEOUT_SEC", 5)) * time.Second,
+		ReadTimeout:        time.Duration(getEnvInt("API_READ_TIMEOUT_SEC", 15)) * time.Second,
+		WriteTimeout:       time.Duration(getEnvInt("API_WRITE_TIMEOUT_SEC", 30)) * time.Second,
+		IdleTimeout:        time.Duration(getEnvInt("API_IDLE_TIMEOUT_SEC", 60)) * time.Second,
+		RateLimitMaxIPs:    getEnvInt("RATE_LIMIT_MAX_IPS", 10000),
 	}
 
 	if cfg.DatabaseURL == "" {

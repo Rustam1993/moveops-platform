@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend:
+    name: Backend (fmt, test, govulncheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.13"
+
+      - name: Check gofmt
+        run: |
+          cd apps/api
+          unformatted=$(gofmt -l $(find . -name '*.go'))
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Go tests
+        run: cd apps/api && go test ./...
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: cd apps/api && govulncheck ./...
+
+  frontend:
+    name: Frontend (typecheck, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build generated client package
+        run: |
+          cd packages/client
+          npm install
+          npm run gen
+          npm run build
+
+      - name: Typecheck web app
+        run: |
+          cd apps/web
+          npm install
+          npm run typecheck
+
+      - name: Build web app
+        run: cd apps/web && npm run build
+
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+
+  trivy:
+    name: Trivy FS Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan (CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: "1"
+          format: table
+
+  e2e:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Start docker stack
+        run: docker compose up --build -d
+
+      - name: Wait for API and web
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8080/api/health >/dev/null && curl -fsS http://localhost:3000/login >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Services did not become healthy in time"
+          docker compose logs --tail=200
+          exit 1
+
+      - name: Install web dependencies
+        run: cd apps/web && npm install
+
+      - name: Install Playwright browser
+        run: cd apps/web && npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke tests
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: cd apps/web && npm run e2e
+
+      - name: Stop docker stack
+        if: always()
+        run: docker compose down -v

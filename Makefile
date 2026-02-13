@@ -9,7 +9,7 @@ SQLC_VERSION := v1.27.0
 GOOSE_VERSION := v3.22.1
 OPENAPI_TS_VERSION := 7.6.1
 
-.PHONY: tools gen gen-api gen-client test lint db-up db-down
+.PHONY: tools gen gen-api gen-client test lint db-up db-down e2e
 
 tools:
 	@mkdir -p $(BIN_DIR)
@@ -40,3 +40,9 @@ db-up:
 
 db-down:
 	docker compose down -v
+
+e2e:
+	docker compose up --build -d
+	cd apps/web && npm install
+	cd apps/web && npx playwright install --with-deps chromium
+	cd apps/web && npm run e2e

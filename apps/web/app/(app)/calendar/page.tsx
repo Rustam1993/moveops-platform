@@ -4,6 +4,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { NotAuthorizedState } from "@/components/layout/not-authorized-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
   type Job,
   type UpdateJobRequest,
 } from "@/lib/phase2-api";
+import { isForbiddenError } from "@/lib/api";
 
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -52,6 +54,7 @@ export default function CalendarPage() {
 
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<CalendarJobCard[]>([]);
+  const [forbidden, setForbidden] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -77,8 +80,13 @@ export default function CalendarPage() {
           jobType: jobTypeFilter === "all" ? undefined : jobTypeFilter,
         });
         setJobs(response.jobs);
+        setForbidden(false);
       } catch (error) {
-        toast.error(getApiErrorMessage(error));
+        if (isForbiddenError(error)) {
+          setForbidden(true);
+        } else {
+          toast.error(getApiErrorMessage(error));
+        }
       } finally {
         if (showLoading) setLoading(false);
       }
@@ -179,6 +187,13 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6 pb-8">
+      {forbidden ? (
+        <>
+          <PageHeader title="Calendar" description="Monthly operations planning by scheduled jobs." />
+          <NotAuthorizedState message="You need calendar permissions to view this page." />
+        </>
+      ) : (
+        <>
       <PageHeader
         title="Calendar"
         description="Monthly operations planning by scheduled jobs."
@@ -377,6 +392,8 @@ export default function CalendarPage() {
           )}
         </SheetContent>
       </Sheet>
+        </>
+      )}
     </div>
   );
 }

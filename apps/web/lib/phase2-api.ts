@@ -1,7 +1,6 @@
 import type { components, operations } from "@moveops/client";
 
 import { api } from "@/lib/api";
-import { getCsrf } from "@/lib/session";
 
 export type Estimate = components["schemas"]["Estimate"];
 export type Job = components["schemas"]["Job"];
@@ -24,24 +23,11 @@ export function getApiErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Request failed";
 }
 
-async function getCsrfToken() {
-  const cached = sessionStorage.getItem("csrfToken");
-  if (cached) {
-    return cached;
-  }
-
-  const data = await getCsrf();
-  sessionStorage.setItem("csrfToken", data.csrfToken);
-  return data.csrfToken;
-}
-
 export async function createEstimate(payload: CreateEstimateRequest, idempotencyKey: string) {
-  const csrfToken = await getCsrfToken();
   return api.request<EstimateResponse>("/estimates", {
     method: "POST",
     body: JSON.stringify(payload),
     headers: {
-      "X-CSRF-Token": csrfToken,
       "Idempotency-Key": idempotencyKey,
     },
   });
@@ -52,22 +38,16 @@ export async function getEstimate(estimateId: string) {
 }
 
 export async function updateEstimate(estimateId: string, payload: UpdateEstimateRequest) {
-  const csrfToken = await getCsrfToken();
   return api.request<EstimateResponse>(`/estimates/${estimateId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-    headers: {
-      "X-CSRF-Token": csrfToken,
-    },
   });
 }
 
 export async function convertEstimate(estimateId: string, idempotencyKey: string) {
-  const csrfToken = await getCsrfToken();
   return api.request<JobResponse>(`/estimates/${estimateId}/convert`, {
     method: "POST",
     headers: {
-      "X-CSRF-Token": csrfToken,
       "Idempotency-Key": idempotencyKey,
     },
   });
@@ -98,12 +78,8 @@ export async function getCalendar(params: {
 }
 
 export async function updateJob(jobId: string, payload: UpdateJobRequest) {
-  const csrfToken = await getCsrfToken();
   return api.request<JobResponse>(`/jobs/${jobId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-    headers: {
-      "X-CSRF-Token": csrfToken,
-    },
   });
 }
