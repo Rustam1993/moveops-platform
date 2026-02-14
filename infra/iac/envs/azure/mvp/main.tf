@@ -20,7 +20,9 @@ module "cae" {
 
 module "postgres" {
   source              = "../../../modules/azure/postgres_flexible"
-  name                = "${var.app_prefix}-pg"
+  # Postgres Flexible Server names are effectively global and can remain "reserved" even after failed/partial creates.
+  # Including location avoids name collisions when moving regions.
+  name                = "${var.app_prefix}-pg-${var.location}"
   location            = var.location
   resource_group_name = data.azurerm_resource_group.rg.name
 
