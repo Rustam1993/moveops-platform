@@ -36,9 +36,17 @@ async function proxy(req: NextRequest, pathParts: string[]) {
   const init: RequestInit = {
     method: req.method,
     headers,
-    redirect: "manual",
+    // Follow internal redirects (e.g. http -> https) so we don't leak internal ACA URLs
+    // back to the browser via Location headers.
+    redirect: "follow",
     body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
   };
+
+  // Node fetch requires `duplex: 'half'` when streaming a request body.
+  // NextRequest.body is a ReadableStream for non-GET/HEAD, so set it explicitly.
+  if (init.body) {
+    (init as any).duplex = "half";
+  }
 
   const upstreamResp = await fetch(upstreamURL, init);
 
