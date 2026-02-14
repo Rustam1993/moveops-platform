@@ -9,6 +9,15 @@ on:
       image_tag:
         description: "Image tag to deploy (defaults to current sha)."
         required: false
+      lock_timeout:
+        description: "OpenTofu state lock wait time (e.g. 5m, 10m)."
+        required: false
+        default: "10m"
+      reconcile_existing:
+        description: "Best-effort import of existing Azure Container Apps/Job into state (avoids 'already exists' failures)."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
@@ -68,19 +77,55 @@ jobs:
         working-directory: infra/iac/envs/azure/mvp
         run: tofu init -input=false
 
+      - name: Reconcile existing ACA resources (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.reconcile_existing }}
+        working-directory: infra/iac/envs/azure/mvp
+        run: |
+          set -euo pipefail
+
+          # Only import if the resource exists in Azure and is missing from state.
+          import_if_missing() {
+            local addr="$1"
+            local id="$2"
+
+            if tofu state show -no-color "${addr}" >/dev/null 2>&1; then
+              echo "state has ${addr}"
+              return 0
+            fi
+
+            echo "importing ${addr}"
+            tofu import -input=false "${addr}" "${id}" || true
+          }
+
+          RG="rg-moveops-mvp"
+          SUB="${ARM_SUBSCRIPTION_ID}"
+
+          # Container Apps
+          if az containerapp show -g "${RG}" -n "moveops-web" >/dev/null 2>&1; then
+            import_if_missing "module.web.azurerm_container_app.this" "/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.App/containerApps/moveops-web"
+          fi
+          if az containerapp show -g "${RG}" -n "moveops-api" >/dev/null 2>&1; then
+            import_if_missing "module.api.azurerm_container_app.this" "/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.App/containerApps/moveops-api"
+          fi
+
+          # Container Apps Job
+          if az containerapp job show -g "${RG}" -n "moveops-db-migrate" >/dev/null 2>&1; then
+            import_if_missing "module.db_migrate.azurerm_container_app_job.this" "/subscriptions/${SUB}/resourceGroups/${RG}/providers/Microsoft.App/containerAppsJobs/moveops-db-migrate"
+          fi
+
       - name: Tofu plan
         working-directory: infra/iac/envs/azure/mvp
         env:
           TF_VAR_api_image: moveacr.azurecr.io/moveops/api:${{ steps.tag.outputs.tag }}
           TF_VAR_web_image: moveacr.azurecr.io/moveops/web:${{ steps.tag.outputs.tag }}
-        run: tofu plan -input=false
+        run: tofu plan -input=false -lock-timeout=${{ inputs.lock_timeout || '10m' }}
 
       - name: Tofu apply
         working-directory: infra/iac/envs/azure/mvp
         env:
           TF_VAR_api_image: moveacr.azurecr.io/moveops/api:${{ steps.tag.outputs.tag }}
           TF_VAR_web_image: moveacr.azurecr.io/moveops/web:${{ steps.tag.outputs.tag }}
-        run: tofu apply -auto-approve -input=false
+        run: tofu apply -auto-approve -input=false -lock-timeout=${{ inputs.lock_timeout || '10m' }}
 
       - name: Run migrations job
         run: |
