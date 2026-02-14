@@ -22,6 +22,17 @@ variable "registry_server" {
   type = string
 }
 
+variable "registry_username" {
+  type    = string
+  default = ""
+}
+
+variable "registry_password" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 variable "cpu" {
   type    = number
   default = 0.25

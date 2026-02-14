@@ -15,11 +15,11 @@ module "cae" {
   name                       = "${var.app_prefix}-cae"
   location                   = var.location
   resource_group_name        = data.azurerm_resource_group.rg.name
-  log_analytics_workspace_id  = module.logs.id
+  log_analytics_workspace_id = module.logs.id
 }
 
 module "postgres" {
-  source              = "../../../modules/azure/postgres_flexible"
+  source = "../../../modules/azure/postgres_flexible"
   # Postgres Flexible Server names are effectively global and can remain "reserved" even after failed/partial creates.
   # Including location avoids name collisions when moving regions.
   name                = "${var.app_prefix}-pg-${var.location}"
@@ -66,20 +66,22 @@ module "api" {
 
   ingress_external_enabled = false
 
-  cpu         = var.api_cpu
-  memory      = var.api_memory
+  cpu          = var.api_cpu
+  memory       = var.api_memory
   min_replicas = 1
   max_replicas = 3
 
-  registry_server = var.acr_server
+  registry_server   = var.acr_server
+  registry_username = var.acr_admin_username
+  registry_password = var.acr_admin_password
 
   env = {
-    APP_ENV            = "production"
-    API_ADDR           = ":8080"
-    SESSION_COOKIE_NAME = "mo_sess"
-    SESSION_TTL_HOURS   = "12"
-    COOKIE_SECURE       = "true"
-    CSRF_ENFORCE        = "true"
+    APP_ENV              = "production"
+    API_ADDR             = ":8080"
+    SESSION_COOKIE_NAME  = "mo_sess"
+    SESSION_TTL_HOURS    = "12"
+    COOKIE_SECURE        = "true"
+    CSRF_ENFORCE         = "true"
     CORS_ALLOWED_ORIGINS = local.web_public_url
 
     # Do not auto-migrate in production; handled by Container Apps Job.
@@ -109,15 +111,17 @@ module "web" {
 
   ingress_external_enabled = true
 
-  cpu         = var.web_cpu
-  memory      = var.web_memory
+  cpu          = var.web_cpu
+  memory       = var.web_memory
   min_replicas = 0
   max_replicas = 2
 
-  registry_server = var.acr_server
+  registry_server   = var.acr_server
+  registry_username = var.acr_admin_username
+  registry_password = var.acr_admin_password
 
   env = {
-    NODE_ENV            = "production"
+    NODE_ENV = "production"
 
     # Browser calls hit the web app, which proxies to API_INTERNAL_URL.
     NEXT_PUBLIC_API_URL = "/api"
@@ -137,8 +141,10 @@ module "db_migrate" {
   resource_group_name = data.azurerm_resource_group.rg.name
   environment_id      = module.cae.id
 
-  image           = var.api_image
-  registry_server = var.acr_server
+  image             = var.api_image
+  registry_server   = var.acr_server
+  registry_username = var.acr_admin_username
+  registry_password = var.acr_admin_password
 
   command = ["/usr/local/bin/migrate", "-dir", "/app/migrations"]
 

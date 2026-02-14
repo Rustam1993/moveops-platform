@@ -14,6 +14,11 @@ resource "azurerm_postgresql_flexible_server" "this" {
   backup_retention_days = var.backup_retention_days
 
   public_network_access_enabled = true
+
+  # Azure does not allow arbitrary zone changes after create; ignore drift to avoid broken applies.
+  lifecycle {
+    ignore_changes = [zone]
+  }
 }
 
 resource "azurerm_postgresql_flexible_server_database" "db" {

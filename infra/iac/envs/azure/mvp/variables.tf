@@ -18,6 +18,19 @@ variable "acr_server" {
   default = "moveacr.azurecr.io"
 }
 
+variable "acr_admin_username" {
+  type        = string
+  description = "Optional. If set with acr_admin_password, Container Apps will use ACR admin creds to pull images."
+  default     = ""
+}
+
+variable "acr_admin_password" {
+  type        = string
+  description = "Optional. If set with acr_admin_username, Container Apps will use ACR admin creds to pull images."
+  default     = ""
+  sensitive   = true
+}
+
 variable "api_image" {
   type        = string
   description = "Full image URI, e.g. moveacr.azurecr.io/moveops/api:<tag>"
@@ -71,7 +84,7 @@ variable "db_allowed_ip_ranges" {
 
 # Budget defaults
 variable "log_retention_days" {
-  type    = number
+  type = number
   # Azure Log Analytics retention must be between 30 and 730 days.
   default = 30
 }
