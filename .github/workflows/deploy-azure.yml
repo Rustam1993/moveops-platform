@@ -29,15 +29,17 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      TF_VAR_pg_admin_user: ${{ secrets.TF_VAR_pg_admin_user }}
-      TF_VAR_pg_admin_password: ${{ secrets.TF_VAR_pg_admin_password }}
-      TF_VAR_pg_db_name: ${{ secrets.TF_VAR_pg_db_name }}
-      TF_VAR_session_secret: ${{ secrets.TF_VAR_session_secret }}
-      TF_VAR_csrf_secret: ${{ secrets.TF_VAR_csrf_secret }}
+      # Repo secrets are named in ALL CAPS. The TF_VAR_* env var names must match the tofu variable names,
+      # but the right-hand side must match the GitHub secret names exactly.
+      TF_VAR_pg_admin_user: ${{ secrets.TF_VAR_PG_ADMIN_USER }}
+      TF_VAR_pg_admin_password: ${{ secrets.TF_VAR_PG_ADMIN_PASSWORD }}
+      TF_VAR_pg_db_name: ${{ secrets.TF_VAR_PG_DB_NAME }}
+      TF_VAR_session_secret: ${{ secrets.TF_VAR_SESSION_SECRET }}
+      TF_VAR_csrf_secret: ${{ secrets.TF_VAR_CSRF_SECRET }}
 
       # Optional: ACR admin creds for deterministic image pulls (MVP). If unset, IaC uses managed identity.
-      TF_VAR_acr_admin_username: ${{ secrets.TF_VAR_acr_admin_username }}
-      TF_VAR_acr_admin_password: ${{ secrets.TF_VAR_acr_admin_password }}
+      TF_VAR_acr_admin_username: ${{ secrets.TF_VAR_ACR_ADMIN_USERNAME }}
+      TF_VAR_acr_admin_password: ${{ secrets.TF_VAR_ACR_ADMIN_PASSWORD }}
 
     steps:
       - name: Checkout
@@ -100,7 +102,7 @@ jobs:
             fi
             if [ "${status}" = "Failed" ]; then
               echo "Migration job failed"
-              az containerapp job execution show -n moveops-db-migrate -g rg-moveops-mvp --execution ${exec_name} -o json || true
+              az containerapp job execution show -n moveops-db-migrate -g rg-moveops-mvp --job-execution-name ${exec_name} -o json || true
               exit 1
             fi
             sleep 5
