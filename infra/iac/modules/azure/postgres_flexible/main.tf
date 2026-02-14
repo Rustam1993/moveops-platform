@@ -21,6 +21,14 @@ resource "azurerm_postgresql_flexible_server" "this" {
   }
 }
 
+# Azure Database for PostgreSQL Flexible Server requires extensions to be allow-listed via server parameters.
+# Our migrations rely on `pgcrypto` for `gen_random_uuid()`.
+resource "azurerm_postgresql_flexible_server_configuration" "azure_extensions" {
+  name      = "azure.extensions"
+  server_id = azurerm_postgresql_flexible_server.this.id
+  value     = "pgcrypto"
+}
+
 resource "azurerm_postgresql_flexible_server_database" "db" {
   name      = var.db_name
   server_id = azurerm_postgresql_flexible_server.this.id

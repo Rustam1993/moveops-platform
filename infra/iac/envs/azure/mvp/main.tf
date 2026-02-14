@@ -44,8 +44,11 @@ locals {
   web_fqdn = "${var.app_prefix}-web.${module.cae.default_domain}"
   api_fqdn = "${var.app_prefix}-api.${module.cae.default_domain}"
 
+  # For internal-only Container Apps, the FQDN is `${name}.internal.${default_domain}`.
+  api_internal_fqdn = "${var.app_prefix}-api.internal.${module.cae.default_domain}"
+
   # Internal base URL that the web app uses for server-side proxying.
-  api_internal_base_url = "http://${local.api_fqdn}/api"
+  api_internal_base_url = "http://${local.api_internal_fqdn}/api"
 
   # Public URL for callers.
   web_public_url = "https://${local.web_fqdn}"
