@@ -51,7 +51,8 @@ locals {
   web_public_url = "https://${local.web_fqdn}"
 
   # TLS required for Flexible Server.
-  database_url = "postgresql://${var.pg_admin_user}:${var.pg_admin_password}@${module.postgres.fqdn}:5432/${var.pg_db_name}?sslmode=require"
+  # URL-encode credentials: Azure-generated/admin passwords can include reserved URL chars (e.g. ':' or '@').
+  database_url = "postgresql://${urlencode(var.pg_admin_user)}:${urlencode(var.pg_admin_password)}@${module.postgres.fqdn}:5432/${urlencode(var.pg_db_name)}?sslmode=require"
 }
 
 module "api" {

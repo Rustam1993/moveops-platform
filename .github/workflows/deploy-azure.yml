@@ -100,7 +100,7 @@ jobs:
             fi
             if [ "${status}" = "Failed" ]; then
               echo "Migration job failed"
-              az containerapp job execution show -n moveops-db-migrate -g rg-moveops-mvp --execution ${exec_name} -o json || true
+              az containerapp job execution show -n moveops-db-migrate -g rg-moveops-mvp --job-execution-name ${exec_name} -o json || true
               exit 1
             fi
             sleep 5
