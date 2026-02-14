@@ -1,3 +1,11 @@
+locals {
+  # Container Apps secret names must be lowercase and use hyphens.
+  # We accept env-var style keys (e.g. DATABASE_URL) and normalize them.
+  secret_name_by_env = {
+    for k, _ in var.secret_env : k => replace(lower(k), "_", "-")
+  }
+}
+
 resource "azurerm_container_app" "this" {
   name                         = var.name
   resource_group_name          = var.resource_group_name
@@ -46,7 +54,7 @@ resource "azurerm_container_app" "this" {
         for_each = var.secret_env
         content {
           name        = env.key
-          secret_name = env.key
+          secret_name = local.secret_name_by_env[env.key]
         }
       }
 
@@ -73,7 +81,7 @@ resource "azurerm_container_app" "this" {
   dynamic "secret" {
     for_each = var.secret_env
     content {
-      name  = secret.key
+      name  = local.secret_name_by_env[secret.key]
       value = secret.value
     }
   }
