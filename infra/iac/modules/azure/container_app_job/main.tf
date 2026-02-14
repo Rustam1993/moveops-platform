@@ -3,6 +3,9 @@ locals {
   secret_name_by_env = {
     for k, _ in var.secret_env : k => replace(lower(k), "_", "-")
   }
+
+  use_acr_admin_creds = var.registry_username != "" && var.registry_password != ""
+  acr_password_secret = "acr-password"
 }
 
 resource "azurerm_container_app_job" "this" {
@@ -17,9 +20,21 @@ resource "azurerm_container_app_job" "this" {
     type = "SystemAssigned"
   }
 
-  registry {
-    server   = var.registry_server
-    identity = "system"
+  dynamic "registry" {
+    for_each = local.use_acr_admin_creds ? [1] : []
+    content {
+      server               = var.registry_server
+      username             = var.registry_username
+      password_secret_name = local.acr_password_secret
+    }
+  }
+
+  dynamic "registry" {
+    for_each = local.use_acr_admin_creds ? [] : [1]
+    content {
+      server   = var.registry_server
+      identity = "system"
+    }
   }
 
   manual_trigger_config {
@@ -59,6 +74,14 @@ resource "azurerm_container_app_job" "this" {
     content {
       name  = local.secret_name_by_env[secret.key]
       value = secret.value
+    }
+  }
+
+  dynamic "secret" {
+    for_each = local.use_acr_admin_creds ? [1] : []
+    content {
+      name  = local.acr_password_secret
+      value = var.registry_password
     }
   }
 }

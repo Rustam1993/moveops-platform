@@ -11,6 +11,9 @@ bin/
 **/.cache/
 .worktrees/
 
+# OpenTofu/Terraform
+**/.terraform/
+
 # Node
 **/node_modules/
 apps/web/.next/

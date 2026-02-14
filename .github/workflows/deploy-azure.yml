@@ -35,6 +35,10 @@ jobs:
       TF_VAR_session_secret: ${{ secrets.TF_VAR_session_secret }}
       TF_VAR_csrf_secret: ${{ secrets.TF_VAR_csrf_secret }}
 
+      # Optional: ACR admin creds for deterministic image pulls (MVP). If unset, IaC uses managed identity.
+      TF_VAR_acr_admin_username: ${{ secrets.TF_VAR_acr_admin_username }}
+      TF_VAR_acr_admin_password: ${{ secrets.TF_VAR_acr_admin_password }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
