@@ -44,17 +44,17 @@ export default function DashboardPage() {
   const stats: StatCard[] = [
     {
       label: "Open Estimates",
-      value: summary?.allowed.openEstimates ? String(summary.openEstimatesCount ?? 0) : "—",
+      value: summary?.allowed.estimates ? String(summary.openEstimatesCount ?? 0) : "—",
       icon: UsersRound,
     },
     {
       label: "Open Jobs",
-      value: summary?.allowed.upcomingJobs ? String(summary.upcomingJobsCount ?? 0) : "—",
+      value: summary?.allowed.jobs ? String(summary.upcomingJobsCount ?? 0) : "—",
       icon: Clock3,
     },
     {
       label: "Storage Records",
-      value: summary?.allowed.storageRecords ? String(summary.storageRecordsCount ?? 0) : "—",
+      value: summary?.allowed.storage ? String(summary.storageRecordsCount ?? 0) : "—",
       icon: Building2,
     },
   ];
