@@ -14,7 +14,7 @@ Next.js app for Phase 1 with minimal login and dashboard placeholder.
 - Builds `packages/client` first (types/client generation + TS build), then builds Next.js app.
 
 ## Environment
-- `NEXT_PUBLIC_API_URL` default `http://localhost:8080/api`
+- `NEXT_PUBLIC_API_URL` default `/api`
 
 ## Start locally (dev)
 From repo root:
