@@ -22,6 +22,32 @@ function upstreamBase() {
   return base;
 }
 
+async function fetchWithRedirects(url: URL, init: RequestInit): Promise<Response> {
+  // In ACA, the stable internal FQDN can redirect to a specific revision FQDN.
+  // Node/undici "follow" redirect handling will convert POST -> GET for 301/302/303,
+  // which breaks endpoints like POST /auth/login (API sees GET and returns 405).
+  // We follow redirects manually while preserving the original method/body.
+  let current = url;
+  for (let i = 0; i < 5; i++) {
+    const resp = await fetch(current, { ...init, redirect: "manual" });
+    if (resp.status < 300 || resp.status >= 400) return resp;
+
+    const location = resp.headers.get("location");
+    if (!location) return resp;
+
+    // Release resources from the redirect response before continuing.
+    try {
+      await resp.arrayBuffer();
+    } catch {
+      // ignore
+    }
+
+    current = new URL(location, current);
+  }
+
+  throw new Error("Upstream redirect loop");
+}
+
 async function proxy(req: NextRequest, pathParts: string[]) {
   const upstreamPath = pathParts.join("/");
   const upstreamURL = new URL(joinURL(upstreamBase(), upstreamPath));
@@ -44,13 +70,10 @@ async function proxy(req: NextRequest, pathParts: string[]) {
   const init: RequestInit = {
     method: req.method,
     headers,
-    // Follow internal redirects (e.g. http -> https) so we don't leak internal ACA URLs
-    // back to the browser via Location headers.
-    redirect: "follow",
     body,
   };
 
-  const upstreamResp = await fetch(upstreamURL, init);
+  const upstreamResp = await fetchWithRedirects(upstreamURL, init);
 
   // Copy headers including Set-Cookie so API sessions work through the proxy.
   const respHeaders = new Headers(upstreamResp.headers);
