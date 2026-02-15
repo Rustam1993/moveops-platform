@@ -22,6 +22,8 @@ import {
   type CalendarPhase,
   type Job,
   type JobListItem,
+  type JobListJobType,
+  type JobListStatus,
   type UpdateJobRequest,
 } from "@/lib/phase2-api";
 import { isForbiddenError } from "@/lib/api";
@@ -109,8 +111,8 @@ export default function CalendarPage() {
 
       try {
         const response = await getJobsList({
-          status: phaseFilter === "all" ? undefined : (phaseFilter as any),
-          jobType: jobTypeFilter === "all" ? undefined : (jobTypeFilter as any),
+          status: phaseFilter === "all" ? undefined : (phaseFilter as JobListStatus),
+          jobType: jobTypeFilter === "all" ? undefined : (jobTypeFilter as JobListJobType),
           scheduled: false,
           limit: 10,
           cursor: options?.cursor,
