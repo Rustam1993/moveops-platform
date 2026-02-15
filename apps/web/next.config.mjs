@@ -1,5 +1,6 @@
 const isProd = process.env.NODE_ENV === "production";
-const apiURL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+// Default to same-origin proxy route. In prod, the browser should never call localhost.
+const apiURL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 function apiOriginFromURL(value) {
   try {
@@ -62,4 +63,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-

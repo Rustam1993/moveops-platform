@@ -1,6 +1,8 @@
 import type { components } from "@moveops/client";
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
+// Default to same-origin proxy route so production builds don't accidentally call localhost.
+// In local dev, `/api/*` is proxied to `http://localhost:8080/api/*` by `apps/web/app/api/[...path]/route.ts`.
+const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 type ErrorEnvelope = components["schemas"]["ErrorEnvelope"];
 
