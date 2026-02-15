@@ -120,7 +120,26 @@ jobs:
           echo "web_url=${web_url}"
           echo "api_internal_fqdn=${api_fqdn}"
 
+          # Container Apps can cold-start or take a bit to pull the new image on revision rollout.
+          # Retry a few times before failing the deploy.
+          echo "Waiting for web to respond..."
+          for i in {1..30}; do
+            if curl -fsS --max-time 10 "${web_url}/login" >/dev/null; then
+              break
+            fi
+            echo "web not ready yet (attempt ${i}/30)"
+            sleep 10
+          done
           curl -fsS --max-time 10 "${web_url}/login" >/dev/null
+
+          echo "Waiting for web-proxied api health..."
+          for i in {1..30}; do
+            if curl -fsS --max-time 10 "${web_url}/api/health" >/dev/null; then
+              break
+            fi
+            echo "api health not ready yet (attempt ${i}/30)"
+            sleep 10
+          done
           curl -fsS --max-time 10 "${web_url}/api/health" >/dev/null
 
           # API must not be reachable from public internet. Internal FQDN should fail from GitHub runner.
@@ -128,3 +147,13 @@ jobs:
             echo "API was reachable publicly (unexpected)"
             exit 1
           fi
+        shell: bash
+
+      - name: Debug on failure (web)
+        if: ${{ failure() }}
+        run: |
+          az extension add --name containerapp --upgrade
+          az containerapp show -g rg-moveops-mvp -n moveops-web -o jsonc || true
+          az containerapp revision list -g rg-moveops-mvp -n moveops-web -o table || true
+          az containerapp logs show -g rg-moveops-mvp -n moveops-web --tail 200 || true
+        shell: bash
