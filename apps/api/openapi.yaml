@@ -119,6 +119,43 @@ paths:
         default:
           $ref: '#/components/responses/ErrorResponse'
   /estimates:
+    get:
+      operationId: GetEstimates
+      summary: List estimates (paged)
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [draft, converted]
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Estimates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
     post:
       operationId: PostEstimates
       summary: Create a draft estimate
@@ -270,6 +307,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CalendarResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /dashboard/summary:
+    get:
+      operationId: GetDashboardSummary
+      summary: Dashboard summary counts for the current tenant
+      responses:
+        '200':
+          description: Summary counts (permission-aware)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /jobs:
+    get:
+      operationId: GetJobs
+      summary: List jobs (paged)
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [booked, scheduled, completed, cancelled]
+        - in: query
+          name: jobType
+          required: false
+          schema:
+            type: string
+            enum: [local, long_distance, other]
+        - in: query
+          name: scheduled
+          required: false
+          description: >
+            When true, only jobs with scheduledDate set are returned. When false, only jobs with scheduledDate missing are returned.
+          schema:
+            type: boolean
+        - in: query
+          name: scheduledFrom
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: scheduledTo
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /jobs/{jobId}:
@@ -953,6 +1066,51 @@ components:
           $ref: '#/components/schemas/Estimate'
         requestId:
           type: string
+    EstimateListItem:
+      type: object
+      required: [estimateId, estimateNumber, customerName, status, moveDate, createdAt, updatedAt]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        estimateNumber:
+          type: string
+        customerName:
+          type: string
+        email:
+          type: string
+          format: email
+        primaryPhone:
+          type: string
+        status:
+          type: string
+          enum: [draft, converted]
+        moveDate:
+          type: string
+          format: date
+        convertedJobId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EstimateListResponse:
+      type: object
+      required: [items, requestId]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateListItem'
+        nextCursor:
+          type: string
+          nullable: true
+        requestId:
+          type: string
     UpdateJobRequest:
       type: object
       properties:
@@ -964,6 +1122,94 @@ components:
         status:
           type: string
           enum: [booked, scheduled, completed, cancelled]
+    JobListItem:
+      type: object
+      required:
+        - jobId
+        - jobNumber
+        - status
+        - customerName
+        - originShort
+        - destinationShort
+        - hasStorage
+        - balanceDueCents
+        - createdAt
+        - updatedAt
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        jobNumber:
+          type: string
+        status:
+          type: string
+          enum: [booked, scheduled, completed, cancelled]
+        scheduledDate:
+          type: string
+          format: date
+          nullable: true
+        pickupTime:
+          type: string
+          nullable: true
+        customerName:
+          type: string
+        originShort:
+          type: string
+        destinationShort:
+          type: string
+        hasStorage:
+          type: boolean
+        balanceDueCents:
+          type: integer
+          format: int64
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    JobListResponse:
+      type: object
+      required: [items, requestId]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobListItem'
+        nextCursor:
+          type: string
+          nullable: true
+        requestId:
+          type: string
+    DashboardSummaryResponse:
+      type: object
+      required: [allowed, requestId]
+      properties:
+        allowed:
+          type: object
+          required: [estimates, jobs, storage]
+          properties:
+            estimates:
+              type: boolean
+            jobs:
+              type: boolean
+            storage:
+              type: boolean
+        openEstimatesCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        upcomingJobsCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        storageRecordsCount:
+          type: integer
+          minimum: 0
+          nullable: true
+        requestId:
+          type: string
     CalendarJobCard:
       type: object
       required:

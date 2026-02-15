@@ -8,23 +8,56 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isForbiddenError } from "@/lib/api";
+import { getApiErrorMessage, getDashboardSummary } from "@/lib/phase2-api";
 import { getMe, type SessionPayload } from "@/lib/session";
+import { toast } from "sonner";
 
-const stats = [
-  { label: "Open Estimates", value: "0", icon: UsersRound },
-  { label: "Upcoming Jobs", value: "0", icon: Clock3 },
-  { label: "Storage Records", value: "0", icon: Building2 },
-];
+type StatCard = { label: string; value: string; icon: typeof UsersRound };
 
 export default function DashboardPage() {
   const [session, setSession] = useState<SessionPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getDashboardSummary>> | null>(null);
 
   useEffect(() => {
     getMe()
       .then(setSession)
-      .finally(() => setLoading(false));
+      .finally(() => setSessionLoading(false));
   }, []);
+
+  useEffect(() => {
+    getDashboardSummary()
+      .then((res) => setSummary(res))
+      .catch((err) => {
+        if (isForbiddenError(err)) {
+          // Dashboard is still useful for session info; just omit stats.
+          setSummary(null);
+          return;
+        }
+        toast.error(getApiErrorMessage(err));
+      })
+      .finally(() => setSummaryLoading(false));
+  }, []);
+
+  const stats: StatCard[] = [
+    {
+      label: "Open Estimates",
+      value: summary?.allowed.estimates ? String(summary.openEstimatesCount ?? 0) : "—",
+      icon: UsersRound,
+    },
+    {
+      label: "Open Jobs",
+      value: summary?.allowed.jobs ? String(summary.upcomingJobsCount ?? 0) : "—",
+      icon: Clock3,
+    },
+    {
+      label: "Storage Records",
+      value: summary?.allowed.storage ? String(summary.storageRecordsCount ?? 0) : "—",
+      icon: Building2,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -46,7 +79,7 @@ export default function DashboardPage() {
             <Card key={stat.label}>
               <CardHeader className="pb-3">
                 <CardDescription>{stat.label}</CardDescription>
-                <CardTitle className="text-2xl">{stat.value}</CardTitle>
+                <CardTitle className="text-2xl">{summaryLoading ? <Skeleton className="h-7 w-16" /> : stat.value}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Icon className="h-5 w-5 text-muted-foreground" />
@@ -62,7 +95,7 @@ export default function DashboardPage() {
           <CardDescription>Signed-in context used for tenant isolation and RBAC.</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {sessionLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-4 w-1/3" />
               <Skeleton className="h-4 w-2/3" />

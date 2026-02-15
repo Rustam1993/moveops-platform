@@ -15,11 +15,15 @@ import {
   getApiErrorMessage,
   getCalendar,
   getJob,
+  getJobsList,
   updateJob,
   type CalendarJobCard,
   type CalendarJobType,
   type CalendarPhase,
   type Job,
+  type JobListItem,
+  type JobListJobType,
+  type JobListStatus,
   type UpdateJobRequest,
 } from "@/lib/phase2-api";
 import { isForbiddenError } from "@/lib/api";
@@ -49,12 +53,17 @@ type JobEditorState = {
 
 export default function CalendarPage() {
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
-  const [phaseFilter, setPhaseFilter] = useState<CalendarPhase | "all">("booked");
+  const [phaseFilter, setPhaseFilter] = useState<CalendarPhase | "all">("all");
   const [jobTypeFilter, setJobTypeFilter] = useState<CalendarJobType | "all">("all");
 
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<CalendarJobCard[]>([]);
   const [forbidden, setForbidden] = useState(false);
+
+  const [unscheduledLoading, setUnscheduledLoading] = useState(false);
+  const [unscheduledLoadingMore, setUnscheduledLoadingMore] = useState(false);
+  const [unscheduledJobs, setUnscheduledJobs] = useState<JobListItem[]>([]);
+  const [unscheduledNextCursor, setUnscheduledNextCursor] = useState<string | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -94,9 +103,40 @@ export default function CalendarPage() {
     [dateRange.fromISO, dateRange.toISO, phaseFilter, jobTypeFilter],
   );
 
+  const loadUnscheduled = useCallback(
+    async (options?: { append?: boolean; cursor?: string }) => {
+      const append = options?.append ?? false;
+      if (append) setUnscheduledLoadingMore(true);
+      else setUnscheduledLoading(true);
+
+      try {
+        const response = await getJobsList({
+          status: phaseFilter === "all" ? undefined : (phaseFilter as JobListStatus),
+          jobType: jobTypeFilter === "all" ? undefined : (jobTypeFilter as JobListJobType),
+          scheduled: false,
+          limit: 10,
+          cursor: options?.cursor,
+        });
+        setUnscheduledJobs((prev) => (append ? [...prev, ...response.items] : response.items));
+        setUnscheduledNextCursor(response.nextCursor ?? null);
+      } catch (error) {
+        // Don't block calendar rendering if this secondary section fails.
+        if (!isForbiddenError(error)) toast.error(getApiErrorMessage(error));
+      } finally {
+        if (append) setUnscheduledLoadingMore(false);
+        else setUnscheduledLoading(false);
+      }
+    },
+    [jobTypeFilter, phaseFilter],
+  );
+
   useEffect(() => {
     void loadCalendar(true);
   }, [loadCalendar]);
+
+  useEffect(() => {
+    void loadUnscheduled();
+  }, [loadUnscheduled]);
 
   useEffect(() => {
     if (!drawerOpen || !selectedJobId) return;
@@ -260,6 +300,62 @@ export default function CalendarPage() {
           </p>
           <p className="mt-1 text-xs text-muted-foreground">`to` is exclusive.</p>
         </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-border/70 bg-card/60">
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold">Unscheduled jobs</p>
+            <p className="text-xs text-muted-foreground">Jobs without a scheduled date. Click one to plan it.</p>
+          </div>
+          <Button variant="outline" disabled={unscheduledLoading} onClick={() => void loadUnscheduled()}>
+            Refresh
+          </Button>
+        </div>
+        {unscheduledLoading ? (
+          <div className="space-y-2 p-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : unscheduledJobs.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">No unscheduled jobs for the current filters.</div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {unscheduledJobs.map((job) => (
+              <button
+                key={job.jobId}
+                type="button"
+                onClick={() => openJobEditor(job.jobId)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-primary">
+                    {job.jobNumber} <span className="text-muted-foreground">·</span> {job.customerName}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {job.originShort} → {job.destinationShort}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {job.hasStorage ? <Badge>STORAGE</Badge> : null}
+                  {job.balanceDueCents > 0 ? <Badge>Balance {formatCurrency(job.balanceDueCents)}</Badge> : null}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {unscheduledNextCursor ? (
+          <div className="flex items-center justify-center border-t border-border/60 p-3">
+            <Button
+              variant="outline"
+              disabled={unscheduledLoadingMore}
+              onClick={() => void loadUnscheduled({ append: true, cursor: unscheduledNextCursor })}
+            >
+              {unscheduledLoadingMore ? "Loading..." : "Load more"}
+            </Button>
+          </div>
+        ) : null}
       </section>
 
       <section className="overflow-hidden rounded-xl border border-border/70 bg-card/60">

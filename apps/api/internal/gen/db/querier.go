@@ -12,6 +12,9 @@ import (
 
 type Querier interface {
 	CompleteImportRun(ctx context.Context, arg CompleteImportRunParams) (ImportRun, error)
+	CountOpenEstimates(ctx context.Context, tenantID uuid.UUID) (int64, error)
+	CountStorageRecords(ctx context.Context, tenantID uuid.UUID) (int64, error)
+	CountUpcomingJobs(ctx context.Context, tenantID uuid.UUID) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
 	CreateCustomerForEstimate(ctx context.Context, arg CreateCustomerForEstimateParams) (Customer, error)
 	CreateEstimate(ctx context.Context, arg CreateEstimateParams) (Estimate, error)
@@ -44,8 +47,10 @@ type Querier interface {
 	IncrementTenantCounter(ctx context.Context, arg IncrementTenantCounterParams) (int64, error)
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) error
 	ListCalendarJobs(ctx context.Context, arg ListCalendarJobsParams) ([]ListCalendarJobsRow, error)
+	ListEstimates(ctx context.Context, arg ListEstimatesParams) ([]ListEstimatesRow, error)
 	ListImportRowResultsByRun(ctx context.Context, arg ListImportRowResultsByRunParams) ([]ImportRowResult, error)
 	ListImportRowResultsByRunAndSeverity(ctx context.Context, arg ListImportRowResultsByRunAndSeverityParams) ([]ImportRowResult, error)
+	ListJobs(ctx context.Context, arg ListJobsParams) ([]ListJobsRow, error)
 	ListStorageRows(ctx context.Context, arg ListStorageRowsParams) ([]ListStorageRowsRow, error)
 	ListUsersByEmail(ctx context.Context, email string) ([]ListUsersByEmailRow, error)
 	MarkEstimateConverted(ctx context.Context, arg MarkEstimateConvertedParams) (int64, error)
