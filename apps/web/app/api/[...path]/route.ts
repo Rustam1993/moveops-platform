@@ -32,6 +32,14 @@ async function proxy(req: NextRequest, pathParts: string[]) {
   headers.set("X-Forwarded-Host", req.headers.get("host") ?? "");
   headers.set("X-Forwarded-Proto", req.nextUrl.protocol.replace(":", ""));
   headers.delete("host");
+  // We'll recompute content-length when forwarding bodies.
+  headers.delete("content-length");
+
+  let body: ArrayBuffer | undefined;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const ab = await req.arrayBuffer();
+    body = ab.byteLength ? ab : undefined;
+  }
 
   const init: RequestInit = {
     method: req.method,
@@ -39,14 +47,8 @@ async function proxy(req: NextRequest, pathParts: string[]) {
     // Follow internal redirects (e.g. http -> https) so we don't leak internal ACA URLs
     // back to the browser via Location headers.
     redirect: "follow",
-    body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+    body,
   };
-
-  // Node fetch requires `duplex: 'half'` when streaming a request body.
-  // NextRequest.body is a ReadableStream for non-GET/HEAD, so set it explicitly.
-  if (init.body) {
-    (init as any).duplex = "half";
-  }
 
   const upstreamResp = await fetch(upstreamURL, init);
 
