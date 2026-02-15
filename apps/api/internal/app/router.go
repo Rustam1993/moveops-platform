@@ -86,6 +86,10 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		protected.With(middleware.EnforceCSRF(cfg.CSRFEnforce)).Post("/auth/logout", h.PostAuthLogout)
 
 		protected.With(
+			middleware.RequireAnyPermission(q, "estimates.read", "jobs.read", "storage.read"),
+		).Get("/dashboard/summary", h.GetDashboardSummary)
+
+		protected.With(
 			middleware.RequirePermission(q, "customers.read"),
 		).Get("/customers/{customerId}", func(w http.ResponseWriter, r *http.Request) {
 			customerID, ok := parseUUIDParam(w, r, chi.URLParam(r, "customerId"), "invalid_customer_id", "Customer id must be a valid UUID")
@@ -105,6 +109,35 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
 		).Post("/estimates", func(w http.ResponseWriter, r *http.Request) {
 			h.PostEstimates(w, r, oapi.PostEstimatesParams{IdempotencyKey: r.Header.Get("Idempotency-Key")})
+		})
+
+		protected.With(
+			searchRateLimiter.Middleware("Too many search requests"),
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates", func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+			params := oapi.GetEstimatesParams{}
+
+			if qRaw := strings.TrimSpace(query.Get("q")); qRaw != "" {
+				params.Q = &qRaw
+			}
+			if statusRaw := strings.TrimSpace(query.Get("status")); statusRaw != "" {
+				status := oapi.GetEstimatesParamsStatus(statusRaw)
+				params.Status = &status
+			}
+			if limitRaw := strings.TrimSpace(query.Get("limit")); limitRaw != "" {
+				limit, err := strconv.Atoi(limitRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "limit must be an integer", nil)
+					return
+				}
+				params.Limit = &limit
+			}
+			if cursorRaw := strings.TrimSpace(query.Get("cursor")); cursorRaw != "" {
+				params.Cursor = &cursorRaw
+			}
+
+			h.GetEstimates(w, r, params)
 		})
 
 		protected.With(
@@ -182,6 +215,65 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 			}
 
 			h.GetCalendar(w, r, params)
+		})
+
+		protected.With(
+			searchRateLimiter.Middleware("Too many search requests"),
+			middleware.RequirePermission(q, "jobs.read"),
+		).Get("/jobs", func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+			params := oapi.GetJobsParams{}
+
+			if qRaw := strings.TrimSpace(query.Get("q")); qRaw != "" {
+				params.Q = &qRaw
+			}
+			if statusRaw := strings.TrimSpace(query.Get("status")); statusRaw != "" {
+				status := oapi.GetJobsParamsStatus(statusRaw)
+				params.Status = &status
+			}
+			if jobTypeRaw := strings.TrimSpace(query.Get("jobType")); jobTypeRaw != "" {
+				jobType := oapi.GetJobsParamsJobType(jobTypeRaw)
+				params.JobType = &jobType
+			}
+			if scheduledRaw := strings.TrimSpace(query.Get("scheduled")); scheduledRaw != "" {
+				parsed, err := strconv.ParseBool(scheduledRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "scheduled must be boolean", nil)
+					return
+				}
+				params.Scheduled = &parsed
+			}
+			if fromRaw := strings.TrimSpace(query.Get("scheduledFrom")); fromRaw != "" {
+				parsed, err := time.Parse("2006-01-02", fromRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "scheduledFrom must be in YYYY-MM-DD format", nil)
+					return
+				}
+				d := openapi_types.Date{Time: time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC)}
+				params.ScheduledFrom = &d
+			}
+			if toRaw := strings.TrimSpace(query.Get("scheduledTo")); toRaw != "" {
+				parsed, err := time.Parse("2006-01-02", toRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "scheduledTo must be in YYYY-MM-DD format", nil)
+					return
+				}
+				d := openapi_types.Date{Time: time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 0, 0, 0, 0, time.UTC)}
+				params.ScheduledTo = &d
+			}
+			if limitRaw := strings.TrimSpace(query.Get("limit")); limitRaw != "" {
+				limit, err := strconv.Atoi(limitRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "limit must be an integer", nil)
+					return
+				}
+				params.Limit = &limit
+			}
+			if cursorRaw := strings.TrimSpace(query.Get("cursor")); cursorRaw != "" {
+				params.Cursor = &cursorRaw
+			}
+
+			h.GetJobs(w, r, params)
 		})
 
 		protected.With(

@@ -296,6 +296,48 @@ LEFT JOIN jobs j
 WHERE e.id = sqlc.arg(id)
   AND e.tenant_id = sqlc.arg(tenant_id);
 
+-- name: ListEstimates :many
+SELECT
+  e.id AS estimate_id,
+  e.estimate_number,
+  e.status,
+  e.customer_name,
+  e.primary_phone,
+  e.email,
+  e.move_date,
+  j.id AS converted_job_id,
+  e.created_at,
+  e.updated_at,
+  e.created_at AS sort_created_at,
+  e.id AS sort_estimate_id
+FROM estimates e
+LEFT JOIN jobs j
+  ON j.tenant_id = e.tenant_id
+  AND j.estimate_id = e.id
+WHERE e.tenant_id = sqlc.arg(tenant_id)
+  AND (sqlc.narg(status)::text IS NULL OR e.status = sqlc.narg(status)::text)
+  AND (
+    sqlc.narg(search_q)::text IS NULL
+    OR (
+      e.estimate_number ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR e.customer_name ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR e.email ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR e.primary_phone ILIKE '%' || sqlc.narg(search_q)::text || '%'
+    )
+  )
+  AND (
+    sqlc.narg(cursor_created_at)::timestamptz IS NULL
+    OR (e.created_at, e.id) < (sqlc.narg(cursor_created_at)::timestamptz, sqlc.narg(cursor_estimate_id)::uuid)
+  )
+ORDER BY e.created_at DESC, e.id DESC
+LIMIT sqlc.arg(limit_rows);
+
+-- name: CountOpenEstimates :one
+SELECT COUNT(*)::bigint AS count
+FROM estimates
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND status = 'draft';
+
 -- name: GetEstimateByIdempotencyKey :one
 SELECT
   id,
@@ -489,6 +531,87 @@ WHERE j.tenant_id = sqlc.arg(tenant_id)
     ) = sqlc.narg(job_type)::text
   )
 ORDER BY j.scheduled_date ASC, COALESCE(j.pickup_time, ''), j.job_number ASC;
+
+-- name: ListJobs :many
+SELECT
+  j.id AS job_id,
+  j.job_number,
+  j.status,
+  j.scheduled_date,
+  j.pickup_time,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), j.job_number) AS customer_name,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS origin_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS destination_short,
+  EXISTS (
+    SELECT 1 FROM storage_record sr
+    WHERE sr.tenant_id = j.tenant_id
+      AND sr.job_id = j.id
+  ) AS has_storage,
+  GREATEST(COALESCE(e.estimated_total_cents, 0) - COALESCE(e.deposit_cents, 0), 0)::bigint AS balance_due_cents,
+  j.created_at,
+  j.updated_at,
+  j.created_at AS sort_created_at,
+  j.id AS sort_job_id
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE j.tenant_id = sqlc.arg(tenant_id)
+  AND (sqlc.narg(status)::text IS NULL OR j.status = sqlc.narg(status)::text)
+  AND (
+    sqlc.narg(scheduled)::bool IS NULL
+    OR (sqlc.narg(scheduled)::bool = TRUE AND j.scheduled_date IS NOT NULL)
+    OR (sqlc.narg(scheduled)::bool = FALSE AND j.scheduled_date IS NULL)
+  )
+  AND (sqlc.narg(scheduled_from)::date IS NULL OR j.scheduled_date >= sqlc.narg(scheduled_from)::date)
+  AND (sqlc.narg(scheduled_to)::date IS NULL OR j.scheduled_date < sqlc.narg(scheduled_to)::date)
+  AND (
+    sqlc.narg(job_type)::text IS NULL
+    OR (
+      CASE
+        WHEN e.id IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+        WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+        ELSE 'long_distance'
+      END
+    ) = sqlc.narg(job_type)::text
+  )
+  AND (
+    sqlc.narg(search_q)::text IS NULL
+    OR (
+      j.job_number ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR c.first_name ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR c.last_name ILIKE '%' || sqlc.narg(search_q)::text || '%'
+      OR e.customer_name ILIKE '%' || sqlc.narg(search_q)::text || '%'
+    )
+  )
+  AND (
+    sqlc.narg(cursor_created_at)::timestamptz IS NULL
+    OR (j.created_at, j.id) < (sqlc.narg(cursor_created_at)::timestamptz, sqlc.narg(cursor_job_id)::uuid)
+  )
+ORDER BY j.created_at DESC, j.id DESC
+LIMIT sqlc.arg(limit_rows);
+
+-- name: CountUpcomingJobs :one
+SELECT COUNT(*)::bigint AS count
+FROM jobs
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND status IN ('booked', 'scheduled');
+
+-- name: CountStorageRecords :one
+SELECT COUNT(*)::bigint AS count
+FROM storage_record
+WHERE tenant_id = sqlc.arg(tenant_id);
 
 -- name: GetJobByEstimateID :one
 SELECT

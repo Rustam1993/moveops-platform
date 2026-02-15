@@ -21,8 +21,14 @@ const (
 
 // Defines values for EstimateStatus.
 const (
-	Converted EstimateStatus = "converted"
-	Draft     EstimateStatus = "draft"
+	EstimateStatusConverted EstimateStatus = "converted"
+	EstimateStatusDraft     EstimateStatus = "draft"
+)
+
+// Defines values for EstimateListItemStatus.
+const (
+	EstimateListItemStatusConverted EstimateListItemStatus = "converted"
+	EstimateListItemStatusDraft     EstimateListItemStatus = "draft"
 )
 
 // Defines values for ImportMode.
@@ -83,6 +89,14 @@ const (
 	JobStatusScheduled JobStatus = "scheduled"
 )
 
+// Defines values for JobListItemStatus.
+const (
+	JobListItemStatusBooked    JobListItemStatus = "booked"
+	JobListItemStatusCancelled JobListItemStatus = "cancelled"
+	JobListItemStatusCompleted JobListItemStatus = "completed"
+	JobListItemStatusScheduled JobListItemStatus = "scheduled"
+)
+
 // Defines values for StorageListItemStatus.
 const (
 	StorageListItemStatusInStorage StorageListItemStatus = "in_storage"
@@ -107,17 +121,38 @@ const (
 
 // Defines values for GetCalendarParamsPhase.
 const (
-	Booked    GetCalendarParamsPhase = "booked"
-	Cancelled GetCalendarParamsPhase = "cancelled"
-	Completed GetCalendarParamsPhase = "completed"
-	Scheduled GetCalendarParamsPhase = "scheduled"
+	GetCalendarParamsPhaseBooked    GetCalendarParamsPhase = "booked"
+	GetCalendarParamsPhaseCancelled GetCalendarParamsPhase = "cancelled"
+	GetCalendarParamsPhaseCompleted GetCalendarParamsPhase = "completed"
+	GetCalendarParamsPhaseScheduled GetCalendarParamsPhase = "scheduled"
 )
 
 // Defines values for GetCalendarParamsJobType.
 const (
-	Local        GetCalendarParamsJobType = "local"
-	LongDistance GetCalendarParamsJobType = "long_distance"
-	Other        GetCalendarParamsJobType = "other"
+	GetCalendarParamsJobTypeLocal        GetCalendarParamsJobType = "local"
+	GetCalendarParamsJobTypeLongDistance GetCalendarParamsJobType = "long_distance"
+	GetCalendarParamsJobTypeOther        GetCalendarParamsJobType = "other"
+)
+
+// Defines values for GetEstimatesParamsStatus.
+const (
+	Converted GetEstimatesParamsStatus = "converted"
+	Draft     GetEstimatesParamsStatus = "draft"
+)
+
+// Defines values for GetJobsParamsStatus.
+const (
+	Booked    GetJobsParamsStatus = "booked"
+	Cancelled GetJobsParamsStatus = "cancelled"
+	Completed GetJobsParamsStatus = "completed"
+	Scheduled GetJobsParamsStatus = "scheduled"
+)
+
+// Defines values for GetJobsParamsJobType.
+const (
+	GetJobsParamsJobTypeLocal        GetJobsParamsJobType = "local"
+	GetJobsParamsJobTypeLongDistance GetJobsParamsJobType = "long_distance"
+	GetJobsParamsJobTypeOther        GetJobsParamsJobType = "other"
 )
 
 // AuthSessionResponse defines model for AuthSessionResponse.
@@ -214,6 +249,19 @@ type Customer struct {
 	UpdatedAt time.Time            `json:"updatedAt"`
 }
 
+// DashboardSummaryResponse defines model for DashboardSummaryResponse.
+type DashboardSummaryResponse struct {
+	Allowed struct {
+		Estimates bool `json:"estimates"`
+		Jobs      bool `json:"jobs"`
+		Storage   bool `json:"storage"`
+	} `json:"allowed"`
+	OpenEstimatesCount  *int   `json:"openEstimatesCount"`
+	RequestId           string `json:"requestId"`
+	StorageRecordsCount *int   `json:"storageRecordsCount"`
+	UpcomingJobsCount   *int   `json:"upcomingJobsCount"`
+}
+
 // ErrorEnvelope defines model for ErrorEnvelope.
 type ErrorEnvelope struct {
 	Error struct {
@@ -258,6 +306,30 @@ type Estimate struct {
 
 // EstimateStatus defines model for Estimate.Status.
 type EstimateStatus string
+
+// EstimateListItem defines model for EstimateListItem.
+type EstimateListItem struct {
+	ConvertedJobId *openapi_types.UUID    `json:"convertedJobId"`
+	CreatedAt      time.Time              `json:"createdAt"`
+	CustomerName   string                 `json:"customerName"`
+	Email          *openapi_types.Email   `json:"email,omitempty"`
+	EstimateId     openapi_types.UUID     `json:"estimateId"`
+	EstimateNumber string                 `json:"estimateNumber"`
+	MoveDate       openapi_types.Date     `json:"moveDate"`
+	PrimaryPhone   *string                `json:"primaryPhone,omitempty"`
+	Status         EstimateListItemStatus `json:"status"`
+	UpdatedAt      time.Time              `json:"updatedAt"`
+}
+
+// EstimateListItemStatus defines model for EstimateListItem.Status.
+type EstimateListItemStatus string
+
+// EstimateListResponse defines model for EstimateListResponse.
+type EstimateListResponse struct {
+	Items      []EstimateListItem `json:"items"`
+	NextCursor *string            `json:"nextCursor"`
+	RequestId  string             `json:"requestId"`
+}
 
 // EstimateResponse defines model for EstimateResponse.
 type EstimateResponse struct {
@@ -391,6 +463,32 @@ type Job struct {
 
 // JobStatus defines model for Job.Status.
 type JobStatus string
+
+// JobListItem defines model for JobListItem.
+type JobListItem struct {
+	BalanceDueCents  int64               `json:"balanceDueCents"`
+	CreatedAt        time.Time           `json:"createdAt"`
+	CustomerName     string              `json:"customerName"`
+	DestinationShort string              `json:"destinationShort"`
+	HasStorage       bool                `json:"hasStorage"`
+	JobId            openapi_types.UUID  `json:"jobId"`
+	JobNumber        string              `json:"jobNumber"`
+	OriginShort      string              `json:"originShort"`
+	PickupTime       *string             `json:"pickupTime"`
+	ScheduledDate    *openapi_types.Date `json:"scheduledDate"`
+	Status           JobListItemStatus   `json:"status"`
+	UpdatedAt        time.Time           `json:"updatedAt"`
+}
+
+// JobListItemStatus defines model for JobListItem.Status.
+type JobListItemStatus string
+
+// JobListResponse defines model for JobListResponse.
+type JobListResponse struct {
+	Items      []JobListItem `json:"items"`
+	NextCursor *string       `json:"nextCursor"`
+	RequestId  string        `json:"requestId"`
+}
 
 // JobResponse defines model for JobResponse.
 type JobResponse struct {
@@ -574,6 +672,17 @@ type GetCalendarParamsPhase string
 // GetCalendarParamsJobType defines parameters for GetCalendar.
 type GetCalendarParamsJobType string
 
+// GetEstimatesParams defines parameters for GetEstimates.
+type GetEstimatesParams struct {
+	Q      *string                   `form:"q,omitempty" json:"q,omitempty"`
+	Status *GetEstimatesParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	Limit  *int                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor *string                   `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetEstimatesParamsStatus defines parameters for GetEstimates.
+type GetEstimatesParamsStatus string
+
 // PostEstimatesParams defines parameters for PostEstimates.
 type PostEstimatesParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
@@ -583,6 +692,26 @@ type PostEstimatesParams struct {
 type PostEstimatesEstimateIdConvertParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
+
+// GetJobsParams defines parameters for GetJobs.
+type GetJobsParams struct {
+	Q       *string               `form:"q,omitempty" json:"q,omitempty"`
+	Status  *GetJobsParamsStatus  `form:"status,omitempty" json:"status,omitempty"`
+	JobType *GetJobsParamsJobType `form:"jobType,omitempty" json:"jobType,omitempty"`
+
+	// Scheduled When true, only jobs with scheduledDate set are returned. When false, only jobs with scheduledDate missing are returned.
+	Scheduled     *bool               `form:"scheduled,omitempty" json:"scheduled,omitempty"`
+	ScheduledFrom *openapi_types.Date `form:"scheduledFrom,omitempty" json:"scheduledFrom,omitempty"`
+	ScheduledTo   *openapi_types.Date `form:"scheduledTo,omitempty" json:"scheduledTo,omitempty"`
+	Limit         *int                `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor        *string             `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetJobsParamsStatus defines parameters for GetJobs.
+type GetJobsParamsStatus string
+
+// GetJobsParamsJobType defines parameters for GetJobs.
+type GetJobsParamsJobType string
 
 // GetStorageParams defines parameters for GetStorage.
 type GetStorageParams struct {

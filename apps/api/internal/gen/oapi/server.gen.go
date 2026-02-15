@@ -35,6 +35,12 @@ type ServerInterface interface {
 	// Get customer by id
 	// (GET /customers/{customerId})
 	GetCustomersCustomerId(w http.ResponseWriter, r *http.Request, customerId openapi_types.UUID)
+	// Dashboard summary counts for the current tenant
+	// (GET /dashboard/summary)
+	GetDashboardSummary(w http.ResponseWriter, r *http.Request)
+	// List estimates (paged)
+	// (GET /estimates)
+	GetEstimates(w http.ResponseWriter, r *http.Request, params GetEstimatesParams)
 	// Create a draft estimate
 	// (POST /estimates)
 	PostEstimates(w http.ResponseWriter, r *http.Request, params PostEstimatesParams)
@@ -80,6 +86,9 @@ type ServerInterface interface {
 	// Download full import report JSON
 	// (GET /imports/{importRunId}/report.json)
 	GetImportsImportRunIdReportJson(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID)
+	// List jobs (paged)
+	// (GET /jobs)
+	GetJobs(w http.ResponseWriter, r *http.Request, params GetJobsParams)
 	// Get job by id
 	// (GET /jobs/{jobId})
 	GetJobsJobId(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
@@ -143,6 +152,18 @@ func (_ Unimplemented) PostCustomers(w http.ResponseWriter, r *http.Request) {
 // Get customer by id
 // (GET /customers/{customerId})
 func (_ Unimplemented) GetCustomersCustomerId(w http.ResponseWriter, r *http.Request, customerId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Dashboard summary counts for the current tenant
+// (GET /dashboard/summary)
+func (_ Unimplemented) GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List estimates (paged)
+// (GET /estimates)
+func (_ Unimplemented) GetEstimates(w http.ResponseWriter, r *http.Request, params GetEstimatesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -233,6 +254,12 @@ func (_ Unimplemented) GetImportsImportRunIdErrorsCsv(w http.ResponseWriter, r *
 // Download full import report JSON
 // (GET /imports/{importRunId}/report.json)
 func (_ Unimplemented) GetImportsImportRunIdReportJson(w http.ResponseWriter, r *http.Request, importRunId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List jobs (paged)
+// (GET /jobs)
+func (_ Unimplemented) GetJobs(w http.ResponseWriter, r *http.Request, params GetJobsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -448,6 +475,71 @@ func (siw *ServerInterfaceWrapper) GetCustomersCustomerId(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCustomersCustomerId(w, r, customerId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDashboardSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDashboardSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimates operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetEstimatesParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "q", r.URL.Query(), &params.Q)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", r.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimates(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -793,6 +885,89 @@ func (siw *ServerInterfaceWrapper) GetImportsImportRunIdReportJson(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetImportsImportRunIdReportJson(w, r, importRunId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetJobs operation middleware
+func (siw *ServerInterfaceWrapper) GetJobs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetJobsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "q", r.URL.Query(), &params.Q)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "jobType" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "jobType", r.URL.Query(), &params.JobType)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "jobType", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "scheduled" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "scheduled", r.URL.Query(), &params.Scheduled)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduled", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "scheduledFrom" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "scheduledFrom", r.URL.Query(), &params.ScheduledFrom)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduledFrom", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "scheduledTo" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "scheduledTo", r.URL.Query(), &params.ScheduledTo)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scheduledTo", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", r.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJobs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1160,6 +1335,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/customers/{customerId}", wrapper.GetCustomersCustomerId)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/dashboard/summary", wrapper.GetDashboardSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates", wrapper.GetEstimates)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/estimates", wrapper.PostEstimates)
 	})
 	r.Group(func(r chi.Router) {
@@ -1203,6 +1384,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{importRunId}/report.json", wrapper.GetImportsImportRunIdReportJson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/jobs", wrapper.GetJobs)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/jobs/{jobId}", wrapper.GetJobsJobId)

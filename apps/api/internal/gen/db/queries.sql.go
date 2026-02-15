@@ -55,6 +55,47 @@ func (q *Queries) CompleteImportRun(ctx context.Context, arg CompleteImportRunPa
 	return i, err
 }
 
+const countOpenEstimates = `-- name: CountOpenEstimates :one
+SELECT COUNT(*)::bigint AS count
+FROM estimates
+WHERE tenant_id = $1
+  AND status = 'draft'
+`
+
+func (q *Queries) CountOpenEstimates(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countOpenEstimates, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countStorageRecords = `-- name: CountStorageRecords :one
+SELECT COUNT(*)::bigint AS count
+FROM storage_record
+WHERE tenant_id = $1
+`
+
+func (q *Queries) CountStorageRecords(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countStorageRecords, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUpcomingJobs = `-- name: CountUpcomingJobs :one
+SELECT COUNT(*)::bigint AS count
+FROM jobs
+WHERE tenant_id = $1
+  AND status IN ('booked', 'scheduled')
+`
+
+func (q *Queries) CountUpcomingJobs(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUpcomingJobs, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCustomer = `-- name: CreateCustomer :one
 INSERT INTO customers (
   tenant_id,
@@ -2266,6 +2307,107 @@ func (q *Queries) ListCalendarJobs(ctx context.Context, arg ListCalendarJobsPara
 	return items, nil
 }
 
+const listEstimates = `-- name: ListEstimates :many
+SELECT
+  e.id AS estimate_id,
+  e.estimate_number,
+  e.status,
+  e.customer_name,
+  e.primary_phone,
+  e.email,
+  e.move_date,
+  j.id AS converted_job_id,
+  e.created_at,
+  e.updated_at,
+  e.created_at AS sort_created_at,
+  e.id AS sort_estimate_id
+FROM estimates e
+LEFT JOIN jobs j
+  ON j.tenant_id = e.tenant_id
+  AND j.estimate_id = e.id
+WHERE e.tenant_id = $1
+  AND ($2::text IS NULL OR e.status = $2::text)
+  AND (
+    $3::text IS NULL
+    OR (
+      e.estimate_number ILIKE '%' || $3::text || '%'
+      OR e.customer_name ILIKE '%' || $3::text || '%'
+      OR e.email ILIKE '%' || $3::text || '%'
+      OR e.primary_phone ILIKE '%' || $3::text || '%'
+    )
+  )
+  AND (
+    $4::timestamptz IS NULL
+    OR (e.created_at, e.id) < ($4::timestamptz, $5::uuid)
+  )
+ORDER BY e.created_at DESC, e.id DESC
+LIMIT $6
+`
+
+type ListEstimatesParams struct {
+	TenantID         uuid.UUID  `json:"tenant_id"`
+	Status           *string    `json:"status"`
+	SearchQ          *string    `json:"search_q"`
+	CursorCreatedAt  *time.Time `json:"cursor_created_at"`
+	CursorEstimateID *uuid.UUID `json:"cursor_estimate_id"`
+	LimitRows        int32      `json:"limit_rows"`
+}
+
+type ListEstimatesRow struct {
+	EstimateID     uuid.UUID  `json:"estimate_id"`
+	EstimateNumber string     `json:"estimate_number"`
+	Status         string     `json:"status"`
+	CustomerName   string     `json:"customer_name"`
+	PrimaryPhone   string     `json:"primary_phone"`
+	Email          string     `json:"email"`
+	MoveDate       time.Time  `json:"move_date"`
+	ConvertedJobID *uuid.UUID `json:"converted_job_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+	SortCreatedAt  time.Time  `json:"sort_created_at"`
+	SortEstimateID uuid.UUID  `json:"sort_estimate_id"`
+}
+
+func (q *Queries) ListEstimates(ctx context.Context, arg ListEstimatesParams) ([]ListEstimatesRow, error) {
+	rows, err := q.db.Query(ctx, listEstimates,
+		arg.TenantID,
+		arg.Status,
+		arg.SearchQ,
+		arg.CursorCreatedAt,
+		arg.CursorEstimateID,
+		arg.LimitRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListEstimatesRow{}
+	for rows.Next() {
+		var i ListEstimatesRow
+		if err := rows.Scan(
+			&i.EstimateID,
+			&i.EstimateNumber,
+			&i.Status,
+			&i.CustomerName,
+			&i.PrimaryPhone,
+			&i.Email,
+			&i.MoveDate,
+			&i.ConvertedJobID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SortCreatedAt,
+			&i.SortEstimateID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listImportRowResultsByRun = `-- name: ListImportRowResultsByRun :many
 SELECT
   id,
@@ -2384,6 +2526,153 @@ func (q *Queries) ListImportRowResultsByRunAndSeverity(ctx context.Context, arg 
 			&i.RawValue,
 			&i.TargetEntityID,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listJobs = `-- name: ListJobs :many
+SELECT
+  j.id AS job_id,
+  j.job_number,
+  j.status,
+  j.scheduled_date,
+  j.pickup_time,
+  COALESCE(NULLIF(TRIM(c.first_name || ' ' || c.last_name), ''), j.job_number) AS customer_name,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.origin_city), ''), NULLIF(TRIM(e.origin_state), '')), ''),
+    'TBD'
+  )::text AS origin_short,
+  COALESCE(
+    NULLIF(CONCAT_WS(', ', NULLIF(TRIM(e.destination_city), ''), NULLIF(TRIM(e.destination_state), '')), ''),
+    'TBD'
+  )::text AS destination_short,
+  EXISTS (
+    SELECT 1 FROM storage_record sr
+    WHERE sr.tenant_id = j.tenant_id
+      AND sr.job_id = j.id
+  ) AS has_storage,
+  GREATEST(COALESCE(e.estimated_total_cents, 0) - COALESCE(e.deposit_cents, 0), 0)::bigint AS balance_due_cents,
+  j.created_at,
+  j.updated_at,
+  j.created_at AS sort_created_at,
+  j.id AS sort_job_id
+FROM jobs j
+JOIN customers c
+  ON c.id = j.customer_id
+  AND c.tenant_id = j.tenant_id
+LEFT JOIN estimates e
+  ON e.id = j.estimate_id
+  AND e.tenant_id = j.tenant_id
+WHERE j.tenant_id = $1
+  AND ($2::text IS NULL OR j.status = $2::text)
+  AND (
+    $3::bool IS NULL
+    OR ($3::bool = TRUE AND j.scheduled_date IS NOT NULL)
+    OR ($3::bool = FALSE AND j.scheduled_date IS NULL)
+  )
+  AND ($4::date IS NULL OR j.scheduled_date >= $4::date)
+  AND ($5::date IS NULL OR j.scheduled_date < $5::date)
+  AND (
+    $6::text IS NULL
+    OR (
+      CASE
+        WHEN e.id IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.origin_state, '')), '') IS NULL THEN 'other'
+        WHEN NULLIF(TRIM(COALESCE(e.destination_state, '')), '') IS NULL THEN 'other'
+        WHEN UPPER(e.origin_state) = UPPER(e.destination_state) THEN 'local'
+        ELSE 'long_distance'
+      END
+    ) = $6::text
+  )
+  AND (
+    $7::text IS NULL
+    OR (
+      j.job_number ILIKE '%' || $7::text || '%'
+      OR c.first_name ILIKE '%' || $7::text || '%'
+      OR c.last_name ILIKE '%' || $7::text || '%'
+      OR e.customer_name ILIKE '%' || $7::text || '%'
+    )
+  )
+  AND (
+    $8::timestamptz IS NULL
+    OR (j.created_at, j.id) < ($8::timestamptz, $9::uuid)
+  )
+ORDER BY j.created_at DESC, j.id DESC
+LIMIT $10
+`
+
+type ListJobsParams struct {
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Status          *string    `json:"status"`
+	Scheduled       *bool      `json:"scheduled"`
+	ScheduledFrom   *time.Time `json:"scheduled_from"`
+	ScheduledTo     *time.Time `json:"scheduled_to"`
+	JobType         *string    `json:"job_type"`
+	SearchQ         *string    `json:"search_q"`
+	CursorCreatedAt *time.Time `json:"cursor_created_at"`
+	CursorJobID     *uuid.UUID `json:"cursor_job_id"`
+	LimitRows       int32      `json:"limit_rows"`
+}
+
+type ListJobsRow struct {
+	JobID            uuid.UUID  `json:"job_id"`
+	JobNumber        string     `json:"job_number"`
+	Status           string     `json:"status"`
+	ScheduledDate    *time.Time `json:"scheduled_date"`
+	PickupTime       *string    `json:"pickup_time"`
+	CustomerName     string     `json:"customer_name"`
+	OriginShort      string     `json:"origin_short"`
+	DestinationShort string     `json:"destination_short"`
+	HasStorage       bool       `json:"has_storage"`
+	BalanceDueCents  int64      `json:"balance_due_cents"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	SortCreatedAt    time.Time  `json:"sort_created_at"`
+	SortJobID        uuid.UUID  `json:"sort_job_id"`
+}
+
+func (q *Queries) ListJobs(ctx context.Context, arg ListJobsParams) ([]ListJobsRow, error) {
+	rows, err := q.db.Query(ctx, listJobs,
+		arg.TenantID,
+		arg.Status,
+		arg.Scheduled,
+		arg.ScheduledFrom,
+		arg.ScheduledTo,
+		arg.JobType,
+		arg.SearchQ,
+		arg.CursorCreatedAt,
+		arg.CursorJobID,
+		arg.LimitRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListJobsRow{}
+	for rows.Next() {
+		var i ListJobsRow
+		if err := rows.Scan(
+			&i.JobID,
+			&i.JobNumber,
+			&i.Status,
+			&i.ScheduledDate,
+			&i.PickupTime,
+			&i.CustomerName,
+			&i.OriginShort,
+			&i.DestinationShort,
+			&i.HasStorage,
+			&i.BalanceDueCents,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SortCreatedAt,
+			&i.SortJobID,
 		); err != nil {
 			return nil, err
 		}

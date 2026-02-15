@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CalendarDays, Database, FileInput, LayoutDashboard, PlusSquare } from "lucide-react";
+import { Briefcase, CalendarDays, Database, FileInput, FileText, LayoutDashboard, PlusSquare } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -16,10 +16,22 @@ export const navItems: NavItem[] = [
     description: "Overview of your operations workspace",
   },
   {
+    title: "Estimates",
+    href: "/estimates",
+    icon: FileText,
+    description: "View and manage saved estimates",
+  },
+  {
     title: "New Estimate",
     href: "/estimates/new",
     icon: PlusSquare,
     description: "Start a new moving estimate",
+  },
+  {
+    title: "Jobs",
+    href: "/jobs",
+    icon: Briefcase,
+    description: "View and manage converted jobs",
   },
   {
     title: "Calendar",
