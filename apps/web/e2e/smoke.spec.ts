@@ -29,7 +29,11 @@ test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ pa
   await page.goto("/estimates/new");
   await page.waitForURL(/\/estimates\/new$/);
   await expect(page.getByRole("heading", { name: "New estimate" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Inventory" })).toBeDisabled();
+  await expect(
+    page
+      .getByRole("tablist", { name: "Estimate workspace tabs" })
+      .getByRole("button", { name: "Inventory", exact: true }),
+  ).toBeDisabled();
 
   await page.getByLabel("First name").fill(firstName);
   await page.getByLabel("Last name").fill(lastName);
