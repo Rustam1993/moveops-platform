@@ -7,12 +7,11 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ page }) => {
+test("Phase 2 smoke: login -> create estimate -> inventory save updates total", async ({ page }) => {
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
   const email = `e2e.${suffix}@example.com`;
-  const updatedLastName = "Updated";
   const moveDate = formatDate(new Date());
 
   await page.goto("/login");
@@ -59,15 +58,12 @@ test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ pa
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  await expect(page.getByText("Coming soon in Phase 2/3")).toBeVisible();
-
-  await page.getByRole("link", { name: "Entry Form" }).click();
-  await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
-
-  await page.getByLabel("Last name").fill(updatedLastName);
+  await expect(page.getByRole("button", { name: "Add 1 Box, Medium 18x18x16" })).toBeVisible();
+  await page.getByRole("button", { name: "Add 1 Box, Medium 18x18x16" }).click();
+  await expect(page.getByTestId("inventory-total-cf")).toContainText("3.00 cf");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved")).toBeVisible();
 
   await page.reload();
-  await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
+  await expect(page.getByTestId("inventory-total-cf")).toContainText("3.00 cf");
 });

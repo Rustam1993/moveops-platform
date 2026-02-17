@@ -1,10 +1,7 @@
-import { WorkspacePlaceholder } from "@/components/estimates/workspace-placeholder";
+"use client";
+
+import { EstimateInventoryEditor } from "@/components/estimates/estimate-inventory-editor";
 
 export default function EstimateInventoryPage() {
-  return (
-    <WorkspacePlaceholder
-      title="Inventory"
-      description="Room-by-room inventory and total CF/LBS workflow will be added in a later phase."
-    />
-  );
+  return <EstimateInventoryEditor />;
 }

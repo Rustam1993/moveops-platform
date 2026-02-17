@@ -83,7 +83,7 @@ export default function EstimateWorkspaceLayout({ children }: { children: React.
   }
 
   return (
-    <EstimateWorkspaceProvider value={{ estimate, setEstimate }}>
+    <EstimateWorkspaceProvider value={{ estimate, setEstimate: (next) => setEstimate(next) }}>
       <EstimateWorkspaceShell mode="existing" activeTab={activeTab} estimate={estimate}>
         {children}
       </EstimateWorkspaceShell>

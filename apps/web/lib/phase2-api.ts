@@ -2,7 +2,9 @@ import type { components, operations } from "@moveops/client";
 
 import { api } from "@/lib/api";
 
-export type Estimate = components["schemas"]["Estimate"];
+export type Estimate = components["schemas"]["Estimate"] & {
+  totalVolumeCf?: number;
+};
 export type Job = components["schemas"]["Job"];
 export type CalendarJobCard = components["schemas"]["CalendarJobCard"];
 export type JobListItem = components["schemas"]["JobListItem"];
