@@ -58,10 +58,10 @@ test("Phase 2 smoke: login -> create estimate -> inventory save updates total", 
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  await expect(page.getByLabel("Item name")).toBeVisible();
-  await page.getByLabel("Item name").fill("E2E Medium Box");
-  await page.getByLabel("Volume (cf)").fill("3");
-  await page.getByLabel("Qty").fill("1");
+  await expect(page.locator("#custom-item-name")).toBeVisible();
+  await page.locator("#custom-item-name").fill("E2E Medium Box");
+  await page.locator("#custom-item-volume").fill("3");
+  await page.locator("#custom-item-qty").fill("1");
   await page.getByRole("button", { name: "Add Item" }).click();
   await expect(page.getByTestId("inventory-total-cf")).toContainText("3.00 cf");
   await page.getByRole("button", { name: "Save" }).click();
