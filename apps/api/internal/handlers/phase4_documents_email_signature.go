@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
+	"net/mail"
 	"net/smtp"
 	"strings"
 	"time"
@@ -902,33 +904,89 @@ func (s *Server) sendTransactionalEmailWithContext(ctx context.Context, to strin
 
 func sendSMTPEmailRich(cfg config.Config, recipientEmail string, ccEmail *string, subject string, body string) error {
 	addr := fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
-	recipients := []string{recipientEmail}
+	fromAddress, err := sanitizeSMTPAddress(cfg.EmailFrom)
+	if err != nil {
+		return fmt.Errorf("invalid EMAIL_FROM: %w", err)
+	}
+	toAddress, err := sanitizeSMTPAddress(recipientEmail)
+	if err != nil {
+		return fmt.Errorf("invalid recipient email: %w", err)
+	}
+	recipients := []string{toAddress}
+
+	var ccAddress *string
 	if ccEmail != nil && strings.TrimSpace(*ccEmail) != "" {
-		recipients = append(recipients, strings.TrimSpace(*ccEmail))
+		cleanCC, err := sanitizeSMTPAddress(*ccEmail)
+		if err != nil {
+			return fmt.Errorf("invalid cc email: %w", err)
+		}
+		ccAddress = &cleanCC
+		recipients = append(recipients, cleanCC)
+	}
+
+	cleanSubject, err := sanitizeSMTPHeaderValue(subject)
+	if err != nil {
+		return fmt.Errorf("invalid subject: %w", err)
+	}
+
+	var replyToHeader *string
+	if strings.TrimSpace(cfg.EmailReplyTo) != "" {
+		cleanReplyTo, err := sanitizeSMTPAddress(cfg.EmailReplyTo)
+		if err != nil {
+			return fmt.Errorf("invalid EMAIL_REPLY_TO: %w", err)
+		}
+		replyToHeader = &cleanReplyTo
 	}
 
 	headers := []string{
-		"From: " + cfg.EmailFrom,
-		"To: " + recipientEmail,
-		"Subject: " + subject,
+		"From: " + fromAddress,
+		"To: " + toAddress,
+		"Subject: " + mime.QEncoding.Encode("utf-8", cleanSubject),
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=utf-8",
 	}
-	if ccEmail != nil && strings.TrimSpace(*ccEmail) != "" {
-		headers = append(headers, "Cc: "+strings.TrimSpace(*ccEmail))
+	if ccAddress != nil {
+		headers = append(headers, "Cc: "+*ccAddress)
 	}
-	if strings.TrimSpace(cfg.EmailReplyTo) != "" {
-		headers = append(headers, "Reply-To: "+strings.TrimSpace(cfg.EmailReplyTo))
+	if replyToHeader != nil {
+		headers = append(headers, "Reply-To: "+*replyToHeader)
 	}
 
-	msg := []byte(strings.Join(headers, "\r\n") + "\r\n\r\n" + body + "\r\n")
+	cleanBody := strings.ReplaceAll(body, "\x00", "")
+	msg := []byte(strings.Join(headers, "\r\n") + "\r\n\r\n" + cleanBody + "\r\n")
 
 	var auth smtp.Auth
 	if strings.TrimSpace(cfg.SMTPUser) != "" {
 		auth = smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPHost)
 	}
 
-	return smtp.SendMail(addr, auth, cfg.EmailFrom, recipients, msg)
+	return smtp.SendMail(addr, auth, fromAddress, recipients, msg)
+}
+
+func sanitizeSMTPAddress(raw string) (string, error) {
+	candidate := strings.TrimSpace(raw)
+	if candidate == "" {
+		return "", errors.New("address is empty")
+	}
+	if strings.ContainsAny(candidate, "\r\n") {
+		return "", errors.New("address contains prohibited newline characters")
+	}
+	parsed, err := mail.ParseAddress(candidate)
+	if err != nil {
+		return "", err
+	}
+	return parsed.Address, nil
+}
+
+func sanitizeSMTPHeaderValue(raw string) (string, error) {
+	candidate := strings.TrimSpace(raw)
+	if candidate == "" {
+		return "", errors.New("value is empty")
+	}
+	if strings.ContainsAny(candidate, "\r\n") {
+		return "", errors.New("value contains prohibited newline characters")
+	}
+	return candidate, nil
 }
 
 func safeString(v *string) string {
