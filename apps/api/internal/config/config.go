@@ -21,8 +21,11 @@ type Config struct {
 	Env                string
 	PublicWebBaseURL   string
 	InventoryShareTTL  time.Duration
+	QuoteShareTTL      time.Duration
+	SignRequestTTL     time.Duration
 	EmailMode          string
 	EmailFrom          string
+	EmailReplyTo       string
 	SMTPHost           string
 	SMTPPort           int
 	SMTPUser           string
@@ -54,8 +57,11 @@ func Load() (Config, error) {
 		Env:                getEnv("APP_ENV", "dev"),
 		PublicWebBaseURL:   strings.TrimRight(getEnv("PUBLIC_WEB_BASE_URL", "http://localhost:3000"), "/"),
 		InventoryShareTTL:  time.Duration(getEnvInt("INVENTORY_SHARE_TTL_HOURS", 336)) * time.Hour,
+		QuoteShareTTL:      time.Duration(getEnvInt("QUOTE_SHARE_TTL_HOURS", 336)) * time.Hour,
+		SignRequestTTL:     time.Duration(getEnvInt("SIGN_REQUEST_TTL_HOURS", 336)) * time.Hour,
 		EmailMode:          strings.ToLower(getEnv("EMAIL_MODE", "log")),
 		EmailFrom:          getEnv("EMAIL_FROM", "no-reply@moveops.local"),
+		EmailReplyTo:       getEnv("EMAIL_REPLY_TO", getEnv("EMAIL_FROM", "no-reply@moveops.local")),
 		SMTPHost:           getEnv("SMTP_HOST", ""),
 		SMTPPort:           getEnvInt("SMTP_PORT", 587),
 		SMTPUser:           getEnv("SMTP_USER", ""),

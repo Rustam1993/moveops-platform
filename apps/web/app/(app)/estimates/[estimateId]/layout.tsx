@@ -17,6 +17,7 @@ const segmentToTab: Record<string, EstimateWorkspaceTabKey> = {
   inventory: "inventory",
   "items-not-moving": "items-not-moving",
   "printed-estimate": "printed-estimate",
+  email: "email",
   charges: "charges",
   tasks: "tasks",
   payments: "payments",

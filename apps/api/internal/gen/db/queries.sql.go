@@ -373,6 +373,163 @@ func (q *Queries) CreateEstimate(ctx context.Context, arg CreateEstimateParams) 
 	return i, err
 }
 
+const createEstimateDocument = `-- name: CreateEstimateDocument :one
+INSERT INTO estimate_document (
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  COALESCE($9::jsonb, '{}'::jsonb),
+  $10
+)
+RETURNING id, tenant_id, estimate_id, document_type, file_name, mime_type, content_bytes, content_sha256, size_bytes, metadata_json, generated_by, created_at
+`
+
+type CreateEstimateDocumentParams struct {
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	EstimateID    uuid.UUID  `json:"estimate_id"`
+	DocumentType  string     `json:"document_type"`
+	FileName      string     `json:"file_name"`
+	MimeType      string     `json:"mime_type"`
+	ContentBytes  []byte     `json:"content_bytes"`
+	ContentSha256 string     `json:"content_sha256"`
+	SizeBytes     int32      `json:"size_bytes"`
+	MetadataJson  []byte     `json:"metadata_json"`
+	GeneratedBy   *uuid.UUID `json:"generated_by"`
+}
+
+func (q *Queries) CreateEstimateDocument(ctx context.Context, arg CreateEstimateDocumentParams) (EstimateDocument, error) {
+	row := q.db.QueryRow(ctx, createEstimateDocument,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.DocumentType,
+		arg.FileName,
+		arg.MimeType,
+		arg.ContentBytes,
+		arg.ContentSha256,
+		arg.SizeBytes,
+		arg.MetadataJson,
+		arg.GeneratedBy,
+	)
+	var i EstimateDocument
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentType,
+		&i.FileName,
+		&i.MimeType,
+		&i.ContentBytes,
+		&i.ContentSha256,
+		&i.SizeBytes,
+		&i.MetadataJson,
+		&i.GeneratedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstimateEmailLog = `-- name: CreateEstimateEmailLog :one
+INSERT INTO estimate_email_log (
+  tenant_id,
+  estimate_id,
+  template_key,
+  email_to,
+  email_cc,
+  email_from,
+  subject,
+  status,
+  provider_message_id,
+  delivery_mode,
+  error_message,
+  rendered_json,
+  created_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  COALESCE($12::jsonb, '{}'::jsonb),
+  $13
+)
+RETURNING id, tenant_id, estimate_id, template_key, email_to, email_cc, email_from, subject, status, provider_message_id, delivery_mode, error_message, rendered_json, created_by, created_at
+`
+
+type CreateEstimateEmailLogParams struct {
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	EstimateID        uuid.UUID  `json:"estimate_id"`
+	TemplateKey       string     `json:"template_key"`
+	EmailTo           string     `json:"email_to"`
+	EmailCc           *string    `json:"email_cc"`
+	EmailFrom         string     `json:"email_from"`
+	Subject           string     `json:"subject"`
+	Status            string     `json:"status"`
+	ProviderMessageID *string    `json:"provider_message_id"`
+	DeliveryMode      string     `json:"delivery_mode"`
+	ErrorMessage      *string    `json:"error_message"`
+	RenderedJson      []byte     `json:"rendered_json"`
+	CreatedBy         *uuid.UUID `json:"created_by"`
+}
+
+func (q *Queries) CreateEstimateEmailLog(ctx context.Context, arg CreateEstimateEmailLogParams) (EstimateEmailLog, error) {
+	row := q.db.QueryRow(ctx, createEstimateEmailLog,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.TemplateKey,
+		arg.EmailTo,
+		arg.EmailCc,
+		arg.EmailFrom,
+		arg.Subject,
+		arg.Status,
+		arg.ProviderMessageID,
+		arg.DeliveryMode,
+		arg.ErrorMessage,
+		arg.RenderedJson,
+		arg.CreatedBy,
+	)
+	var i EstimateEmailLog
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.TemplateKey,
+		&i.EmailTo,
+		&i.EmailCc,
+		&i.EmailFrom,
+		&i.Subject,
+		&i.Status,
+		&i.ProviderMessageID,
+		&i.DeliveryMode,
+		&i.ErrorMessage,
+		&i.RenderedJson,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createEstimateInventoryShareLink = `-- name: CreateEstimateInventoryShareLink :one
 INSERT INTO estimate_inventory_share_link (
   tenant_id,
@@ -444,6 +601,224 @@ func (q *Queries) CreateEstimateInventoryShareLink(ctx context.Context, arg Crea
 		&i.LastAccessedAt,
 		&i.LastUpdatedAt,
 		&i.RevokedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstimateQuoteShareLink = `-- name: CreateEstimateQuoteShareLink :one
+INSERT INTO estimate_quote_share_link (
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  last_accessed_at,
+  revoked_at,
+  created_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9
+)
+RETURNING id, tenant_id, estimate_id, document_id, token_hash, recipient_email, expires_at, last_accessed_at, revoked_at, created_by, created_at
+`
+
+type CreateEstimateQuoteShareLinkParams struct {
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     uuid.UUID  `json:"estimate_id"`
+	DocumentID     *uuid.UUID `json:"document_id"`
+	TokenHash      string     `json:"token_hash"`
+	RecipientEmail string     `json:"recipient_email"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+}
+
+func (q *Queries) CreateEstimateQuoteShareLink(ctx context.Context, arg CreateEstimateQuoteShareLinkParams) (EstimateQuoteShareLink, error) {
+	row := q.db.QueryRow(ctx, createEstimateQuoteShareLink,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.DocumentID,
+		arg.TokenHash,
+		arg.RecipientEmail,
+		arg.ExpiresAt,
+		arg.LastAccessedAt,
+		arg.RevokedAt,
+		arg.CreatedBy,
+	)
+	var i EstimateQuoteShareLink
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentID,
+		&i.TokenHash,
+		&i.RecipientEmail,
+		&i.ExpiresAt,
+		&i.LastAccessedAt,
+		&i.RevokedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstimateSignature = `-- name: CreateEstimateSignature :one
+INSERT INTO estimate_signature (
+  tenant_id,
+  estimate_id,
+  signature_request_id,
+  document_id,
+  signer_name,
+  signer_email,
+  signature_type,
+  signature_value,
+  agreed_terms,
+  ip_address,
+  user_agent,
+  signed_at
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12
+)
+RETURNING id, tenant_id, estimate_id, signature_request_id, document_id, signer_name, signer_email, signature_type, signature_value, agreed_terms, ip_address, user_agent, signed_at, created_at
+`
+
+type CreateEstimateSignatureParams struct {
+	TenantID           uuid.UUID  `json:"tenant_id"`
+	EstimateID         uuid.UUID  `json:"estimate_id"`
+	SignatureRequestID uuid.UUID  `json:"signature_request_id"`
+	DocumentID         *uuid.UUID `json:"document_id"`
+	SignerName         string     `json:"signer_name"`
+	SignerEmail        string     `json:"signer_email"`
+	SignatureType      string     `json:"signature_type"`
+	SignatureValue     string     `json:"signature_value"`
+	AgreedTerms        bool       `json:"agreed_terms"`
+	IpAddress          *string    `json:"ip_address"`
+	UserAgent          *string    `json:"user_agent"`
+	SignedAt           time.Time  `json:"signed_at"`
+}
+
+func (q *Queries) CreateEstimateSignature(ctx context.Context, arg CreateEstimateSignatureParams) (EstimateSignature, error) {
+	row := q.db.QueryRow(ctx, createEstimateSignature,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.SignatureRequestID,
+		arg.DocumentID,
+		arg.SignerName,
+		arg.SignerEmail,
+		arg.SignatureType,
+		arg.SignatureValue,
+		arg.AgreedTerms,
+		arg.IpAddress,
+		arg.UserAgent,
+		arg.SignedAt,
+	)
+	var i EstimateSignature
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.SignatureRequestID,
+		&i.DocumentID,
+		&i.SignerName,
+		&i.SignerEmail,
+		&i.SignatureType,
+		&i.SignatureValue,
+		&i.AgreedTerms,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.SignedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstimateSignatureRequest = `-- name: CreateEstimateSignatureRequest :one
+INSERT INTO estimate_signature_request (
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  used_at,
+  last_accessed_at,
+  revoked_at,
+  created_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10
+)
+RETURNING id, tenant_id, estimate_id, document_id, token_hash, recipient_email, expires_at, used_at, last_accessed_at, revoked_at, created_by, created_at
+`
+
+type CreateEstimateSignatureRequestParams struct {
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     uuid.UUID  `json:"estimate_id"`
+	DocumentID     *uuid.UUID `json:"document_id"`
+	TokenHash      string     `json:"token_hash"`
+	RecipientEmail string     `json:"recipient_email"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	UsedAt         *time.Time `json:"used_at"`
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+}
+
+func (q *Queries) CreateEstimateSignatureRequest(ctx context.Context, arg CreateEstimateSignatureRequestParams) (EstimateSignatureRequest, error) {
+	row := q.db.QueryRow(ctx, createEstimateSignatureRequest,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.DocumentID,
+		arg.TokenHash,
+		arg.RecipientEmail,
+		arg.ExpiresAt,
+		arg.UsedAt,
+		arg.LastAccessedAt,
+		arg.RevokedAt,
+		arg.CreatedBy,
+	)
+	var i EstimateSignatureRequest
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentID,
+		&i.TokenHash,
+		&i.RecipientEmail,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.LastAccessedAt,
+		&i.RevokedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -1671,6 +2046,50 @@ func (q *Queries) GetEstimateDetailByID(ctx context.Context, arg GetEstimateDeta
 	return i, err
 }
 
+const getEstimateDocumentByID = `-- name: GetEstimateDocumentByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by,
+  created_at
+FROM estimate_document
+WHERE id = $1
+  AND tenant_id = $2
+`
+
+type GetEstimateDocumentByIDParams struct {
+	ID       uuid.UUID `json:"id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+}
+
+func (q *Queries) GetEstimateDocumentByID(ctx context.Context, arg GetEstimateDocumentByIDParams) (EstimateDocument, error) {
+	row := q.db.QueryRow(ctx, getEstimateDocumentByID, arg.ID, arg.TenantID)
+	var i EstimateDocument
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentType,
+		&i.FileName,
+		&i.MimeType,
+		&i.ContentBytes,
+		&i.ContentSha256,
+		&i.SizeBytes,
+		&i.MetadataJson,
+		&i.GeneratedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getEstimateInventoryItems = `-- name: GetEstimateInventoryItems :many
 SELECT
   id,
@@ -1761,6 +2180,82 @@ func (q *Queries) GetEstimateInventoryShareLinkByTokenHash(ctx context.Context, 
 		&i.LastAccessedAt,
 		&i.LastUpdatedAt,
 		&i.RevokedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEstimateQuoteShareLinkByTokenHash = `-- name: GetEstimateQuoteShareLinkByTokenHash :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  last_accessed_at,
+  revoked_at,
+  created_by,
+  created_at
+FROM estimate_quote_share_link
+WHERE token_hash = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) GetEstimateQuoteShareLinkByTokenHash(ctx context.Context, tokenHash string) (EstimateQuoteShareLink, error) {
+	row := q.db.QueryRow(ctx, getEstimateQuoteShareLinkByTokenHash, tokenHash)
+	var i EstimateQuoteShareLink
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentID,
+		&i.TokenHash,
+		&i.RecipientEmail,
+		&i.ExpiresAt,
+		&i.LastAccessedAt,
+		&i.RevokedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEstimateSignatureRequestByTokenHash = `-- name: GetEstimateSignatureRequestByTokenHash :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  used_at,
+  last_accessed_at,
+  revoked_at,
+  created_by,
+  created_at
+FROM estimate_signature_request
+WHERE token_hash = $1
+  AND revoked_at IS NULL
+`
+
+func (q *Queries) GetEstimateSignatureRequestByTokenHash(ctx context.Context, tokenHash string) (EstimateSignatureRequest, error) {
+	row := q.db.QueryRow(ctx, getEstimateSignatureRequestByTokenHash, tokenHash)
+	var i EstimateSignatureRequest
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentID,
+		&i.TokenHash,
+		&i.RecipientEmail,
+		&i.ExpiresAt,
+		&i.UsedAt,
+		&i.LastAccessedAt,
+		&i.RevokedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -2104,6 +2599,104 @@ func (q *Queries) GetJobDetailByID(ctx context.Context, arg GetJobDetailByIDPara
 		&i.LastName,
 		&i.Phone,
 		&i.Email,
+	)
+	return i, err
+}
+
+const getLatestEstimateDocumentByType = `-- name: GetLatestEstimateDocumentByType :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by,
+  created_at
+FROM estimate_document
+WHERE tenant_id = $1
+  AND estimate_id = $2
+  AND document_type = $3
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type GetLatestEstimateDocumentByTypeParams struct {
+	TenantID     uuid.UUID `json:"tenant_id"`
+	EstimateID   uuid.UUID `json:"estimate_id"`
+	DocumentType string    `json:"document_type"`
+}
+
+func (q *Queries) GetLatestEstimateDocumentByType(ctx context.Context, arg GetLatestEstimateDocumentByTypeParams) (EstimateDocument, error) {
+	row := q.db.QueryRow(ctx, getLatestEstimateDocumentByType, arg.TenantID, arg.EstimateID, arg.DocumentType)
+	var i EstimateDocument
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.DocumentType,
+		&i.FileName,
+		&i.MimeType,
+		&i.ContentBytes,
+		&i.ContentSha256,
+		&i.SizeBytes,
+		&i.MetadataJson,
+		&i.GeneratedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLatestEstimateSignatureByEstimateID = `-- name: GetLatestEstimateSignatureByEstimateID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  signature_request_id,
+  document_id,
+  signer_name,
+  signer_email,
+  signature_type,
+  signature_value,
+  agreed_terms,
+  ip_address,
+  user_agent,
+  signed_at,
+  created_at
+FROM estimate_signature
+WHERE tenant_id = $1
+  AND estimate_id = $2
+ORDER BY signed_at DESC, id DESC
+LIMIT 1
+`
+
+type GetLatestEstimateSignatureByEstimateIDParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) GetLatestEstimateSignatureByEstimateID(ctx context.Context, arg GetLatestEstimateSignatureByEstimateIDParams) (EstimateSignature, error) {
+	row := q.db.QueryRow(ctx, getLatestEstimateSignatureByEstimateID, arg.TenantID, arg.EstimateID)
+	var i EstimateSignature
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.SignatureRequestID,
+		&i.DocumentID,
+		&i.SignerName,
+		&i.SignerEmail,
+		&i.SignatureType,
+		&i.SignatureValue,
+		&i.AgreedTerms,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.SignedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -2624,6 +3217,72 @@ func (q *Queries) ListCalendarJobs(ctx context.Context, arg ListCalendarJobsPara
 			&i.Status,
 			&i.HasStorage,
 			&i.BalanceDueCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEstimateEmailLogs = `-- name: ListEstimateEmailLogs :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  template_key,
+  email_to,
+  email_cc,
+  email_from,
+  subject,
+  status,
+  provider_message_id,
+  delivery_mode,
+  error_message,
+  rendered_json,
+  created_by,
+  created_at
+FROM estimate_email_log
+WHERE tenant_id = $1
+  AND estimate_id = $2
+ORDER BY created_at DESC, id DESC
+LIMIT $3
+`
+
+type ListEstimateEmailLogsParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+	LimitRows  int32     `json:"limit_rows"`
+}
+
+func (q *Queries) ListEstimateEmailLogs(ctx context.Context, arg ListEstimateEmailLogsParams) ([]EstimateEmailLog, error) {
+	rows, err := q.db.Query(ctx, listEstimateEmailLogs, arg.TenantID, arg.EstimateID, arg.LimitRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EstimateEmailLog{}
+	for rows.Next() {
+		var i EstimateEmailLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.EstimateID,
+			&i.TemplateKey,
+			&i.EmailTo,
+			&i.EmailCc,
+			&i.EmailFrom,
+			&i.Subject,
+			&i.Status,
+			&i.ProviderMessageID,
+			&i.DeliveryMode,
+			&i.ErrorMessage,
+			&i.RenderedJson,
+			&i.CreatedBy,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -3296,6 +3955,28 @@ func (q *Queries) MarkEstimateConverted(ctx context.Context, arg MarkEstimateCon
 	return result.RowsAffected(), nil
 }
 
+const markEstimateSignatureRequestUsed = `-- name: MarkEstimateSignatureRequestUsed :execrows
+UPDATE estimate_signature_request
+SET used_at = $1
+WHERE id = $2
+  AND tenant_id = $3
+  AND used_at IS NULL
+`
+
+type MarkEstimateSignatureRequestUsedParams struct {
+	UsedAt   *time.Time `json:"used_at"`
+	ID       uuid.UUID  `json:"id"`
+	TenantID uuid.UUID  `json:"tenant_id"`
+}
+
+func (q *Queries) MarkEstimateSignatureRequestUsed(ctx context.Context, arg MarkEstimateSignatureRequestUsedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markEstimateSignatureRequestUsed, arg.UsedAt, arg.ID, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const revokeSessionByID = `-- name: RevokeSessionByID :execrows
 UPDATE sessions
 SET revoked_at = NOW()
@@ -3355,6 +4036,50 @@ func (q *Queries) TouchEstimateInventoryShareLink(ctx context.Context, arg Touch
 		arg.ID,
 		arg.TenantID,
 	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const touchEstimateQuoteShareLink = `-- name: TouchEstimateQuoteShareLink :execrows
+UPDATE estimate_quote_share_link
+SET
+  last_accessed_at = COALESCE($1, last_accessed_at)
+WHERE id = $2
+  AND tenant_id = $3
+`
+
+type TouchEstimateQuoteShareLinkParams struct {
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	ID             uuid.UUID  `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+}
+
+func (q *Queries) TouchEstimateQuoteShareLink(ctx context.Context, arg TouchEstimateQuoteShareLinkParams) (int64, error) {
+	result, err := q.db.Exec(ctx, touchEstimateQuoteShareLink, arg.LastAccessedAt, arg.ID, arg.TenantID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const touchEstimateSignatureRequest = `-- name: TouchEstimateSignatureRequest :execrows
+UPDATE estimate_signature_request
+SET
+  last_accessed_at = COALESCE($1, last_accessed_at)
+WHERE id = $2
+  AND tenant_id = $3
+`
+
+type TouchEstimateSignatureRequestParams struct {
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	ID             uuid.UUID  `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+}
+
+func (q *Queries) TouchEstimateSignatureRequest(ctx context.Context, arg TouchEstimateSignatureRequestParams) (int64, error) {
+	result, err := q.db.Exec(ctx, touchEstimateSignatureRequest, arg.LastAccessedAt, arg.ID, arg.TenantID)
 	if err != nil {
 		return 0, err
 	}

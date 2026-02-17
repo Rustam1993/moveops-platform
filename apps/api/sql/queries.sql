@@ -670,6 +670,284 @@ SET
 WHERE id = sqlc.arg(estimate_id)
   AND tenant_id = sqlc.arg(tenant_id);
 
+-- name: CreateEstimateDocument :one
+INSERT INTO estimate_document (
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(document_type),
+  sqlc.arg(file_name),
+  sqlc.arg(mime_type),
+  sqlc.arg(content_bytes),
+  sqlc.arg(content_sha256),
+  sqlc.arg(size_bytes),
+  COALESCE(sqlc.narg(metadata_json)::jsonb, '{}'::jsonb),
+  sqlc.narg(generated_by)
+)
+RETURNING *;
+
+-- name: GetLatestEstimateDocumentByType :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by,
+  created_at
+FROM estimate_document
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND document_type = sqlc.arg(document_type)
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
+-- name: GetEstimateDocumentByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_type,
+  file_name,
+  mime_type,
+  content_bytes,
+  content_sha256,
+  size_bytes,
+  metadata_json,
+  generated_by,
+  created_at
+FROM estimate_document
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: CreateEstimateEmailLog :one
+INSERT INTO estimate_email_log (
+  tenant_id,
+  estimate_id,
+  template_key,
+  email_to,
+  email_cc,
+  email_from,
+  subject,
+  status,
+  provider_message_id,
+  delivery_mode,
+  error_message,
+  rendered_json,
+  created_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(template_key),
+  sqlc.arg(email_to),
+  sqlc.narg(email_cc),
+  sqlc.arg(email_from),
+  sqlc.arg(subject),
+  sqlc.arg(status),
+  sqlc.narg(provider_message_id),
+  sqlc.arg(delivery_mode),
+  sqlc.narg(error_message),
+  COALESCE(sqlc.narg(rendered_json)::jsonb, '{}'::jsonb),
+  sqlc.narg(created_by)
+)
+RETURNING *;
+
+-- name: ListEstimateEmailLogs :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  template_key,
+  email_to,
+  email_cc,
+  email_from,
+  subject,
+  status,
+  provider_message_id,
+  delivery_mode,
+  error_message,
+  rendered_json,
+  created_by,
+  created_at
+FROM estimate_email_log
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(limit_rows);
+
+-- name: CreateEstimateQuoteShareLink :one
+INSERT INTO estimate_quote_share_link (
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  last_accessed_at,
+  revoked_at,
+  created_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.narg(document_id),
+  sqlc.arg(token_hash),
+  sqlc.arg(recipient_email),
+  sqlc.arg(expires_at),
+  sqlc.narg(last_accessed_at),
+  sqlc.narg(revoked_at),
+  sqlc.narg(created_by)
+)
+RETURNING *;
+
+-- name: GetEstimateQuoteShareLinkByTokenHash :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  last_accessed_at,
+  revoked_at,
+  created_by,
+  created_at
+FROM estimate_quote_share_link
+WHERE token_hash = sqlc.arg(token_hash)
+  AND revoked_at IS NULL;
+
+-- name: TouchEstimateQuoteShareLink :execrows
+UPDATE estimate_quote_share_link
+SET
+  last_accessed_at = COALESCE(sqlc.narg(last_accessed_at), last_accessed_at)
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: CreateEstimateSignatureRequest :one
+INSERT INTO estimate_signature_request (
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  used_at,
+  last_accessed_at,
+  revoked_at,
+  created_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.narg(document_id),
+  sqlc.arg(token_hash),
+  sqlc.arg(recipient_email),
+  sqlc.arg(expires_at),
+  sqlc.narg(used_at),
+  sqlc.narg(last_accessed_at),
+  sqlc.narg(revoked_at),
+  sqlc.narg(created_by)
+)
+RETURNING *;
+
+-- name: GetEstimateSignatureRequestByTokenHash :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  document_id,
+  token_hash,
+  recipient_email,
+  expires_at,
+  used_at,
+  last_accessed_at,
+  revoked_at,
+  created_by,
+  created_at
+FROM estimate_signature_request
+WHERE token_hash = sqlc.arg(token_hash)
+  AND revoked_at IS NULL;
+
+-- name: TouchEstimateSignatureRequest :execrows
+UPDATE estimate_signature_request
+SET
+  last_accessed_at = COALESCE(sqlc.narg(last_accessed_at), last_accessed_at)
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: MarkEstimateSignatureRequestUsed :execrows
+UPDATE estimate_signature_request
+SET used_at = sqlc.arg(used_at)
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND used_at IS NULL;
+
+-- name: CreateEstimateSignature :one
+INSERT INTO estimate_signature (
+  tenant_id,
+  estimate_id,
+  signature_request_id,
+  document_id,
+  signer_name,
+  signer_email,
+  signature_type,
+  signature_value,
+  agreed_terms,
+  ip_address,
+  user_agent,
+  signed_at
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(signature_request_id),
+  sqlc.narg(document_id),
+  sqlc.arg(signer_name),
+  sqlc.arg(signer_email),
+  sqlc.arg(signature_type),
+  sqlc.arg(signature_value),
+  sqlc.arg(agreed_terms),
+  sqlc.narg(ip_address),
+  sqlc.narg(user_agent),
+  sqlc.arg(signed_at)
+)
+RETURNING *;
+
+-- name: GetLatestEstimateSignatureByEstimateID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  signature_request_id,
+  document_id,
+  signer_name,
+  signer_email,
+  signature_type,
+  signature_value,
+  agreed_terms,
+  ip_address,
+  user_agent,
+  signed_at,
+  created_at
+FROM estimate_signature
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+ORDER BY signed_at DESC, id DESC
+LIMIT 1;
+
 -- name: UpdateEstimate :one
 UPDATE estimates
 SET

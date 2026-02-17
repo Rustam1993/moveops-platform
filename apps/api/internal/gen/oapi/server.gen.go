@@ -59,6 +59,18 @@ type ServerInterface interface {
 	// Convert estimate to job (idempotent)
 	// (POST /estimates/{estimateId}/convert)
 	PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, params PostEstimatesEstimateIdConvertParams)
+	// Get latest generated estimate PDF document
+	// (GET /estimates/{estimateId}/documents/estimate-pdf)
+	GetEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Generate and store estimate PDF document
+	// (POST /estimates/{estimateId}/documents/estimate-pdf)
+	PostEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// List estimate transactional emails
+	// (GET /estimates/{estimateId}/emails)
+	GetEstimatesEstimateIdEmails(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Send estimate transactional email from a template
+	// (POST /estimates/{estimateId}/emails/send)
+	PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Get estimate inventory
 	// (GET /estimates/{estimateId}/inventory)
 	GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
@@ -68,6 +80,9 @@ type ServerInterface interface {
 	// Create customer inventory share link and send email
 	// (POST /estimates/{estimateId}/inventory-share-links)
 	PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Create a public signature request link for estimate
+	// (POST /estimates/{estimateId}/signature-requests)
+	PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Export tenant customers CSV
 	// (GET /exports/customers.csv)
 	GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request)
@@ -113,12 +128,21 @@ type ServerInterface interface {
 	// Create a storage record for a job
 	// (POST /jobs/{jobId}/storage)
 	PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
+	// Fetch read-only public estimate PDF payload
+	// (GET /public/estimate/{token})
+	GetPublicEstimateToken(w http.ResponseWriter, r *http.Request, token string)
 	// Fetch customer inventory payload via share token
 	// (GET /public/inventory/{token})
 	GetPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string)
 	// Submit customer inventory payload via share token
 	// (PUT /public/inventory/{token})
 	PutPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string)
+	// Fetch public estimate signature request payload
+	// (GET /public/sign/{token})
+	GetPublicSignToken(w http.ResponseWriter, r *http.Request, token string)
+	// Submit typed signature for estimate
+	// (POST /public/sign/{token})
+	PostPublicSignToken(w http.ResponseWriter, r *http.Request, token string)
 	// List storage rows for a facility
 	// (GET /storage)
 	GetStorage(w http.ResponseWriter, r *http.Request, params GetStorageParams)
@@ -224,6 +248,30 @@ func (_ Unimplemented) PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Get latest generated estimate PDF document
+// (GET /estimates/{estimateId}/documents/estimate-pdf)
+func (_ Unimplemented) GetEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Generate and store estimate PDF document
+// (POST /estimates/{estimateId}/documents/estimate-pdf)
+func (_ Unimplemented) PostEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List estimate transactional emails
+// (GET /estimates/{estimateId}/emails)
+func (_ Unimplemented) GetEstimatesEstimateIdEmails(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send estimate transactional email from a template
+// (POST /estimates/{estimateId}/emails/send)
+func (_ Unimplemented) PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get estimate inventory
 // (GET /estimates/{estimateId}/inventory)
 func (_ Unimplemented) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
@@ -239,6 +287,12 @@ func (_ Unimplemented) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r 
 // Create customer inventory share link and send email
 // (POST /estimates/{estimateId}/inventory-share-links)
 func (_ Unimplemented) PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a public signature request link for estimate
+// (POST /estimates/{estimateId}/signature-requests)
+func (_ Unimplemented) PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -332,6 +386,12 @@ func (_ Unimplemented) PostJobsJobIdStorage(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Fetch read-only public estimate PDF payload
+// (GET /public/estimate/{token})
+func (_ Unimplemented) GetPublicEstimateToken(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Fetch customer inventory payload via share token
 // (GET /public/inventory/{token})
 func (_ Unimplemented) GetPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string) {
@@ -341,6 +401,18 @@ func (_ Unimplemented) GetPublicInventoryToken(w http.ResponseWriter, r *http.Re
 // Submit customer inventory payload via share token
 // (PUT /public/inventory/{token})
 func (_ Unimplemented) PutPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Fetch public estimate signature request payload
+// (GET /public/sign/{token})
+func (_ Unimplemented) GetPublicSignToken(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Submit typed signature for estimate
+// (POST /public/sign/{token})
+func (_ Unimplemented) PostPublicSignToken(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -809,6 +881,106 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdConvert(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// GetEstimatesEstimateIdDocumentsEstimatePdf operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdDocumentsEstimatePdf(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdDocumentsEstimatePdf operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdDocumentsEstimatePdf(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdDocumentsEstimatePdf(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimatesEstimateIdEmails operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdEmails(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdEmails(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdEmailsSend operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdEmailsSend(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetEstimatesEstimateIdInventory operation middleware
 func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request) {
 
@@ -875,6 +1047,31 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdInventoryShareLinks(w 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostEstimatesEstimateIdInventoryShareLinks(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdSignatureRequests operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdSignatureRequests(w, r, estimateId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1240,6 +1437,31 @@ func (siw *ServerInterfaceWrapper) PostJobsJobIdStorage(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicEstimateToken operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicEstimateToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicEstimateToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPublicInventoryToken operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicInventoryToken(w http.ResponseWriter, r *http.Request) {
 
@@ -1281,6 +1503,56 @@ func (siw *ServerInterfaceWrapper) PutPublicInventoryToken(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PutPublicInventoryToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPublicSignToken operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicSignToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicSignToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostPublicSignToken operation middleware
+func (siw *ServerInterfaceWrapper) PostPublicSignToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostPublicSignToken(w, r, token)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1597,6 +1869,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/estimates/{estimateId}/convert", wrapper.PostEstimatesEstimateIdConvert)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/documents/estimate-pdf", wrapper.GetEstimatesEstimateIdDocumentsEstimatePdf)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/documents/estimate-pdf", wrapper.PostEstimatesEstimateIdDocumentsEstimatePdf)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/emails", wrapper.GetEstimatesEstimateIdEmails)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/emails/send", wrapper.PostEstimatesEstimateIdEmailsSend)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/estimates/{estimateId}/inventory", wrapper.GetEstimatesEstimateIdInventory)
 	})
 	r.Group(func(r chi.Router) {
@@ -1604,6 +1888,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/estimates/{estimateId}/inventory-share-links", wrapper.PostEstimatesEstimateIdInventoryShareLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/signature-requests", wrapper.PostEstimatesEstimateIdSignatureRequests)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/exports/customers.csv", wrapper.GetExportsCustomersCsv)
@@ -1651,10 +1938,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/jobs/{jobId}/storage", wrapper.PostJobsJobIdStorage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/estimate/{token}", wrapper.GetPublicEstimateToken)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/inventory/{token}", wrapper.GetPublicInventoryToken)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/public/inventory/{token}", wrapper.PutPublicInventoryToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/sign/{token}", wrapper.GetPublicSignToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/sign/{token}", wrapper.PostPublicSignToken)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/storage", wrapper.GetStorage)

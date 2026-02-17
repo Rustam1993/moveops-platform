@@ -1,10 +1,5 @@
-import { WorkspacePlaceholder } from "@/components/estimates/workspace-placeholder";
+import { EstimatePrintedEstimateEditor } from "@/components/estimates/estimate-printed-estimate-editor";
 
 export default function EstimatePrintedEstimatePage() {
-  return (
-    <WorkspacePlaceholder
-      title="Printed Estimate"
-      description="Printable estimate preview and generated documents will be added in a later phase."
-    />
-  );
+  return <EstimatePrintedEstimateEditor />;
 }

@@ -3,6 +3,7 @@ export type EstimateWorkspaceTabKey =
   | "inventory"
   | "items-not-moving"
   | "printed-estimate"
+  | "email"
   | "charges"
   | "tasks"
   | "payments"
@@ -19,6 +20,7 @@ export const estimateWorkspaceTabs: EstimateWorkspaceTab[] = [
   { key: "inventory", label: "Inventory", segment: "inventory" },
   { key: "items-not-moving", label: "Items not Moving", segment: "items-not-moving" },
   { key: "printed-estimate", label: "Printed Estimate", segment: "printed-estimate" },
+  { key: "email", label: "Email Center", segment: "email" },
   { key: "charges", label: "Charges", segment: "charges" },
   { key: "tasks", label: "Tasks List", segment: "tasks" },
   { key: "payments", label: "Payments", segment: "payments" },
