@@ -325,6 +325,51 @@ paths:
                 $ref: '#/components/schemas/CreateInventoryShareLinkResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/charges:
+    get:
+      operationId: GetEstimatesEstimateIdCharges
+      summary: Get estimate charges and computed totals
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate charges
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateChargesResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutEstimatesEstimateIdCharges
+      summary: Upsert estimate charges and recalculate totals
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceEstimateChargesRequest'
+      responses:
+        '200':
+          description: Estimate charges updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateChargesResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /public/inventory/{token}:
     get:
       operationId: GetPublicInventoryToken
@@ -1281,6 +1326,262 @@ components:
         expiresAt:
           type: string
           format: date-time
+        requestId:
+          type: string
+    EstimateChargesMode:
+      type: string
+      enum: [local, long_distance]
+    EstimateLiabilityType:
+      type: string
+      enum: [release, full_value]
+    EstimateChargesLineItem:
+      type: object
+      required: [label, amountCents]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        amountCents:
+          type: integer
+          format: int64
+    EstimateChargesLongDistanceInput:
+      type: object
+      properties:
+        ratePerCf:
+          type: number
+          format: double
+          minimum: 0
+        fixedBaseAmountCents:
+          type: integer
+          format: int64
+          minimum: 0
+    EstimateChargesLocalInput:
+      type: object
+      properties:
+        trucks:
+          type: integer
+          minimum: 0
+        workers:
+          type: integer
+          minimum: 0
+        laborHours:
+          type: number
+          format: double
+          minimum: 0
+        laborRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+        travelHours:
+          type: number
+          format: double
+          minimum: 0
+        travelRateCents:
+          type: integer
+          format: int64
+          minimum: 0
+    EstimateChargesDiscountInput:
+      type: object
+      properties:
+        couponPct:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        couponAmountCents:
+          type: integer
+          format: int64
+          minimum: 0
+        seniorPct:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        seniorAmountCents:
+          type: integer
+          format: int64
+          minimum: 0
+    EstimateChargesPackingInput:
+      type: object
+      properties:
+        packers:
+          type: integer
+          minimum: 0
+        hours:
+          type: number
+          format: double
+          minimum: 0
+        rateCents:
+          type: integer
+          format: int64
+          minimum: 0
+    EstimateChargesLiabilityInput:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/EstimateLiabilityType'
+        valuationChargeCents:
+          type: integer
+          format: int64
+          minimum: 0
+    ReplaceEstimateChargesRequest:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          $ref: '#/components/schemas/EstimateChargesMode'
+        cfLbsRatio:
+          type: number
+          format: double
+          minimum: 0
+        fuelSurchargePct:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        longDistance:
+          $ref: '#/components/schemas/EstimateChargesLongDistanceInput'
+        local:
+          $ref: '#/components/schemas/EstimateChargesLocalInput'
+        otherLineItems:
+          type: array
+          maxItems: 25
+          items:
+            $ref: '#/components/schemas/EstimateChargesLineItem'
+        discounts:
+          $ref: '#/components/schemas/EstimateChargesDiscountInput'
+        packing:
+          $ref: '#/components/schemas/EstimateChargesPackingInput'
+        liability:
+          $ref: '#/components/schemas/EstimateChargesLiabilityInput'
+        taxRatePct:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        depositRequiredCents:
+          type: integer
+          format: int64
+          minimum: 0
+        amountPaidCents:
+          type: integer
+          format: int64
+          minimum: 0
+    EstimateChargesComputed:
+      type: object
+      required:
+        - baseCents
+        - fuelSurchargeCents
+        - otherItemsTotalCents
+        - packingTotalCents
+        - liabilityTotalCents
+        - subtotalCents
+        - discountsTotalCents
+        - taxTotalCents
+        - totalCents
+        - totalCf
+        - totalLbs
+      properties:
+        baseCents:
+          type: integer
+          format: int64
+        fuelSurchargeCents:
+          type: integer
+          format: int64
+        otherItemsTotalCents:
+          type: integer
+          format: int64
+        packingTotalCents:
+          type: integer
+          format: int64
+        liabilityTotalCents:
+          type: integer
+          format: int64
+        subtotalCents:
+          type: integer
+          format: int64
+        discountsTotalCents:
+          type: integer
+          format: int64
+        taxTotalCents:
+          type: integer
+          format: int64
+        totalCents:
+          type: integer
+          format: int64
+        totalCf:
+          type: number
+          format: double
+        totalLbs:
+          type: number
+          format: double
+    EstimateCharges:
+      type: object
+      required:
+        - estimateId
+        - mode
+        - calculationVersion
+        - cfLbsRatio
+        - fuelSurchargePct
+        - longDistance
+        - local
+        - otherLineItems
+        - discounts
+        - packing
+        - liability
+        - taxRatePct
+        - amountPaidCents
+        - computed
+        - updatedAt
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        mode:
+          $ref: '#/components/schemas/EstimateChargesMode'
+        calculationVersion:
+          type: string
+        cfLbsRatio:
+          type: number
+          format: double
+        fuelSurchargePct:
+          type: number
+          format: double
+        longDistance:
+          $ref: '#/components/schemas/EstimateChargesLongDistanceInput'
+        local:
+          $ref: '#/components/schemas/EstimateChargesLocalInput'
+        otherLineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateChargesLineItem'
+        discounts:
+          $ref: '#/components/schemas/EstimateChargesDiscountInput'
+        packing:
+          $ref: '#/components/schemas/EstimateChargesPackingInput'
+        liability:
+          $ref: '#/components/schemas/EstimateChargesLiabilityInput'
+        taxRatePct:
+          type: number
+          format: double
+        depositRequiredCents:
+          type: integer
+          format: int64
+        amountPaidCents:
+          type: integer
+          format: int64
+        computed:
+          $ref: '#/components/schemas/EstimateChargesComputed'
+        updatedAt:
+          type: string
+          format: date-time
+    EstimateChargesResponse:
+      type: object
+      required: [charges, requestId]
+      properties:
+        charges:
+          $ref: '#/components/schemas/EstimateCharges'
         requestId:
           type: string
     EstimateListItem:

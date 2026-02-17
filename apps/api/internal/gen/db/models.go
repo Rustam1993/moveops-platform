@@ -70,6 +70,52 @@ type Estimate struct {
 	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
+type EstimateCharge struct {
+	ID                            uuid.UUID  `json:"id"`
+	TenantID                      uuid.UUID  `json:"tenant_id"`
+	EstimateID                    uuid.UUID  `json:"estimate_id"`
+	Mode                          string     `json:"mode"`
+	CalculationVersion            string     `json:"calculation_version"`
+	CfLbsRatio                    float64    `json:"cf_lbs_ratio"`
+	FuelSurchargePct              float64    `json:"fuel_surcharge_pct"`
+	LdRatePerCf                   float64    `json:"ld_rate_per_cf"`
+	LdFixedBaseAmountCents        *int64     `json:"ld_fixed_base_amount_cents"`
+	LocalTrucks                   int32      `json:"local_trucks"`
+	LocalWorkers                  int32      `json:"local_workers"`
+	LocalLaborHours               float64    `json:"local_labor_hours"`
+	LocalLaborRateCents           int64      `json:"local_labor_rate_cents"`
+	LocalTravelHours              float64    `json:"local_travel_hours"`
+	LocalTravelRateCents          int64      `json:"local_travel_rate_cents"`
+	OtherLineItemsJson            []byte     `json:"other_line_items_json"`
+	DiscountCouponPct             float64    `json:"discount_coupon_pct"`
+	DiscountCouponAmountCents     int64      `json:"discount_coupon_amount_cents"`
+	DiscountSeniorPct             float64    `json:"discount_senior_pct"`
+	DiscountSeniorAmountCents     int64      `json:"discount_senior_amount_cents"`
+	PackingPackers                int32      `json:"packing_packers"`
+	PackingHours                  float64    `json:"packing_hours"`
+	PackingRateCents              int64      `json:"packing_rate_cents"`
+	LiabilityType                 string     `json:"liability_type"`
+	LiabilityValuationChargeCents int64      `json:"liability_valuation_charge_cents"`
+	TaxRatePct                    float64    `json:"tax_rate_pct"`
+	DepositRequiredCents          *int64     `json:"deposit_required_cents"`
+	AmountPaidCents               int64      `json:"amount_paid_cents"`
+	ComputedTotalCf               float64    `json:"computed_total_cf"`
+	ComputedTotalLbs              float64    `json:"computed_total_lbs"`
+	ComputedBaseCents             int64      `json:"computed_base_cents"`
+	ComputedFuelSurchargeCents    int64      `json:"computed_fuel_surcharge_cents"`
+	ComputedOtherItemsCents       int64      `json:"computed_other_items_cents"`
+	ComputedPackingCents          int64      `json:"computed_packing_cents"`
+	ComputedLiabilityCents        int64      `json:"computed_liability_cents"`
+	ComputedSubtotalCents         int64      `json:"computed_subtotal_cents"`
+	ComputedDiscountsCents        int64      `json:"computed_discounts_cents"`
+	ComputedTaxCents              int64      `json:"computed_tax_cents"`
+	ComputedTotalCents            int64      `json:"computed_total_cents"`
+	CreatedBy                     *uuid.UUID `json:"created_by"`
+	UpdatedBy                     *uuid.UUID `json:"updated_by"`
+	CreatedAt                     time.Time  `json:"created_at"`
+	UpdatedAt                     time.Time  `json:"updated_at"`
+}
+
 type EstimateInventoryItem struct {
 	ID         uuid.UUID `json:"id"`
 	TenantID   uuid.UUID `json:"tenant_id"`
