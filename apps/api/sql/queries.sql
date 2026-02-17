@@ -242,6 +242,7 @@ SELECT
   lead_source,
   move_size,
   location_type,
+  total_volume_cf,
   estimated_total_cents,
   deposit_cents,
   notes,
@@ -279,6 +280,7 @@ SELECT
   e.lead_source,
   e.move_size,
   e.location_type,
+  e.total_volume_cf,
   e.estimated_total_cents,
   e.deposit_cents,
   e.notes,
@@ -362,6 +364,7 @@ SELECT
   lead_source,
   move_size,
   location_type,
+  total_volume_cf,
   estimated_total_cents,
   deposit_cents,
   notes,
@@ -374,6 +377,112 @@ SELECT
 FROM estimates
 WHERE tenant_id = sqlc.arg(tenant_id)
   AND idempotency_key = sqlc.arg(idempotency_key);
+
+-- name: GetEstimateInventoryItems :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  category,
+  item_name,
+  volume_cf,
+  qty,
+  is_custom,
+  created_at,
+  updated_at
+FROM estimate_inventory_item
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+ORDER BY lower(category), lower(item_name), id;
+
+-- name: DeleteEstimateInventoryItems :exec
+DELETE FROM estimate_inventory_item
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id);
+
+-- name: InsertEstimateInventoryItem :one
+INSERT INTO estimate_inventory_item (
+  tenant_id,
+  estimate_id,
+  category,
+  item_name,
+  volume_cf,
+  qty,
+  is_custom
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(category),
+  sqlc.arg(item_name),
+  sqlc.arg(volume_cf),
+  sqlc.arg(qty),
+  COALESCE(sqlc.narg(is_custom)::boolean, FALSE)
+)
+RETURNING *;
+
+-- name: UpdateEstimateTotalVolumeCf :execrows
+UPDATE estimates
+SET
+  total_volume_cf = sqlc.arg(total_volume_cf),
+  updated_by = COALESCE(sqlc.narg(updated_by), updated_by),
+  updated_at = NOW()
+WHERE id = sqlc.arg(estimate_id)
+  AND tenant_id = sqlc.arg(tenant_id);
+
+-- name: CreateEstimateInventoryShareLink :one
+INSERT INTO estimate_inventory_share_link (
+  tenant_id,
+  estimate_id,
+  token_hash,
+  recipient_email,
+  delivery_mode,
+  delivery_error,
+  created_by,
+  expires_at,
+  last_accessed_at,
+  last_updated_at,
+  revoked_at
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(token_hash),
+  sqlc.arg(recipient_email),
+  sqlc.arg(delivery_mode),
+  sqlc.narg(delivery_error),
+  sqlc.narg(created_by),
+  sqlc.arg(expires_at),
+  sqlc.narg(last_accessed_at),
+  sqlc.narg(last_updated_at),
+  sqlc.narg(revoked_at)
+)
+RETURNING *;
+
+-- name: GetEstimateInventoryShareLinkByTokenHash :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  token_hash,
+  recipient_email,
+  delivery_mode,
+  delivery_error,
+  created_by,
+  expires_at,
+  last_accessed_at,
+  last_updated_at,
+  revoked_at,
+  created_at
+FROM estimate_inventory_share_link
+WHERE token_hash = sqlc.arg(token_hash)
+  AND revoked_at IS NULL;
+
+-- name: TouchEstimateInventoryShareLink :execrows
+UPDATE estimate_inventory_share_link
+SET
+  last_accessed_at = COALESCE(sqlc.narg(last_accessed_at), last_accessed_at),
+  last_updated_at = COALESCE(sqlc.narg(last_updated_at), last_updated_at)
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id);
 
 -- name: UpdateEstimate :one
 UPDATE estimates
@@ -1013,38 +1122,7 @@ WHERE tenant_id = sqlc.arg(tenant_id)
 RETURNING *;
 
 -- name: GetEstimateByNumber :one
-SELECT
-  id,
-  tenant_id,
-  estimate_number,
-  customer_id,
-  status,
-  customer_name,
-  primary_phone,
-  secondary_phone,
-  email,
-  origin_address_line1,
-  origin_city,
-  origin_state,
-  origin_postal_code,
-  destination_address_line1,
-  destination_city,
-  destination_state,
-  destination_postal_code,
-  move_date,
-  pickup_time,
-  lead_source,
-  move_size,
-  location_type,
-  estimated_total_cents,
-  deposit_cents,
-  notes,
-  idempotency_key,
-  idempotency_payload_hash,
-  created_by,
-  updated_by,
-  created_at,
-  updated_at
+SELECT *
 FROM estimates
 WHERE tenant_id = sqlc.arg(tenant_id)
   AND estimate_number = sqlc.arg(estimate_number);
