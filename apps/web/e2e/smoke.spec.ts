@@ -7,7 +7,7 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-test("Phase 2 smoke: login -> create estimate -> inventory tab reachable -> entry edit persists", async ({ page }) => {
+test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
@@ -68,4 +68,21 @@ test("Phase 2 smoke: login -> create estimate -> inventory tab reachable -> entr
 
   await page.reload();
   await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
+
+  await page.getByRole("link", { name: "Charges" }).click();
+  await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
+
+  await page.getByLabel("# Workers").fill("2");
+  await page.getByLabel("Labor hours").fill("3");
+  await page.getByLabel("Labor rate ($/hr)").fill("150");
+  await page.getByLabel("Travel hours").fill("1");
+  await page.getByLabel("Travel rate ($/hr)").fill("150");
+
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved")).toBeVisible();
+  await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
+
+  await page.reload();
+  await expect(page.getByLabel("Labor hours")).toHaveValue("3");
+  await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
 });

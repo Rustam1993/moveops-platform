@@ -50,6 +50,12 @@ type ServerInterface interface {
 	// Update estimate fields
 	// (PATCH /estimates/{estimateId})
 	PatchEstimatesEstimateId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Get estimate charges and computed totals
+	// (GET /estimates/{estimateId}/charges)
+	GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Upsert estimate charges and recalculate totals
+	// (PUT /estimates/{estimateId}/charges)
+	PutEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Convert estimate to job (idempotent)
 	// (POST /estimates/{estimateId}/convert)
 	PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, params PostEstimatesEstimateIdConvertParams)
@@ -197,6 +203,18 @@ func (_ Unimplemented) GetEstimatesEstimateId(w http.ResponseWriter, r *http.Req
 // Update estimate fields
 // (PATCH /estimates/{estimateId})
 func (_ Unimplemented) PatchEstimatesEstimateId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get estimate charges and computed totals
+// (GET /estimates/{estimateId}/charges)
+func (_ Unimplemented) GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upsert estimate charges and recalculate totals
+// (PUT /estimates/{estimateId}/charges)
+func (_ Unimplemented) PutEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -679,6 +697,56 @@ func (siw *ServerInterfaceWrapper) PatchEstimatesEstimateId(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PatchEstimatesEstimateId(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimatesEstimateIdCharges operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdCharges(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutEstimatesEstimateIdCharges operation middleware
+func (siw *ServerInterfaceWrapper) PutEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutEstimatesEstimateIdCharges(w, r, estimateId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1518,6 +1586,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/estimates/{estimateId}", wrapper.PatchEstimatesEstimateId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/charges", wrapper.GetEstimatesEstimateIdCharges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/estimates/{estimateId}/charges", wrapper.PutEstimatesEstimateIdCharges)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/estimates/{estimateId}/convert", wrapper.PostEstimatesEstimateIdConvert)

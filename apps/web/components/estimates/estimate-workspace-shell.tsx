@@ -17,7 +17,7 @@ import type { Estimate } from "@/lib/phase2-api";
 type Props = {
   mode: "new" | "existing";
   activeTab: EstimateWorkspaceTabKey;
-  estimate?: Pick<Estimate, "id" | "estimateNumber" | "customerName" | "status" | "totalVolumeCf">;
+  estimate?: Pick<Estimate, "id" | "estimateNumber" | "customerName" | "status" | "totalVolumeCf" | "locationType" | "estimatedTotalCents">;
   children: React.ReactNode;
 };
 
@@ -148,8 +148,10 @@ export function EstimateWorkspaceShell({ mode, activeTab, estimate, children }: 
               <div className="h-px bg-border/70" />
 
               <SidebarGroupTitle title="Derived totals" />
+              <SidebarField label="Service type" value={formatServiceType(estimate?.locationType)} />
               <SidebarField label="Total CF" value={formatCf(estimate?.totalVolumeCf)} />
               <SidebarField label="Total LBS" value="—" />
+              <SidebarField label="Total estimate" value={formatCurrency(estimate?.estimatedTotalCents)} />
             </CardContent>
           </Card>
         </aside>
@@ -178,4 +180,17 @@ function SidebarField({ label, value }: { label: string; value: string }) {
       <span className="font-medium">{value}</span>
     </div>
   );
+}
+
+function formatServiceType(locationType?: string | null) {
+  if (!locationType) return "Local";
+  return locationType.toLowerCase().includes("long") ? "Long Distance" : "Local";
+}
+
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(value / 100);
 }

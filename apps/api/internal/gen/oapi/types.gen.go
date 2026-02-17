@@ -31,6 +31,18 @@ const (
 	EstimateStatusDraft     EstimateStatus = "draft"
 )
 
+// Defines values for EstimateChargesMode.
+const (
+	EstimateChargesModeLocal        EstimateChargesMode = "local"
+	EstimateChargesModeLongDistance EstimateChargesMode = "long_distance"
+)
+
+// Defines values for EstimateLiabilityType.
+const (
+	FullValue EstimateLiabilityType = "full_value"
+	Release   EstimateLiabilityType = "release"
+)
+
 // Defines values for EstimateListItemStatus.
 const (
 	EstimateListItemStatusConverted EstimateListItemStatus = "converted"
@@ -156,9 +168,9 @@ const (
 
 // Defines values for GetJobsParamsJobType.
 const (
-	GetJobsParamsJobTypeLocal        GetJobsParamsJobType = "local"
-	GetJobsParamsJobTypeLongDistance GetJobsParamsJobType = "long_distance"
-	GetJobsParamsJobTypeOther        GetJobsParamsJobType = "other"
+	Local        GetJobsParamsJobType = "local"
+	LongDistance GetJobsParamsJobType = "long_distance"
+	Other        GetJobsParamsJobType = "other"
 )
 
 // AuthSessionResponse defines model for AuthSessionResponse.
@@ -333,6 +345,93 @@ type Estimate struct {
 // EstimateStatus defines model for Estimate.Status.
 type EstimateStatus string
 
+// EstimateCharges defines model for EstimateCharges.
+type EstimateCharges struct {
+	AmountPaidCents      int64                            `json:"amountPaidCents"`
+	CalculationVersion   string                           `json:"calculationVersion"`
+	CfLbsRatio           float64                          `json:"cfLbsRatio"`
+	Computed             EstimateChargesComputed          `json:"computed"`
+	DepositRequiredCents *int64                           `json:"depositRequiredCents,omitempty"`
+	Discounts            EstimateChargesDiscountInput     `json:"discounts"`
+	EstimateId           openapi_types.UUID               `json:"estimateId"`
+	FuelSurchargePct     float64                          `json:"fuelSurchargePct"`
+	Liability            EstimateChargesLiabilityInput    `json:"liability"`
+	Local                EstimateChargesLocalInput        `json:"local"`
+	LongDistance         EstimateChargesLongDistanceInput `json:"longDistance"`
+	Mode                 EstimateChargesMode              `json:"mode"`
+	OtherLineItems       []EstimateChargesLineItem        `json:"otherLineItems"`
+	Packing              EstimateChargesPackingInput      `json:"packing"`
+	TaxRatePct           float64                          `json:"taxRatePct"`
+	UpdatedAt            time.Time                        `json:"updatedAt"`
+}
+
+// EstimateChargesComputed defines model for EstimateChargesComputed.
+type EstimateChargesComputed struct {
+	BaseCents            int64   `json:"baseCents"`
+	DiscountsTotalCents  int64   `json:"discountsTotalCents"`
+	FuelSurchargeCents   int64   `json:"fuelSurchargeCents"`
+	LiabilityTotalCents  int64   `json:"liabilityTotalCents"`
+	OtherItemsTotalCents int64   `json:"otherItemsTotalCents"`
+	PackingTotalCents    int64   `json:"packingTotalCents"`
+	SubtotalCents        int64   `json:"subtotalCents"`
+	TaxTotalCents        int64   `json:"taxTotalCents"`
+	TotalCents           int64   `json:"totalCents"`
+	TotalCf              float64 `json:"totalCf"`
+	TotalLbs             float64 `json:"totalLbs"`
+}
+
+// EstimateChargesDiscountInput defines model for EstimateChargesDiscountInput.
+type EstimateChargesDiscountInput struct {
+	CouponAmountCents *int64   `json:"couponAmountCents,omitempty"`
+	CouponPct         *float64 `json:"couponPct,omitempty"`
+	SeniorAmountCents *int64   `json:"seniorAmountCents,omitempty"`
+	SeniorPct         *float64 `json:"seniorPct,omitempty"`
+}
+
+// EstimateChargesLiabilityInput defines model for EstimateChargesLiabilityInput.
+type EstimateChargesLiabilityInput struct {
+	Type                 *EstimateLiabilityType `json:"type,omitempty"`
+	ValuationChargeCents *int64                 `json:"valuationChargeCents,omitempty"`
+}
+
+// EstimateChargesLineItem defines model for EstimateChargesLineItem.
+type EstimateChargesLineItem struct {
+	AmountCents int64  `json:"amountCents"`
+	Label       string `json:"label"`
+}
+
+// EstimateChargesLocalInput defines model for EstimateChargesLocalInput.
+type EstimateChargesLocalInput struct {
+	LaborHours      *float64 `json:"laborHours,omitempty"`
+	LaborRateCents  *int64   `json:"laborRateCents,omitempty"`
+	TravelHours     *float64 `json:"travelHours,omitempty"`
+	TravelRateCents *int64   `json:"travelRateCents,omitempty"`
+	Trucks          *int     `json:"trucks,omitempty"`
+	Workers         *int     `json:"workers,omitempty"`
+}
+
+// EstimateChargesLongDistanceInput defines model for EstimateChargesLongDistanceInput.
+type EstimateChargesLongDistanceInput struct {
+	FixedBaseAmountCents *int64   `json:"fixedBaseAmountCents,omitempty"`
+	RatePerCf            *float64 `json:"ratePerCf,omitempty"`
+}
+
+// EstimateChargesMode defines model for EstimateChargesMode.
+type EstimateChargesMode string
+
+// EstimateChargesPackingInput defines model for EstimateChargesPackingInput.
+type EstimateChargesPackingInput struct {
+	Hours     *float64 `json:"hours,omitempty"`
+	Packers   *int     `json:"packers,omitempty"`
+	RateCents *int64   `json:"rateCents,omitempty"`
+}
+
+// EstimateChargesResponse defines model for EstimateChargesResponse.
+type EstimateChargesResponse struct {
+	Charges   EstimateCharges `json:"charges"`
+	RequestId string          `json:"requestId"`
+}
+
 // EstimateInventoryItem defines model for EstimateInventoryItem.
 type EstimateInventoryItem struct {
 	Category string  `json:"category"`
@@ -349,6 +448,9 @@ type EstimateInventoryResponse struct {
 	RequestId     string                  `json:"requestId"`
 	TotalVolumeCf float64                 `json:"totalVolumeCf"`
 }
+
+// EstimateLiabilityType defines model for EstimateLiabilityType.
+type EstimateLiabilityType string
 
 // EstimateListItem defines model for EstimateListItem.
 type EstimateListItem struct {
@@ -554,6 +656,22 @@ type PublicInventoryResponse struct {
 	MoveDate      openapi_types.Date      `json:"moveDate"`
 	RequestId     string                  `json:"requestId"`
 	TotalVolumeCf float64                 `json:"totalVolumeCf"`
+}
+
+// ReplaceEstimateChargesRequest defines model for ReplaceEstimateChargesRequest.
+type ReplaceEstimateChargesRequest struct {
+	AmountPaidCents      *int64                            `json:"amountPaidCents,omitempty"`
+	CfLbsRatio           *float64                          `json:"cfLbsRatio,omitempty"`
+	DepositRequiredCents *int64                            `json:"depositRequiredCents,omitempty"`
+	Discounts            *EstimateChargesDiscountInput     `json:"discounts,omitempty"`
+	FuelSurchargePct     *float64                          `json:"fuelSurchargePct,omitempty"`
+	Liability            *EstimateChargesLiabilityInput    `json:"liability,omitempty"`
+	Local                *EstimateChargesLocalInput        `json:"local,omitempty"`
+	LongDistance         *EstimateChargesLongDistanceInput `json:"longDistance,omitempty"`
+	Mode                 EstimateChargesMode               `json:"mode"`
+	OtherLineItems       *[]EstimateChargesLineItem        `json:"otherLineItems,omitempty"`
+	Packing              *EstimateChargesPackingInput      `json:"packing,omitempty"`
+	TaxRatePct           *float64                          `json:"taxRatePct,omitempty"`
 }
 
 // ReplaceEstimateInventoryRequest defines model for ReplaceEstimateInventoryRequest.
@@ -796,6 +914,9 @@ type PostEstimatesJSONRequestBody = CreateEstimateRequest
 
 // PatchEstimatesEstimateIdJSONRequestBody defines body for PatchEstimatesEstimateId for application/json ContentType.
 type PatchEstimatesEstimateIdJSONRequestBody = UpdateEstimateRequest
+
+// PutEstimatesEstimateIdChargesJSONRequestBody defines body for PutEstimatesEstimateIdCharges for application/json ContentType.
+type PutEstimatesEstimateIdChargesJSONRequestBody = ReplaceEstimateChargesRequest
 
 // PutEstimatesEstimateIdInventoryJSONRequestBody defines body for PutEstimatesEstimateIdInventory for application/json ContentType.
 type PutEstimatesEstimateIdInventoryJSONRequestBody = ReplaceEstimateInventoryRequest

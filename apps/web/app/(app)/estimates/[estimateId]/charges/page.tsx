@@ -1,10 +1,5 @@
-import { WorkspacePlaceholder } from "@/components/estimates/workspace-placeholder";
+import { EstimateChargesEditor } from "@/components/estimates/estimate-charges-editor";
 
 export default function EstimateChargesPage() {
-  return (
-    <WorkspacePlaceholder
-      title="Charges"
-      description="Local and long-distance pricing breakdown forms and job panel actions are planned for a later phase."
-    />
-  );
+  return <EstimateChargesEditor />;
 }

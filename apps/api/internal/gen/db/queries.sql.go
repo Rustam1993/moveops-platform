@@ -1440,6 +1440,112 @@ func (q *Queries) GetEstimateByNumber(ctx context.Context, arg GetEstimateByNumb
 	return i, err
 }
 
+const getEstimateChargesByEstimateID = `-- name: GetEstimateChargesByEstimateID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  mode,
+  calculation_version,
+  cf_lbs_ratio,
+  fuel_surcharge_pct,
+  ld_rate_per_cf,
+  ld_fixed_base_amount_cents,
+  local_trucks,
+  local_workers,
+  local_labor_hours,
+  local_labor_rate_cents,
+  local_travel_hours,
+  local_travel_rate_cents,
+  other_line_items_json,
+  discount_coupon_pct,
+  discount_coupon_amount_cents,
+  discount_senior_pct,
+  discount_senior_amount_cents,
+  packing_packers,
+  packing_hours,
+  packing_rate_cents,
+  liability_type,
+  liability_valuation_charge_cents,
+  tax_rate_pct,
+  deposit_required_cents,
+  amount_paid_cents,
+  computed_total_cf,
+  computed_total_lbs,
+  computed_base_cents,
+  computed_fuel_surcharge_cents,
+  computed_other_items_cents,
+  computed_packing_cents,
+  computed_liability_cents,
+  computed_subtotal_cents,
+  computed_discounts_cents,
+  computed_tax_cents,
+  computed_total_cents,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM estimate_charge
+WHERE tenant_id = $1
+  AND estimate_id = $2
+`
+
+type GetEstimateChargesByEstimateIDParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) GetEstimateChargesByEstimateID(ctx context.Context, arg GetEstimateChargesByEstimateIDParams) (EstimateCharge, error) {
+	row := q.db.QueryRow(ctx, getEstimateChargesByEstimateID, arg.TenantID, arg.EstimateID)
+	var i EstimateCharge
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Mode,
+		&i.CalculationVersion,
+		&i.CfLbsRatio,
+		&i.FuelSurchargePct,
+		&i.LdRatePerCf,
+		&i.LdFixedBaseAmountCents,
+		&i.LocalTrucks,
+		&i.LocalWorkers,
+		&i.LocalLaborHours,
+		&i.LocalLaborRateCents,
+		&i.LocalTravelHours,
+		&i.LocalTravelRateCents,
+		&i.OtherLineItemsJson,
+		&i.DiscountCouponPct,
+		&i.DiscountCouponAmountCents,
+		&i.DiscountSeniorPct,
+		&i.DiscountSeniorAmountCents,
+		&i.PackingPackers,
+		&i.PackingHours,
+		&i.PackingRateCents,
+		&i.LiabilityType,
+		&i.LiabilityValuationChargeCents,
+		&i.TaxRatePct,
+		&i.DepositRequiredCents,
+		&i.AmountPaidCents,
+		&i.ComputedTotalCf,
+		&i.ComputedTotalLbs,
+		&i.ComputedBaseCents,
+		&i.ComputedFuelSurchargeCents,
+		&i.ComputedOtherItemsCents,
+		&i.ComputedPackingCents,
+		&i.ComputedLiabilityCents,
+		&i.ComputedSubtotalCents,
+		&i.ComputedDiscountsCents,
+		&i.ComputedTaxCents,
+		&i.ComputedTotalCents,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getEstimateDetailByID = `-- name: GetEstimateDetailByID :one
 SELECT
   e.id,
@@ -3562,6 +3668,42 @@ func (q *Queries) UpdateEstimateByNumber(ctx context.Context, arg UpdateEstimate
 	return i, err
 }
 
+const updateEstimatePricingSummary = `-- name: UpdateEstimatePricingSummary :execrows
+UPDATE estimates
+SET
+  estimated_total_cents = $1::bigint,
+  deposit_cents = $2::bigint,
+  location_type = COALESCE($3, location_type),
+  updated_by = COALESCE($4, updated_by),
+  updated_at = NOW()
+WHERE id = $5
+  AND tenant_id = $6
+`
+
+type UpdateEstimatePricingSummaryParams struct {
+	EstimatedTotalCents *int64     `json:"estimated_total_cents"`
+	DepositCents        *int64     `json:"deposit_cents"`
+	LocationType        *string    `json:"location_type"`
+	UpdatedBy           *uuid.UUID `json:"updated_by"`
+	EstimateID          uuid.UUID  `json:"estimate_id"`
+	TenantID            uuid.UUID  `json:"tenant_id"`
+}
+
+func (q *Queries) UpdateEstimatePricingSummary(ctx context.Context, arg UpdateEstimatePricingSummaryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateEstimatePricingSummary,
+		arg.EstimatedTotalCents,
+		arg.DepositCents,
+		arg.LocationType,
+		arg.UpdatedBy,
+		arg.EstimateID,
+		arg.TenantID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const updateEstimateTotalVolumeCf = `-- name: UpdateEstimateTotalVolumeCf :execrows
 UPDATE estimates
 SET
@@ -3790,6 +3932,268 @@ func (q *Queries) UpdateStorageRecordByID(ctx context.Context, arg UpdateStorage
 		&i.MoveBalanceCents,
 		&i.LastPaymentAt,
 		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertEstimateCharges = `-- name: UpsertEstimateCharges :one
+INSERT INTO estimate_charge (
+  tenant_id,
+  estimate_id,
+  mode,
+  calculation_version,
+  cf_lbs_ratio,
+  fuel_surcharge_pct,
+  ld_rate_per_cf,
+  ld_fixed_base_amount_cents,
+  local_trucks,
+  local_workers,
+  local_labor_hours,
+  local_labor_rate_cents,
+  local_travel_hours,
+  local_travel_rate_cents,
+  other_line_items_json,
+  discount_coupon_pct,
+  discount_coupon_amount_cents,
+  discount_senior_pct,
+  discount_senior_amount_cents,
+  packing_packers,
+  packing_hours,
+  packing_rate_cents,
+  liability_type,
+  liability_valuation_charge_cents,
+  tax_rate_pct,
+  deposit_required_cents,
+  amount_paid_cents,
+  computed_total_cf,
+  computed_total_lbs,
+  computed_base_cents,
+  computed_fuel_surcharge_cents,
+  computed_other_items_cents,
+  computed_packing_cents,
+  computed_liability_cents,
+  computed_subtotal_cents,
+  computed_discounts_cents,
+  computed_tax_cents,
+  computed_total_cents,
+  created_by,
+  updated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12,
+  $13,
+  $14,
+  $15,
+  $16,
+  $17,
+  $18,
+  $19,
+  $20,
+  $21,
+  $22,
+  $23,
+  $24,
+  $25,
+  $26,
+  $27,
+  $28,
+  $29,
+  $30,
+  $31,
+  $32,
+  $33,
+  $34,
+  $35,
+  $36,
+  $37,
+  $38,
+  $39,
+  $40
+)
+ON CONFLICT (tenant_id, estimate_id) DO UPDATE
+SET
+  mode = EXCLUDED.mode,
+  calculation_version = EXCLUDED.calculation_version,
+  cf_lbs_ratio = EXCLUDED.cf_lbs_ratio,
+  fuel_surcharge_pct = EXCLUDED.fuel_surcharge_pct,
+  ld_rate_per_cf = EXCLUDED.ld_rate_per_cf,
+  ld_fixed_base_amount_cents = EXCLUDED.ld_fixed_base_amount_cents,
+  local_trucks = EXCLUDED.local_trucks,
+  local_workers = EXCLUDED.local_workers,
+  local_labor_hours = EXCLUDED.local_labor_hours,
+  local_labor_rate_cents = EXCLUDED.local_labor_rate_cents,
+  local_travel_hours = EXCLUDED.local_travel_hours,
+  local_travel_rate_cents = EXCLUDED.local_travel_rate_cents,
+  other_line_items_json = EXCLUDED.other_line_items_json,
+  discount_coupon_pct = EXCLUDED.discount_coupon_pct,
+  discount_coupon_amount_cents = EXCLUDED.discount_coupon_amount_cents,
+  discount_senior_pct = EXCLUDED.discount_senior_pct,
+  discount_senior_amount_cents = EXCLUDED.discount_senior_amount_cents,
+  packing_packers = EXCLUDED.packing_packers,
+  packing_hours = EXCLUDED.packing_hours,
+  packing_rate_cents = EXCLUDED.packing_rate_cents,
+  liability_type = EXCLUDED.liability_type,
+  liability_valuation_charge_cents = EXCLUDED.liability_valuation_charge_cents,
+  tax_rate_pct = EXCLUDED.tax_rate_pct,
+  deposit_required_cents = EXCLUDED.deposit_required_cents,
+  amount_paid_cents = EXCLUDED.amount_paid_cents,
+  computed_total_cf = EXCLUDED.computed_total_cf,
+  computed_total_lbs = EXCLUDED.computed_total_lbs,
+  computed_base_cents = EXCLUDED.computed_base_cents,
+  computed_fuel_surcharge_cents = EXCLUDED.computed_fuel_surcharge_cents,
+  computed_other_items_cents = EXCLUDED.computed_other_items_cents,
+  computed_packing_cents = EXCLUDED.computed_packing_cents,
+  computed_liability_cents = EXCLUDED.computed_liability_cents,
+  computed_subtotal_cents = EXCLUDED.computed_subtotal_cents,
+  computed_discounts_cents = EXCLUDED.computed_discounts_cents,
+  computed_tax_cents = EXCLUDED.computed_tax_cents,
+  computed_total_cents = EXCLUDED.computed_total_cents,
+  updated_by = COALESCE(EXCLUDED.updated_by, estimate_charge.updated_by),
+  updated_at = NOW()
+RETURNING id, tenant_id, estimate_id, mode, calculation_version, cf_lbs_ratio, fuel_surcharge_pct, ld_rate_per_cf, ld_fixed_base_amount_cents, local_trucks, local_workers, local_labor_hours, local_labor_rate_cents, local_travel_hours, local_travel_rate_cents, other_line_items_json, discount_coupon_pct, discount_coupon_amount_cents, discount_senior_pct, discount_senior_amount_cents, packing_packers, packing_hours, packing_rate_cents, liability_type, liability_valuation_charge_cents, tax_rate_pct, deposit_required_cents, amount_paid_cents, computed_total_cf, computed_total_lbs, computed_base_cents, computed_fuel_surcharge_cents, computed_other_items_cents, computed_packing_cents, computed_liability_cents, computed_subtotal_cents, computed_discounts_cents, computed_tax_cents, computed_total_cents, created_by, updated_by, created_at, updated_at
+`
+
+type UpsertEstimateChargesParams struct {
+	TenantID                      uuid.UUID  `json:"tenant_id"`
+	EstimateID                    uuid.UUID  `json:"estimate_id"`
+	Mode                          string     `json:"mode"`
+	CalculationVersion            string     `json:"calculation_version"`
+	CfLbsRatio                    float64    `json:"cf_lbs_ratio"`
+	FuelSurchargePct              float64    `json:"fuel_surcharge_pct"`
+	LdRatePerCf                   float64    `json:"ld_rate_per_cf"`
+	LdFixedBaseAmountCents        *int64     `json:"ld_fixed_base_amount_cents"`
+	LocalTrucks                   int32      `json:"local_trucks"`
+	LocalWorkers                  int32      `json:"local_workers"`
+	LocalLaborHours               float64    `json:"local_labor_hours"`
+	LocalLaborRateCents           int64      `json:"local_labor_rate_cents"`
+	LocalTravelHours              float64    `json:"local_travel_hours"`
+	LocalTravelRateCents          int64      `json:"local_travel_rate_cents"`
+	OtherLineItemsJson            []byte     `json:"other_line_items_json"`
+	DiscountCouponPct             float64    `json:"discount_coupon_pct"`
+	DiscountCouponAmountCents     int64      `json:"discount_coupon_amount_cents"`
+	DiscountSeniorPct             float64    `json:"discount_senior_pct"`
+	DiscountSeniorAmountCents     int64      `json:"discount_senior_amount_cents"`
+	PackingPackers                int32      `json:"packing_packers"`
+	PackingHours                  float64    `json:"packing_hours"`
+	PackingRateCents              int64      `json:"packing_rate_cents"`
+	LiabilityType                 string     `json:"liability_type"`
+	LiabilityValuationChargeCents int64      `json:"liability_valuation_charge_cents"`
+	TaxRatePct                    float64    `json:"tax_rate_pct"`
+	DepositRequiredCents          *int64     `json:"deposit_required_cents"`
+	AmountPaidCents               int64      `json:"amount_paid_cents"`
+	ComputedTotalCf               float64    `json:"computed_total_cf"`
+	ComputedTotalLbs              float64    `json:"computed_total_lbs"`
+	ComputedBaseCents             int64      `json:"computed_base_cents"`
+	ComputedFuelSurchargeCents    int64      `json:"computed_fuel_surcharge_cents"`
+	ComputedOtherItemsCents       int64      `json:"computed_other_items_cents"`
+	ComputedPackingCents          int64      `json:"computed_packing_cents"`
+	ComputedLiabilityCents        int64      `json:"computed_liability_cents"`
+	ComputedSubtotalCents         int64      `json:"computed_subtotal_cents"`
+	ComputedDiscountsCents        int64      `json:"computed_discounts_cents"`
+	ComputedTaxCents              int64      `json:"computed_tax_cents"`
+	ComputedTotalCents            int64      `json:"computed_total_cents"`
+	CreatedBy                     *uuid.UUID `json:"created_by"`
+	UpdatedBy                     *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpsertEstimateCharges(ctx context.Context, arg UpsertEstimateChargesParams) (EstimateCharge, error) {
+	row := q.db.QueryRow(ctx, upsertEstimateCharges,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.Mode,
+		arg.CalculationVersion,
+		arg.CfLbsRatio,
+		arg.FuelSurchargePct,
+		arg.LdRatePerCf,
+		arg.LdFixedBaseAmountCents,
+		arg.LocalTrucks,
+		arg.LocalWorkers,
+		arg.LocalLaborHours,
+		arg.LocalLaborRateCents,
+		arg.LocalTravelHours,
+		arg.LocalTravelRateCents,
+		arg.OtherLineItemsJson,
+		arg.DiscountCouponPct,
+		arg.DiscountCouponAmountCents,
+		arg.DiscountSeniorPct,
+		arg.DiscountSeniorAmountCents,
+		arg.PackingPackers,
+		arg.PackingHours,
+		arg.PackingRateCents,
+		arg.LiabilityType,
+		arg.LiabilityValuationChargeCents,
+		arg.TaxRatePct,
+		arg.DepositRequiredCents,
+		arg.AmountPaidCents,
+		arg.ComputedTotalCf,
+		arg.ComputedTotalLbs,
+		arg.ComputedBaseCents,
+		arg.ComputedFuelSurchargeCents,
+		arg.ComputedOtherItemsCents,
+		arg.ComputedPackingCents,
+		arg.ComputedLiabilityCents,
+		arg.ComputedSubtotalCents,
+		arg.ComputedDiscountsCents,
+		arg.ComputedTaxCents,
+		arg.ComputedTotalCents,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	var i EstimateCharge
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Mode,
+		&i.CalculationVersion,
+		&i.CfLbsRatio,
+		&i.FuelSurchargePct,
+		&i.LdRatePerCf,
+		&i.LdFixedBaseAmountCents,
+		&i.LocalTrucks,
+		&i.LocalWorkers,
+		&i.LocalLaborHours,
+		&i.LocalLaborRateCents,
+		&i.LocalTravelHours,
+		&i.LocalTravelRateCents,
+		&i.OtherLineItemsJson,
+		&i.DiscountCouponPct,
+		&i.DiscountCouponAmountCents,
+		&i.DiscountSeniorPct,
+		&i.DiscountSeniorAmountCents,
+		&i.PackingPackers,
+		&i.PackingHours,
+		&i.PackingRateCents,
+		&i.LiabilityType,
+		&i.LiabilityValuationChargeCents,
+		&i.TaxRatePct,
+		&i.DepositRequiredCents,
+		&i.AmountPaidCents,
+		&i.ComputedTotalCf,
+		&i.ComputedTotalLbs,
+		&i.ComputedBaseCents,
+		&i.ComputedFuelSurchargeCents,
+		&i.ComputedOtherItemsCents,
+		&i.ComputedPackingCents,
+		&i.ComputedLiabilityCents,
+		&i.ComputedSubtotalCents,
+		&i.ComputedDiscountsCents,
+		&i.ComputedTaxCents,
+		&i.ComputedTotalCents,
+		&i.CreatedBy,
+		&i.UpdatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

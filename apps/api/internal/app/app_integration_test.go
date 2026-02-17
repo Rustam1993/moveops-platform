@@ -298,6 +298,153 @@ func TestPublicInventoryTokenReadUpdateAndExpiry(t *testing.T) {
 	}
 }
 
+func TestEstimateChargesTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-charges-a", "Tenant Charges A", "charges-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-charges-b", "Tenant Charges B", "charges-b@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookieA := login(t, env.router, "charges-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-charges-a")
+
+	status, body := request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/charges", chargesPayload(map[string]any{
+		"mode": "local",
+		"local": map[string]any{
+			"workers":         2,
+			"laborHours":      3,
+			"laborRateCents":  15000,
+			"travelHours":     1,
+			"travelRateCents": 15000,
+		},
+	}), cookieA, csrfA)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 charges update by owner tenant, got %d (%s)", status, string(body))
+	}
+
+	cookieB := login(t, env.router, "charges-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/charges", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant charges read, got %d", status)
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/charges", chargesPayload(map[string]any{
+		"mode": "long_distance",
+		"longDistance": map[string]any{
+			"ratePerCf": 4.5,
+		},
+	}), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant charges update, got %d (%s)", status, string(body))
+	}
+}
+
+func TestEstimateChargesCalculationLongDistanceAndLocal(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-charges-calc", "Tenant Charges Calc", "charges-calc@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookie := login(t, env.router, "charges-calc@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "idem-charges-calc")
+
+	status, body := request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/inventory", inventoryPayload(
+		map[string]any{"category": "Boxes", "itemName": "Box, Large 18x18x24", "volumeCf": 100.0, "qty": 3},
+	), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 inventory update for charges calc test, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/charges", chargesPayload(map[string]any{
+		"mode":             "long_distance",
+		"cfLbsRatio":       7.0,
+		"fuelSurchargePct": 10,
+		"longDistance": map[string]any{
+			"ratePerCf": 4.5,
+		},
+		"otherLineItems": []map[string]any{
+			{"label": "Stairs", "amountCents": 5000},
+			{"label": "Promo", "amountCents": -1000},
+		},
+		"discounts": map[string]any{
+			"couponPct":         5,
+			"couponAmountCents": 1000,
+		},
+		"packing": map[string]any{
+			"packers":   2,
+			"hours":     1,
+			"rateCents": 2000,
+		},
+		"liability": map[string]any{
+			"type":                 "full_value",
+			"valuationChargeCents": 2500,
+		},
+		"taxRatePct":           8,
+		"depositRequiredCents": 25000,
+		"amountPaidCents":      5000,
+	}), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 long-distance charges update, got %d (%s)", status, string(body))
+	}
+
+	ld := parseChargesComputed(t, body)
+	if ld.TotalCf != 300.0 {
+		t.Fatalf("expected total CF 300.0, got %.2f", ld.TotalCf)
+	}
+	if ld.TotalCents != 162054 {
+		t.Fatalf("expected long-distance total 162054, got %d", ld.TotalCents)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 estimate read after long-distance charges, got %d (%s)", status, string(body))
+	}
+	if total := parseEstimateTotalCents(t, body); total != 162054 {
+		t.Fatalf("expected estimate estimatedTotalCents 162054, got %d", total)
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/charges", chargesPayload(map[string]any{
+		"mode": "local",
+		"local": map[string]any{
+			"trucks":          2,
+			"workers":         3,
+			"laborHours":      2,
+			"laborRateCents":  20000,
+			"travelHours":     1.5,
+			"travelRateCents": 10000,
+		},
+		"fuelSurchargePct": 5,
+		"otherLineItems": []map[string]any{
+			{"label": "Extra stop", "amountCents": 2000},
+		},
+		"discounts": map[string]any{
+			"seniorAmountCents": 500,
+		},
+		"taxRatePct":      7,
+		"amountPaidCents": 1000,
+	}), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 local charges update, got %d (%s)", status, string(body))
+	}
+
+	local := parseChargesComputed(t, body)
+	if local.TotalCents != 153278 {
+		t.Fatalf("expected local total 153278, got %d", local.TotalCents)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 estimate read after local charges, got %d (%s)", status, string(body))
+	}
+	if total := parseEstimateTotalCents(t, body); total != 153278 {
+		t.Fatalf("expected estimate estimatedTotalCents 153278, got %d", total)
+	}
+}
+
 func TestEstimateRBACForCreateAndConvert(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
@@ -1109,6 +1256,11 @@ func inventoryPayload(items ...map[string]any) []byte {
 	return payload
 }
 
+func chargesPayload(payload map[string]any) []byte {
+	body, _ := json.Marshal(payload)
+	return body
+}
+
 func parseEstimateID(t *testing.T, body []byte) string {
 	t.Helper()
 	var payload struct {
@@ -1136,6 +1288,40 @@ func parseEstimateTotalCf(t *testing.T, body []byte) float64 {
 		t.Fatalf("parse estimate totalVolumeCf: %v", err)
 	}
 	return payload.Estimate.TotalVolumeCf
+}
+
+func parseEstimateTotalCents(t *testing.T, body []byte) int64 {
+	t.Helper()
+	var payload struct {
+		Estimate struct {
+			EstimatedTotalCents *int64 `json:"estimatedTotalCents"`
+		} `json:"estimate"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse estimate estimatedTotalCents: %v", err)
+	}
+	if payload.Estimate.EstimatedTotalCents == nil {
+		return 0
+	}
+	return *payload.Estimate.EstimatedTotalCents
+}
+
+type chargesComputedPayload struct {
+	TotalCf    float64 `json:"totalCf"`
+	TotalCents int64   `json:"totalCents"`
+}
+
+func parseChargesComputed(t *testing.T, body []byte) chargesComputedPayload {
+	t.Helper()
+	var payload struct {
+		Charges struct {
+			Computed chargesComputedPayload `json:"computed"`
+		} `json:"charges"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse charges response: %v", err)
+	}
+	return payload.Charges.Computed
 }
 
 func parsePublicInventoryTotalCf(t *testing.T, body []byte) float64 {

@@ -209,6 +209,27 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		})
 
 		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}/charges", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateIdCharges(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/estimates/{estimateId}/charges", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PutEstimatesEstimateIdCharges(w, r, estimateID)
+		})
+
+		protected.With(
 			middleware.RequirePermission(q, "estimates.convert"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
 		).Post("/estimates/{estimateId}/convert", func(w http.ResponseWriter, r *http.Request) {
