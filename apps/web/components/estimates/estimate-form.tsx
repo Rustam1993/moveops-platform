@@ -1,42 +1,56 @@
 import { type ChangeEvent } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { EstimateFormErrors, EstimateFormValues } from "@/lib/estimate-form";
+import {
+  serviceTypeOptions,
+  type EstimateFormErrors,
+  type EstimateFormField,
+  type EstimateFormValues,
+} from "@/lib/estimate-form";
 import { cn } from "@/lib/utils";
 
 type Props = {
   values: EstimateFormValues;
   errors: EstimateFormErrors;
   disabled?: boolean;
-  onChange: (field: keyof EstimateFormValues, value: string) => void;
+  onChange: (field: EstimateFormField, value: string) => void;
+  onBlur: (field: EstimateFormField) => void;
 };
 
 const selectClassName =
   "flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
-const leadSourceOptions = ["", "Website", "Phone Inquiry", "Referral", "Walk-in", "Other"];
-const moveSizeOptions = ["", "Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Office"];
-const locationTypeOptions = ["", "House", "Apartment", "Condo", "Storage", "Office", "Other"];
-
-export function EstimateForm({ values, errors, disabled, onChange }: Props) {
+export function EstimateForm({ values, errors, disabled, onChange, onBlur }: Props) {
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="space-y-5">
+      <Card className="border-border/70">
         <CardHeader>
-          <CardTitle>Customer contact</CardTitle>
+          <CardTitle>Customer</CardTitle>
+          <CardDescription>Primary contact for this estimate.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <FormField
-            id="customerName"
-            label="Customer name"
+            id="firstName"
+            label="First name"
             required
-            value={values.customerName}
-            error={errors.customerName}
+            value={values.firstName}
+            error={errors.firstName}
             disabled={disabled}
-            onChange={(value) => onChange("customerName", value)}
+            onChange={(value) => onChange("firstName", value)}
+            onBlur={() => onBlur("firstName")}
+          />
+          <FormField
+            id="lastName"
+            label="Last name"
+            required
+            value={values.lastName}
+            error={errors.lastName}
+            disabled={disabled}
+            onChange={(value) => onChange("lastName", value)}
+            onBlur={() => onBlur("lastName")}
           />
           <FormField
             id="email"
@@ -47,209 +61,190 @@ export function EstimateForm({ values, errors, disabled, onChange }: Props) {
             error={errors.email}
             disabled={disabled}
             onChange={(value) => onChange("email", value)}
+            onBlur={() => onBlur("email")}
           />
           <FormField
-            id="primaryPhone"
-            label="Primary phone"
+            id="phone"
+            label="Phone"
             required
-            value={values.primaryPhone}
-            error={errors.primaryPhone}
+            value={values.phone}
+            error={errors.phone}
             disabled={disabled}
-            onChange={(value) => onChange("primaryPhone", value)}
-          />
-          <FormField
-            id="secondaryPhone"
-            label="Secondary phone"
-            value={values.secondaryPhone}
-            error={errors.secondaryPhone}
-            disabled={disabled}
-            onChange={(value) => onChange("secondaryPhone", value)}
+            onChange={(value) => onChange("phone", value)}
+            onBlur={() => onBlur("phone")}
           />
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="border-border/70">
           <CardHeader>
-            <CardTitle>Origin (Moving From)</CardTitle>
+            <CardTitle>Moving From</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
-              id="originAddressLine1"
-              label="Address"
+              id="movingFromStreet"
+              label="Street"
               required
-              value={values.originAddressLine1}
-              error={errors.originAddressLine1}
+              value={values.movingFromStreet}
+              error={errors.movingFromStreet}
               disabled={disabled}
-              onChange={(value) => onChange("originAddressLine1", value)}
+              onChange={(value) => onChange("movingFromStreet", value)}
+              onBlur={() => onBlur("movingFromStreet")}
             />
             <div className="grid gap-4 md:grid-cols-3">
               <FormField
-                id="originCity"
+                id="movingFromCity"
                 label="City"
                 required
-                value={values.originCity}
-                error={errors.originCity}
+                value={values.movingFromCity}
+                error={errors.movingFromCity}
                 disabled={disabled}
-                onChange={(value) => onChange("originCity", value)}
+                onChange={(value) => onChange("movingFromCity", value)}
+                onBlur={() => onBlur("movingFromCity")}
               />
               <FormField
-                id="originState"
+                id="movingFromState"
                 label="State"
                 required
-                value={values.originState}
-                error={errors.originState}
+                value={values.movingFromState}
+                error={errors.movingFromState}
                 disabled={disabled}
-                onChange={(value) => onChange("originState", value)}
+                onChange={(value) => onChange("movingFromState", value)}
+                onBlur={() => onBlur("movingFromState")}
               />
               <FormField
-                id="originPostalCode"
-                label="Postal code"
+                id="movingFromZip"
+                label="ZIP"
                 required
-                value={values.originPostalCode}
-                error={errors.originPostalCode}
+                value={values.movingFromZip}
+                error={errors.movingFromZip}
                 disabled={disabled}
-                onChange={(value) => onChange("originPostalCode", value)}
+                onChange={(value) => onChange("movingFromZip", value)}
+                onBlur={() => onBlur("movingFromZip")}
               />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/70">
           <CardHeader>
-            <CardTitle>Destination (Moving To)</CardTitle>
+            <CardTitle>Moving To</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
-              id="destinationAddressLine1"
-              label="Address"
+              id="movingToStreet"
+              label="Street"
               required
-              value={values.destinationAddressLine1}
-              error={errors.destinationAddressLine1}
+              value={values.movingToStreet}
+              error={errors.movingToStreet}
               disabled={disabled}
-              onChange={(value) => onChange("destinationAddressLine1", value)}
+              onChange={(value) => onChange("movingToStreet", value)}
+              onBlur={() => onBlur("movingToStreet")}
             />
             <div className="grid gap-4 md:grid-cols-3">
               <FormField
-                id="destinationCity"
+                id="movingToCity"
                 label="City"
                 required
-                value={values.destinationCity}
-                error={errors.destinationCity}
+                value={values.movingToCity}
+                error={errors.movingToCity}
                 disabled={disabled}
-                onChange={(value) => onChange("destinationCity", value)}
+                onChange={(value) => onChange("movingToCity", value)}
+                onBlur={() => onBlur("movingToCity")}
               />
               <FormField
-                id="destinationState"
+                id="movingToState"
                 label="State"
                 required
-                value={values.destinationState}
-                error={errors.destinationState}
+                value={values.movingToState}
+                error={errors.movingToState}
                 disabled={disabled}
-                onChange={(value) => onChange("destinationState", value)}
+                onChange={(value) => onChange("movingToState", value)}
+                onBlur={() => onBlur("movingToState")}
               />
               <FormField
-                id="destinationPostalCode"
-                label="Postal code"
+                id="movingToZip"
+                label="ZIP"
                 required
-                value={values.destinationPostalCode}
-                error={errors.destinationPostalCode}
+                value={values.movingToZip}
+                error={errors.movingToZip}
                 disabled={disabled}
-                onChange={(value) => onChange("destinationPostalCode", value)}
+                onChange={(value) => onChange("movingToZip", value)}
+                onBlur={() => onBlur("movingToZip")}
               />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-border/70">
         <CardHeader>
-          <CardTitle>Move details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <FormField
-            id="moveDate"
-            label="Move date"
-            required
-            type="date"
-            value={values.moveDate}
-            error={errors.moveDate}
-            disabled={disabled}
-            onChange={(value) => onChange("moveDate", value)}
-          />
-          <FormField
-            id="pickupTime"
-            label="Pickup time"
-            type="time"
-            value={values.pickupTime}
-            error={errors.pickupTime}
-            disabled={disabled}
-            onChange={(value) => onChange("pickupTime", value)}
-          />
-          <SelectField
-            id="leadSource"
-            label="Lead source"
-            required
-            value={values.leadSource}
-            options={leadSourceOptions}
-            error={errors.leadSource}
-            disabled={disabled}
-            onChange={(value) => onChange("leadSource", value)}
-          />
-          <SelectField
-            id="moveSize"
-            label="Move size"
-            value={values.moveSize}
-            options={moveSizeOptions}
-            error={errors.moveSize}
-            disabled={disabled}
-            onChange={(value) => onChange("moveSize", value)}
-          />
-          <SelectField
-            id="locationType"
-            label="Location type"
-            value={values.locationType}
-            options={locationTypeOptions}
-            error={errors.locationType}
-            disabled={disabled}
-            onChange={(value) => onChange("locationType", value)}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing</CardTitle>
+          <CardTitle>Move Basics</CardTitle>
+          <CardDescription>Date, time preference, and service type for scheduling.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <FormField
-              id="estimatedTotal"
-              label="Estimated total"
-              placeholder="0.00"
-              value={values.estimatedTotal}
-              error={errors.estimatedTotal}
+              id="moveDate"
+              label="Move date"
+              required
+              type="date"
+              value={values.moveDate}
+              error={errors.moveDate}
               disabled={disabled}
-              onChange={(value) => onChange("estimatedTotal", value)}
+              onChange={(value) => onChange("moveDate", value)}
+              onBlur={() => onBlur("moveDate")}
             />
             <FormField
-              id="deposit"
-              label="Deposit"
-              placeholder="0.00"
-              value={values.deposit}
-              error={errors.deposit}
+              id="preferredTimeWindow"
+              label="Preferred time window"
+              type="text"
+              placeholder="e.g., 9:00 AM - 12:00 PM"
+              value={values.preferredTimeWindow}
+              error={errors.preferredTimeWindow}
               disabled={disabled}
-              onChange={(value) => onChange("deposit", value)}
+              onChange={(value) => onChange("preferredTimeWindow", value)}
+              onBlur={() => onBlur("preferredTimeWindow")}
+            />
+            <SelectField
+              id="serviceType"
+              label="Service type"
+              required
+              value={values.serviceType}
+              error={errors.serviceType}
+              disabled={disabled}
+              options={serviceTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
+              onChange={(value) => onChange("serviceType", value)}
+              onBlur={() => onBlur("serviceType")}
             />
           </div>
+
+          <details className="rounded-md border border-border/70 bg-muted/10 p-4">
+            <summary className="cursor-pointer text-sm font-medium">Advanced</summary>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <FormField
+                id="leadSource"
+                label="Referral source"
+                required
+                value={values.leadSource}
+                error={errors.leadSource}
+                disabled={disabled}
+                onChange={(value) => onChange("leadSource", value)}
+                onBlur={() => onBlur("leadSource")}
+              />
+            </div>
+          </details>
+
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Internal notes</Label>
             <Textarea
               id="notes"
               value={values.notes}
               onChange={(event) => onChange("notes", event.target.value)}
+              onBlur={() => onBlur("notes")}
               disabled={disabled}
-              placeholder="Add pricing or scope notes"
+              placeholder="Add context for sales and operations teams"
             />
             <FieldError message={errors.notes} />
           </div>
@@ -264,6 +259,7 @@ function FormField({
   label,
   value,
   onChange,
+  onBlur,
   error,
   required,
   disabled,
@@ -274,6 +270,7 @@ function FormField({
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur: () => void;
   error?: string;
   required?: boolean;
   disabled?: boolean;
@@ -295,6 +292,7 @@ function FormField({
         type={type}
         value={value}
         onChange={handleChange}
+        onBlur={onBlur}
         disabled={disabled}
         placeholder={placeholder}
         className={cn(error ? "border-destructive focus-visible:ring-destructive" : "")}
@@ -310,6 +308,7 @@ function SelectField({
   value,
   options,
   onChange,
+  onBlur,
   error,
   required,
   disabled,
@@ -317,8 +316,9 @@ function SelectField({
   id: string;
   label: string;
   value: string;
-  options: string[];
+  options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
+  onBlur: () => void;
   error?: string;
   required?: boolean;
   disabled?: boolean;
@@ -334,11 +334,12 @@ function SelectField({
         className={cn(selectClassName, error ? "border-destructive focus-visible:ring-destructive" : "")}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         disabled={disabled}
       >
         {options.map((option) => (
-          <option key={option || "empty"} value={option}>
-            {option || "Select"}
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>

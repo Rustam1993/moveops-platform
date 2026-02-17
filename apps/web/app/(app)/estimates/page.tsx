@@ -149,11 +149,11 @@ export default function EstimatesListPage() {
                     key={estimate.estimateId}
                     tabIndex={0}
                     role="button"
-                    onClick={() => router.push(`/estimates/${estimate.estimateId}`)}
+                    onClick={() => router.push(`/estimates/${estimate.estimateId}/entry`)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        router.push(`/estimates/${estimate.estimateId}`);
+                        router.push(`/estimates/${estimate.estimateId}/entry`);
                       }
                     }}
                     className="cursor-pointer border-t border-border/60 hover:bg-muted/20 focus:bg-muted/20 focus:outline-none"
@@ -215,4 +215,3 @@ function StatusPill({ value }: { value: string }) {
   const className = value === "draft" ? "bg-blue-500/15 text-blue-200" : "bg-emerald-500/15 text-emerald-200";
   return <span className={cn("inline-flex rounded px-2 py-0.5 text-xs capitalize", className)}>{value}</span>;
 }
-

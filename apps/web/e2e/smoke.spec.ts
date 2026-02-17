@@ -7,10 +7,12 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-test("MVP smoke: login -> estimate -> job -> calendar -> storage", async ({ page }) => {
+test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ page }) => {
   const suffix = Date.now().toString().slice(-6);
-  const customerName = `E2E Customer ${suffix}`;
+  const firstName = `E2E${suffix}`;
+  const lastName = "Customer";
   const email = `e2e.${suffix}@example.com`;
+  const updatedLastName = "Updated";
   const moveDate = formatDate(new Date());
 
   await page.goto("/login");
@@ -26,41 +28,46 @@ test("MVP smoke: login -> estimate -> job -> calendar -> storage", async ({ page
 
   await page.goto("/estimates/new");
   await page.waitForURL(/\/estimates\/new$/);
-  await expect(page.getByRole("heading", { name: "New Estimate" })).toBeVisible();
-  await page.locator("#customerName").fill(customerName);
-  await page.locator("#email").fill(email);
-  await page.locator("#primaryPhone").fill("5125550200");
-  await page.locator("#originAddressLine1").fill("100 Smoke Origin St");
-  await page.locator("#originCity").fill("Austin");
-  await page.locator("#originState").fill("TX");
-  await page.locator("#originPostalCode").fill("78701");
-  await page.locator("#destinationAddressLine1").fill("900 Smoke Destination Ave");
-  await page.locator("#destinationCity").fill("Dallas");
-  await page.locator("#destinationState").fill("TX");
-  await page.locator("#destinationPostalCode").fill("75001");
-  await page.locator("#moveDate").fill(moveDate);
-  await page.locator("#leadSource").selectOption("Website");
+  await expect(page.getByRole("heading", { name: "New estimate" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("tablist", { name: "Estimate workspace tabs" })
+      .getByRole("button", { name: "Inventory", exact: true }),
+  ).toBeDisabled();
+
+  await page.getByLabel("First name").fill(firstName);
+  await page.getByLabel("Last name").fill(lastName);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Phone").fill("5125550200");
+  await page.getByLabel("Street").first().fill("100 Smoke Origin St");
+  await page.getByLabel("City").first().fill("Austin");
+  await page.getByLabel("State").first().fill("TX");
+  await page.getByLabel("ZIP").first().fill("78701");
+  await page.getByLabel("Street").nth(1).fill("900 Smoke Destination Ave");
+  await page.getByLabel("City").nth(1).fill("Dallas");
+  await page.getByLabel("State").nth(1).fill("TX");
+  await page.getByLabel("ZIP").nth(1).fill("75001");
+  await page.getByLabel("Move date").fill(moveDate);
 
   await Promise.all([
-    page.waitForURL(/\/jobs\/.+/),
-    page.getByRole("button", { name: "Convert to job" }).click(),
+    page.waitForURL(/\/estimates\/.+\/entry$/),
+    page.getByRole("button", { name: "Save" }).click(),
   ]);
 
-  const headingText = await page.getByRole("heading", { name: /^Job J-/ }).first().innerText();
-  const jobNumber = headingText.replace("Job ", "").trim();
-  expect(jobNumber).toMatch(/^J-/);
+  await expect(page.getByText("Saved")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Inventory" })).toBeVisible();
 
-  await page.goto("/calendar");
-  await expect(page.getByText(jobNumber).first()).toBeVisible();
+  await page.getByRole("link", { name: "Inventory" }).click();
+  await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+  await expect(page.getByText("Coming soon in Phase 2/3")).toBeVisible();
 
-  await page.goto("/storage");
-  await page.locator("header select").first().selectOption("Main Facility");
-  await expect(page.getByText(jobNumber).first()).toBeVisible();
-  await page.getByText(jobNumber).first().click();
+  await page.getByRole("link", { name: "Entry Form" }).click();
+  await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
 
-  await expect(page.getByRole("heading", { name: /storage record/i })).toBeVisible();
-  await page.locator("textarea").first().fill(`E2E note ${suffix}`);
+  await page.getByLabel("Last name").fill(updatedLastName);
   await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved")).toBeVisible();
 
-  await expect(page.getByText(jobNumber).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
 });
