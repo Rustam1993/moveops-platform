@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -192,6 +193,108 @@ func TestEstimateTenantIsolationOnUpdate(t *testing.T) {
 	status, body := request(t, env.router, http.MethodPatch, "/api/estimates/"+estimateID, estimateUpdatePayload("Cross Tenant Attempt"), cookieB, csrfB)
 	if status != http.StatusNotFound {
 		t.Fatalf("expected 404 for cross-tenant estimate update, got %d (%s)", status, string(body))
+	}
+}
+
+func TestEstimateInventoryTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-inv-a", "Tenant Inv A", "inv-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-inv-b", "Tenant Inv B", "inv-b@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookieA := login(t, env.router, "inv-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-inv-a")
+
+	status, body := request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/inventory", inventoryPayload(
+		map[string]any{"category": "Boxes", "itemName": "Box, Medium 18x18x16", "volumeCf": 3.0, "qty": 4},
+	), cookieA, csrfA)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 inventory update by owner tenant, got %d (%s)", status, string(body))
+	}
+
+	cookieB := login(t, env.router, "inv-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/inventory", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant inventory read, got %d", status)
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/estimates/"+estimateID+"/inventory", inventoryPayload(
+		map[string]any{"category": "Boxes", "itemName": "Box, Medium 18x18x16", "volumeCf": 3.0, "qty": 1},
+	), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant inventory update, got %d (%s)", status, string(body))
+	}
+}
+
+func TestPublicInventoryTokenReadUpdateAndExpiry(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-public-inv", "Tenant Public Inventory", "public-inv@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookie := login(t, env.router, "public-inv@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "idem-public-inventory")
+
+	status, body := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/inventory-share-links", nil, cookie, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 share link create, got %d (%s)", status, string(body))
+	}
+	token := parseInventoryShareToken(t, body)
+	if token == "" {
+		t.Fatalf("expected non-empty inventory share token")
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/inventory/"+token, nil, nil, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for valid public token read, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodPut, "/api/public/inventory/"+token, inventoryPayload(
+		map[string]any{"category": "Boxes", "itemName": "Box, Medium 18x18x16", "volumeCf": 3.0, "qty": 5},
+		map[string]any{"category": "Boxes", "itemName": "Box, Wardrobe", "volumeCf": 15.0, "qty": 1},
+	), nil, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for valid public token update, got %d (%s)", status, string(body))
+	}
+	if total := parsePublicInventoryTotalCf(t, body); math.Abs(total-30.0) > 0.001 {
+		t.Fatalf("expected public total CF 30.0, got %.3f", total)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID, nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 estimate read after public inventory update, got %d (%s)", status, string(body))
+	}
+	if total := parseEstimateTotalCf(t, body); math.Abs(total-30.0) > 0.001 {
+		t.Fatalf("expected estimate totalVolumeCf 30.0, got %.3f", total)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/inventory/not-a-real-token", nil, nil, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for invalid token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "inventory_share_not_found" {
+		t.Fatalf("expected inventory_share_not_found for invalid token, got %s", code)
+	}
+
+	if _, err := env.pool.Exec(ctx, `
+		UPDATE estimate_inventory_share_link
+		SET expires_at = NOW() - INTERVAL '1 hour'
+		WHERE token_hash = $1
+	`, auth.HashToken(token)); err != nil {
+		t.Fatalf("expire inventory share token: %v", err)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/inventory/"+token, nil, nil, "")
+	if status != http.StatusGone {
+		t.Fatalf("expected 410 for expired token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "inventory_share_expired" {
+		t.Fatalf("expected inventory_share_expired for expired token, got %s", code)
 	}
 }
 
@@ -999,6 +1102,13 @@ func estimateUpdatePayload(customerName string) []byte {
 	return payload
 }
 
+func inventoryPayload(items ...map[string]any) []byte {
+	payload, _ := json.Marshal(map[string]any{
+		"items": items,
+	})
+	return payload
+}
+
 func parseEstimateID(t *testing.T, body []byte) string {
 	t.Helper()
 	var payload struct {
@@ -1013,6 +1123,50 @@ func parseEstimateID(t *testing.T, body []byte) string {
 		t.Fatalf("estimate id missing")
 	}
 	return payload.Estimate.ID
+}
+
+func parseEstimateTotalCf(t *testing.T, body []byte) float64 {
+	t.Helper()
+	var payload struct {
+		Estimate struct {
+			TotalVolumeCf float64 `json:"totalVolumeCf"`
+		} `json:"estimate"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse estimate totalVolumeCf: %v", err)
+	}
+	return payload.Estimate.TotalVolumeCf
+}
+
+func parsePublicInventoryTotalCf(t *testing.T, body []byte) float64 {
+	t.Helper()
+	var payload struct {
+		TotalVolumeCf float64 `json:"totalVolumeCf"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse public inventory response: %v", err)
+	}
+	return payload.TotalVolumeCf
+}
+
+func parseInventoryShareToken(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		ShareURL string `json:"shareUrl"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse inventory share link response: %v", err)
+	}
+	shareURL := strings.TrimSpace(payload.ShareURL)
+	if shareURL == "" {
+		t.Fatalf("shareUrl missing from response")
+	}
+	trimmed := strings.TrimRight(shareURL, "/")
+	idx := strings.LastIndex(trimmed, "/")
+	if idx < 0 || idx == len(trimmed)-1 {
+		t.Fatalf("unexpected shareUrl format: %s", shareURL)
+	}
+	return trimmed[idx+1:]
 }
 
 func parseJobID(t *testing.T, body []byte) string {

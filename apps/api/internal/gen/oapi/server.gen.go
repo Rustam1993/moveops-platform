@@ -53,6 +53,15 @@ type ServerInterface interface {
 	// Convert estimate to job (idempotent)
 	// (POST /estimates/{estimateId}/convert)
 	PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, params PostEstimatesEstimateIdConvertParams)
+	// Get estimate inventory
+	// (GET /estimates/{estimateId}/inventory)
+	GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Replace estimate inventory and recalculate totals
+	// (PUT /estimates/{estimateId}/inventory)
+	PutEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Create customer inventory share link and send email
+	// (POST /estimates/{estimateId}/inventory-share-links)
+	PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Export tenant customers CSV
 	// (GET /exports/customers.csv)
 	GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request)
@@ -98,6 +107,12 @@ type ServerInterface interface {
 	// Create a storage record for a job
 	// (POST /jobs/{jobId}/storage)
 	PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID)
+	// Fetch customer inventory payload via share token
+	// (GET /public/inventory/{token})
+	GetPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string)
+	// Submit customer inventory payload via share token
+	// (PUT /public/inventory/{token})
+	PutPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string)
 	// List storage rows for a facility
 	// (GET /storage)
 	GetStorage(w http.ResponseWriter, r *http.Request, params GetStorageParams)
@@ -191,6 +206,24 @@ func (_ Unimplemented) PostEstimatesEstimateIdConvert(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Get estimate inventory
+// (GET /estimates/{estimateId}/inventory)
+func (_ Unimplemented) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace estimate inventory and recalculate totals
+// (PUT /estimates/{estimateId}/inventory)
+func (_ Unimplemented) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create customer inventory share link and send email
+// (POST /estimates/{estimateId}/inventory-share-links)
+func (_ Unimplemented) PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Export tenant customers CSV
 // (GET /exports/customers.csv)
 func (_ Unimplemented) GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request) {
@@ -278,6 +311,18 @@ func (_ Unimplemented) PatchJobsJobId(w http.ResponseWriter, r *http.Request, jo
 // Create a storage record for a job
 // (POST /jobs/{jobId}/storage)
 func (_ Unimplemented) PostJobsJobIdStorage(w http.ResponseWriter, r *http.Request, jobId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Fetch customer inventory payload via share token
+// (GET /public/inventory/{token})
+func (_ Unimplemented) GetPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Submit customer inventory payload via share token
+// (PUT /public/inventory/{token})
+func (_ Unimplemented) PutPublicInventoryToken(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -696,6 +741,81 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdConvert(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// GetEstimatesEstimateIdInventory operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdInventory(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutEstimatesEstimateIdInventory operation middleware
+func (siw *ServerInterfaceWrapper) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutEstimatesEstimateIdInventory(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdInventoryShareLinks operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdInventoryShareLinks(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetExportsCustomersCsv operation middleware
 func (siw *ServerInterfaceWrapper) GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request) {
 
@@ -1052,6 +1172,56 @@ func (siw *ServerInterfaceWrapper) PostJobsJobIdStorage(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicInventoryToken operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicInventoryToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicInventoryToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutPublicInventoryToken operation middleware
+func (siw *ServerInterfaceWrapper) PutPublicInventoryToken(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutPublicInventoryToken(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetStorage operation middleware
 func (siw *ServerInterfaceWrapper) GetStorage(w http.ResponseWriter, r *http.Request) {
 
@@ -1353,6 +1523,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/estimates/{estimateId}/convert", wrapper.PostEstimatesEstimateIdConvert)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/inventory", wrapper.GetEstimatesEstimateIdInventory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/estimates/{estimateId}/inventory", wrapper.PutEstimatesEstimateIdInventory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/inventory-share-links", wrapper.PostEstimatesEstimateIdInventoryShareLinks)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/exports/customers.csv", wrapper.GetExportsCustomersCsv)
 	})
 	r.Group(func(r chi.Router) {
@@ -1396,6 +1575,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/jobs/{jobId}/storage", wrapper.PostJobsJobIdStorage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/inventory/{token}", wrapper.GetPublicInventoryToken)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/public/inventory/{token}", wrapper.PutPublicInventoryToken)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/storage", wrapper.GetStorage)

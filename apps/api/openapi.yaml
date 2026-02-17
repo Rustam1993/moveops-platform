@@ -254,6 +254,120 @@ paths:
                 $ref: '#/components/schemas/JobResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/inventory:
+    get:
+      operationId: GetEstimatesEstimateIdInventory
+      summary: Get estimate inventory
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate inventory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateInventoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutEstimatesEstimateIdInventory
+      summary: Replace estimate inventory and recalculate totals
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceEstimateInventoryRequest'
+      responses:
+        '200':
+          description: Inventory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateInventoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/inventory-share-links:
+    post:
+      operationId: PostEstimatesEstimateIdInventoryShareLinks
+      summary: Create customer inventory share link and send email
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInventoryShareLinkRequest'
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateInventoryShareLinkResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /public/inventory/{token}:
+    get:
+      operationId: GetPublicInventoryToken
+      summary: Fetch customer inventory payload via share token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public inventory payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicInventoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutPublicInventoryToken
+      summary: Submit customer inventory payload via share token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceEstimateInventoryRequest'
+      responses:
+        '200':
+          description: Public inventory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicInventoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /calendar:
     get:
       operationId: GetCalendar
@@ -988,6 +1102,7 @@ components:
         - destinationPostalCode
         - moveDate
         - leadSource
+        - totalVolumeCf
         - createdAt
         - updatedAt
       properties:
@@ -1041,6 +1156,10 @@ components:
           type: string
         locationType:
           type: string
+        totalVolumeCf:
+          type: number
+          format: double
+          minimum: 0
         estimatedTotalCents:
           type: integer
           format: int64
@@ -1064,6 +1183,104 @@ components:
       properties:
         estimate:
           $ref: '#/components/schemas/Estimate'
+        requestId:
+          type: string
+    EstimateInventoryItem:
+      type: object
+      required: [category, itemName, volumeCf, qty]
+      properties:
+        category:
+          type: string
+          minLength: 1
+        itemName:
+          type: string
+          minLength: 1
+        volumeCf:
+          type: number
+          format: double
+          minimum: 0
+        qty:
+          type: integer
+          minimum: 0
+        isCustom:
+          type: boolean
+    ReplaceEstimateInventoryRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/EstimateInventoryItem'
+    EstimateInventoryResponse:
+      type: object
+      required: [estimateId, items, totalVolumeCf, requestId]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateInventoryItem'
+        totalVolumeCf:
+          type: number
+          format: double
+        requestId:
+          type: string
+    CreateInventoryShareLinkRequest:
+      type: object
+      properties:
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+    CreateInventoryShareLinkResponse:
+      type: object
+      required: [shareLinkId, estimateId, recipientEmail, shareUrl, expiresAt, deliveryMode, requestId]
+      properties:
+        shareLinkId:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        recipientEmail:
+          type: string
+          format: email
+        shareUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        deliveryMode:
+          type: string
+          enum: [log, smtp]
+        requestId:
+          type: string
+    PublicInventoryResponse:
+      type: object
+      required: [estimateId, customerName, moveDate, items, totalVolumeCf, expiresAt, requestId]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        moveDate:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateInventoryItem'
+        totalVolumeCf:
+          type: number
+          format: double
+        expiresAt:
+          type: string
+          format: date-time
         requestId:
           type: string
     EstimateListItem:

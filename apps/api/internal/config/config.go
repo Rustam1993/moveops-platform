@@ -19,6 +19,14 @@ type Config struct {
 	CSRFEnforce        bool
 	CORSAllowedOrigins []string
 	Env                string
+	PublicWebBaseURL   string
+	InventoryShareTTL  time.Duration
+	EmailMode          string
+	EmailFrom          string
+	SMTPHost           string
+	SMTPPort           int
+	SMTPUser           string
+	SMTPPassword       string
 	APIMaxBodyBytes    int64
 	ImportMaxFileBytes int64
 	ImportMaxRows      int
@@ -44,6 +52,14 @@ func Load() (Config, error) {
 			"http://127.0.0.1:3000",
 		}),
 		Env:                getEnv("APP_ENV", "dev"),
+		PublicWebBaseURL:   strings.TrimRight(getEnv("PUBLIC_WEB_BASE_URL", "http://localhost:3000"), "/"),
+		InventoryShareTTL:  time.Duration(getEnvInt("INVENTORY_SHARE_TTL_HOURS", 336)) * time.Hour,
+		EmailMode:          strings.ToLower(getEnv("EMAIL_MODE", "log")),
+		EmailFrom:          getEnv("EMAIL_FROM", "no-reply@moveops.local"),
+		SMTPHost:           getEnv("SMTP_HOST", ""),
+		SMTPPort:           getEnvInt("SMTP_PORT", 587),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPassword:       getEnv("SMTP_PASSWORD", ""),
 		APIMaxBodyBytes:    int64(getEnvInt("API_MAX_BODY_MB", 2)) * 1024 * 1024,
 		ImportMaxFileBytes: int64(getEnvInt("IMPORT_MAX_FILE_MB", 25)) * 1024 * 1024,
 		ImportMaxRows:      getEnvInt("IMPORT_MAX_ROWS", 5000),

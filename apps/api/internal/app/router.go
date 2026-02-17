@@ -73,10 +73,25 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 	searchRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(90, time.Minute, cfg.RateLimitMaxIPs)
 	importRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(8, time.Minute, cfg.RateLimitMaxIPs)
 	exportRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(30, time.Minute, cfg.RateLimitMaxIPs)
+	publicInventoryLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
 
 	api.Group(func(public chi.Router) {
 		public.With(loginLimiter.Middleware).Post("/auth/login", h.PostAuthLogin)
 		public.Get("/health", h.GetHealth)
+
+		public.With(
+			publicInventoryLimiter.Middleware("Too many inventory link requests"),
+		).Get("/public/inventory/{token}", func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimSpace(chi.URLParam(r, "token"))
+			h.GetPublicInventoryToken(w, r, token)
+		})
+
+		public.With(
+			publicInventoryLimiter.Middleware("Too many inventory link requests"),
+		).Put("/public/inventory/{token}", func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimSpace(chi.URLParam(r, "token"))
+			h.PutPublicInventoryToken(w, r, token)
+		})
 	})
 
 	api.Group(func(protected chi.Router) {
@@ -159,6 +174,38 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 				return
 			}
 			h.PatchEstimatesEstimateId(w, r, openapi_types.UUID(estimateID))
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}/inventory", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateIdInventory(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/estimates/{estimateId}/inventory", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PutEstimatesEstimateIdInventory(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates/{estimateId}/inventory-share-links", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostEstimatesEstimateIdInventoryShareLinks(w, r, estimateID)
 		})
 
 		protected.With(

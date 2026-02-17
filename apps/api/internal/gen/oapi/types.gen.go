@@ -19,6 +19,12 @@ const (
 	CalendarJobCardStatusScheduled CalendarJobCardStatus = "scheduled"
 )
 
+// Defines values for CreateInventoryShareLinkResponseDeliveryMode.
+const (
+	Log  CreateInventoryShareLinkResponseDeliveryMode = "log"
+	Smtp CreateInventoryShareLinkResponseDeliveryMode = "smtp"
+)
+
 // Defines values for EstimateStatus.
 const (
 	EstimateStatusConverted EstimateStatus = "converted"
@@ -216,6 +222,25 @@ type CreateEstimateRequest struct {
 	SecondaryPhone          *string             `json:"secondaryPhone,omitempty"`
 }
 
+// CreateInventoryShareLinkRequest defines model for CreateInventoryShareLinkRequest.
+type CreateInventoryShareLinkRequest struct {
+	ExpiresInDays *int `json:"expiresInDays,omitempty"`
+}
+
+// CreateInventoryShareLinkResponse defines model for CreateInventoryShareLinkResponse.
+type CreateInventoryShareLinkResponse struct {
+	DeliveryMode   CreateInventoryShareLinkResponseDeliveryMode `json:"deliveryMode"`
+	EstimateId     openapi_types.UUID                           `json:"estimateId"`
+	ExpiresAt      time.Time                                    `json:"expiresAt"`
+	RecipientEmail openapi_types.Email                          `json:"recipientEmail"`
+	RequestId      string                                       `json:"requestId"`
+	ShareLinkId    openapi_types.UUID                           `json:"shareLinkId"`
+	ShareUrl       string                                       `json:"shareUrl"`
+}
+
+// CreateInventoryShareLinkResponseDeliveryMode defines model for CreateInventoryShareLinkResponse.DeliveryMode.
+type CreateInventoryShareLinkResponseDeliveryMode string
+
 // CreateStorageRecordRequest defines model for CreateStorageRecordRequest.
 type CreateStorageRecordRequest struct {
 	DateIn              *openapi_types.Date `json:"dateIn,omitempty"`
@@ -301,11 +326,29 @@ type Estimate struct {
 	SecondaryPhone          *string             `json:"secondaryPhone,omitempty"`
 	Status                  EstimateStatus      `json:"status"`
 	TenantId                openapi_types.UUID  `json:"tenantId"`
+	TotalVolumeCf           float64             `json:"totalVolumeCf"`
 	UpdatedAt               time.Time           `json:"updatedAt"`
 }
 
 // EstimateStatus defines model for Estimate.Status.
 type EstimateStatus string
+
+// EstimateInventoryItem defines model for EstimateInventoryItem.
+type EstimateInventoryItem struct {
+	Category string  `json:"category"`
+	IsCustom *bool   `json:"isCustom,omitempty"`
+	ItemName string  `json:"itemName"`
+	Qty      int     `json:"qty"`
+	VolumeCf float64 `json:"volumeCf"`
+}
+
+// EstimateInventoryResponse defines model for EstimateInventoryResponse.
+type EstimateInventoryResponse struct {
+	EstimateId    openapi_types.UUID      `json:"estimateId"`
+	Items         []EstimateInventoryItem `json:"items"`
+	RequestId     string                  `json:"requestId"`
+	TotalVolumeCf float64                 `json:"totalVolumeCf"`
+}
 
 // EstimateListItem defines model for EstimateListItem.
 type EstimateListItem struct {
@@ -500,6 +543,22 @@ type JobResponse struct {
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// PublicInventoryResponse defines model for PublicInventoryResponse.
+type PublicInventoryResponse struct {
+	CustomerName  string                  `json:"customerName"`
+	EstimateId    openapi_types.UUID      `json:"estimateId"`
+	ExpiresAt     time.Time               `json:"expiresAt"`
+	Items         []EstimateInventoryItem `json:"items"`
+	MoveDate      openapi_types.Date      `json:"moveDate"`
+	RequestId     string                  `json:"requestId"`
+	TotalVolumeCf float64                 `json:"totalVolumeCf"`
+}
+
+// ReplaceEstimateInventoryRequest defines model for ReplaceEstimateInventoryRequest.
+type ReplaceEstimateInventoryRequest struct {
+	Items []EstimateInventoryItem `json:"items"`
 }
 
 // StorageListItem defines model for StorageListItem.
@@ -738,6 +797,12 @@ type PostEstimatesJSONRequestBody = CreateEstimateRequest
 // PatchEstimatesEstimateIdJSONRequestBody defines body for PatchEstimatesEstimateId for application/json ContentType.
 type PatchEstimatesEstimateIdJSONRequestBody = UpdateEstimateRequest
 
+// PutEstimatesEstimateIdInventoryJSONRequestBody defines body for PutEstimatesEstimateIdInventory for application/json ContentType.
+type PutEstimatesEstimateIdInventoryJSONRequestBody = ReplaceEstimateInventoryRequest
+
+// PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody defines body for PostEstimatesEstimateIdInventoryShareLinks for application/json ContentType.
+type PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody = CreateInventoryShareLinkRequest
+
 // PostImportsApplyMultipartRequestBody defines body for PostImportsApply for multipart/form-data ContentType.
 type PostImportsApplyMultipartRequestBody = ImportUploadRequest
 
@@ -749,6 +814,9 @@ type PatchJobsJobIdJSONRequestBody = UpdateJobRequest
 
 // PostJobsJobIdStorageJSONRequestBody defines body for PostJobsJobIdStorage for application/json ContentType.
 type PostJobsJobIdStorageJSONRequestBody = CreateStorageRecordRequest
+
+// PutPublicInventoryTokenJSONRequestBody defines body for PutPublicInventoryToken for application/json ContentType.
+type PutPublicInventoryTokenJSONRequestBody = ReplaceEstimateInventoryRequest
 
 // PutStorageStorageRecordIdJSONRequestBody defines body for PutStorageStorageRecordId for application/json ContentType.
 type PutStorageStorageRecordIdJSONRequestBody = UpdateStorageRecordRequest

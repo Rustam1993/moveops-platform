@@ -11,12 +11,13 @@ import {
   estimateWorkspaceTabs,
   type EstimateWorkspaceTabKey,
 } from "@/lib/estimate-workspace";
+import { formatCf } from "@/lib/inventory-catalog";
 import type { Estimate } from "@/lib/phase2-api";
 
 type Props = {
   mode: "new" | "existing";
   activeTab: EstimateWorkspaceTabKey;
-  estimate?: Pick<Estimate, "id" | "estimateNumber" | "customerName" | "status">;
+  estimate?: Pick<Estimate, "id" | "estimateNumber" | "customerName" | "status" | "totalVolumeCf">;
   children: React.ReactNode;
 };
 
@@ -147,7 +148,7 @@ export function EstimateWorkspaceShell({ mode, activeTab, estimate, children }: 
               <div className="h-px bg-border/70" />
 
               <SidebarGroupTitle title="Derived totals" />
-              <SidebarField label="Total CF" value="—" />
+              <SidebarField label="Total CF" value={formatCf(estimate?.totalVolumeCf)} />
               <SidebarField label="Total LBS" value="—" />
             </CardContent>
           </Card>

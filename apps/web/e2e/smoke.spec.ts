@@ -7,12 +7,12 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ page }) => {
+test("Phase 2 smoke: login -> create estimate -> inventory tab reachable -> entry edit persists", async ({ page }) => {
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
-  const email = `e2e.${suffix}@example.com`;
   const updatedLastName = "Updated";
+  const email = `e2e.${suffix}@example.com`;
   const moveDate = formatDate(new Date());
 
   await page.goto("/login");
@@ -59,11 +59,9 @@ test("Phase 1 smoke: login -> estimate workspace entry create/edit", async ({ pa
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  await expect(page.getByText("Coming soon in Phase 2/3")).toBeVisible();
 
   await page.getByRole("link", { name: "Entry Form" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
-
   await page.getByLabel("Last name").fill(updatedLastName);
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved")).toBeVisible();

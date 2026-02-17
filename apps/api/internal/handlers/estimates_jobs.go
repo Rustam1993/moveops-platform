@@ -680,6 +680,7 @@ func mapEstimateDetail(detail gen.GetEstimateDetailByIDRow) oapi.Estimate {
 		LeadSource:              detail.LeadSource,
 		MoveSize:                detail.MoveSize,
 		LocationType:            detail.LocationType,
+		TotalVolumeCf:           roundCF(detail.TotalVolumeCf),
 		EstimatedTotalCents:     detail.EstimatedTotalCents,
 		DepositCents:            detail.DepositCents,
 		Notes:                   detail.Notes,
