@@ -940,13 +940,10 @@ func sendSMTPEmailRich(cfg config.Config, recipientEmail string, ccEmail *string
 
 	headers := []string{
 		"From: " + fromAddress,
-		"To: " + toAddress,
+		"To: undisclosed-recipients:;",
 		"Subject: " + mime.QEncoding.Encode("utf-8", cleanSubject),
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=utf-8",
-	}
-	if ccAddress != nil {
-		headers = append(headers, "Cc: "+*ccAddress)
 	}
 	if replyToHeader != nil {
 		headers = append(headers, "Reply-To: "+*replyToHeader)
