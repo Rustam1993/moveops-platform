@@ -21,8 +21,14 @@ const (
 
 // Defines values for CreateInventoryShareLinkResponseDeliveryMode.
 const (
-	Log  CreateInventoryShareLinkResponseDeliveryMode = "log"
-	Smtp CreateInventoryShareLinkResponseDeliveryMode = "smtp"
+	CreateInventoryShareLinkResponseDeliveryModeLog  CreateInventoryShareLinkResponseDeliveryMode = "log"
+	CreateInventoryShareLinkResponseDeliveryModeSmtp CreateInventoryShareLinkResponseDeliveryMode = "smtp"
+)
+
+// Defines values for CreateSignatureRequestResponseDeliveryMode.
+const (
+	CreateSignatureRequestResponseDeliveryModeLog  CreateSignatureRequestResponseDeliveryMode = "log"
+	CreateSignatureRequestResponseDeliveryModeSmtp CreateSignatureRequestResponseDeliveryMode = "smtp"
 )
 
 // Defines values for EstimateStatus.
@@ -35,6 +41,35 @@ const (
 const (
 	EstimateChargesModeLocal        EstimateChargesMode = "local"
 	EstimateChargesModeLongDistance EstimateChargesMode = "long_distance"
+)
+
+// Defines values for EstimateDocumentType.
+const (
+	EstimatePdf       EstimateDocumentType = "estimate_pdf"
+	SignedEstimatePdf EstimateDocumentType = "signed_estimate_pdf"
+)
+
+// Defines values for EstimateEmailLogDeliveryMode.
+const (
+	Log  EstimateEmailLogDeliveryMode = "log"
+	Smtp EstimateEmailLogDeliveryMode = "smtp"
+)
+
+// Defines values for EstimateEmailLogStatus.
+const (
+	Failed EstimateEmailLogStatus = "failed"
+	Queued EstimateEmailLogStatus = "queued"
+	Sent   EstimateEmailLogStatus = "sent"
+)
+
+// Defines values for EstimateEmailTemplateKey.
+const (
+	CreditCardAuthorization EstimateEmailTemplateKey = "credit_card_authorization"
+	FollowUpMove            EstimateEmailTemplateKey = "follow_up_move"
+	MovingEstimate          EstimateEmailTemplateKey = "moving_estimate"
+	SignatureRequest        EstimateEmailTemplateKey = "signature_request"
+	UpdateInventory         EstimateEmailTemplateKey = "update_inventory"
+	WaiverCancellation      EstimateEmailTemplateKey = "waiver_cancellation"
 )
 
 // Defines values for EstimateLiabilityType.
@@ -202,6 +237,25 @@ type CalendarResponse struct {
 	RequestId string            `json:"requestId"`
 }
 
+// CompleteSignatureRequest defines model for CompleteSignatureRequest.
+type CompleteSignatureRequest struct {
+	AgreeToTerms  bool                `json:"agreeToTerms"`
+	SignatureText string              `json:"signatureText"`
+	SignerEmail   openapi_types.Email `json:"signerEmail"`
+	SignerName    string              `json:"signerName"`
+}
+
+// CompleteSignatureResponse defines model for CompleteSignatureResponse.
+type CompleteSignatureResponse struct {
+	Document    EstimateDocument    `json:"document"`
+	EstimateId  openapi_types.UUID  `json:"estimateId"`
+	RequestId   string              `json:"requestId"`
+	SignatureId openapi_types.UUID  `json:"signatureId"`
+	SignedAt    time.Time           `json:"signedAt"`
+	SignerEmail openapi_types.Email `json:"signerEmail"`
+	SignerName  string              `json:"signerName"`
+}
+
 // CreateCustomerRequest defines model for CreateCustomerRequest.
 type CreateCustomerRequest struct {
 	Email     *openapi_types.Email `json:"email,omitempty"`
@@ -252,6 +306,25 @@ type CreateInventoryShareLinkResponse struct {
 
 // CreateInventoryShareLinkResponseDeliveryMode defines model for CreateInventoryShareLinkResponse.DeliveryMode.
 type CreateInventoryShareLinkResponseDeliveryMode string
+
+// CreateSignatureRequestRequest defines model for CreateSignatureRequestRequest.
+type CreateSignatureRequestRequest struct {
+	ExpiresInDays *int `json:"expiresInDays,omitempty"`
+}
+
+// CreateSignatureRequestResponse defines model for CreateSignatureRequestResponse.
+type CreateSignatureRequestResponse struct {
+	DeliveryMode       CreateSignatureRequestResponseDeliveryMode `json:"deliveryMode"`
+	EstimateId         openapi_types.UUID                         `json:"estimateId"`
+	ExpiresAt          time.Time                                  `json:"expiresAt"`
+	RecipientEmail     openapi_types.Email                        `json:"recipientEmail"`
+	RequestId          string                                     `json:"requestId"`
+	SignatureRequestId openapi_types.UUID                         `json:"signatureRequestId"`
+	SignatureUrl       string                                     `json:"signatureUrl"`
+}
+
+// CreateSignatureRequestResponseDeliveryMode defines model for CreateSignatureRequestResponse.DeliveryMode.
+type CreateSignatureRequestResponseDeliveryMode string
 
 // CreateStorageRecordRequest defines model for CreateStorageRecordRequest.
 type CreateStorageRecordRequest struct {
@@ -431,6 +504,66 @@ type EstimateChargesResponse struct {
 	Charges   EstimateCharges `json:"charges"`
 	RequestId string          `json:"requestId"`
 }
+
+// EstimateDocument defines model for EstimateDocument.
+type EstimateDocument struct {
+	ContentBase64 string                  `json:"contentBase64"`
+	CreatedAt     time.Time               `json:"createdAt"`
+	DocumentType  EstimateDocumentType    `json:"documentType"`
+	EstimateId    openapi_types.UUID      `json:"estimateId"`
+	FileName      string                  `json:"fileName"`
+	Id            openapi_types.UUID      `json:"id"`
+	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
+	MimeType      string                  `json:"mimeType"`
+	SizeBytes     int                     `json:"sizeBytes"`
+}
+
+// EstimateDocumentResponse defines model for EstimateDocumentResponse.
+type EstimateDocumentResponse struct {
+	Document  EstimateDocument `json:"document"`
+	RequestId string           `json:"requestId"`
+}
+
+// EstimateDocumentType defines model for EstimateDocumentType.
+type EstimateDocumentType string
+
+// EstimateEmailGeneratedLinks defines model for EstimateEmailGeneratedLinks.
+type EstimateEmailGeneratedLinks struct {
+	InventoryUrl *string `json:"inventoryUrl,omitempty"`
+	QuoteUrl     *string `json:"quoteUrl,omitempty"`
+	SignatureUrl *string `json:"signatureUrl,omitempty"`
+}
+
+// EstimateEmailLog defines model for EstimateEmailLog.
+type EstimateEmailLog struct {
+	Cc                *openapi_types.Email         `json:"cc,omitempty"`
+	CreatedAt         time.Time                    `json:"createdAt"`
+	DeliveryMode      EstimateEmailLogDeliveryMode `json:"deliveryMode"`
+	ErrorMessage      *string                      `json:"errorMessage,omitempty"`
+	EstimateId        openapi_types.UUID           `json:"estimateId"`
+	From              openapi_types.Email          `json:"from"`
+	Id                openapi_types.UUID           `json:"id"`
+	ProviderMessageId *string                      `json:"providerMessageId,omitempty"`
+	Status            EstimateEmailLogStatus       `json:"status"`
+	Subject           string                       `json:"subject"`
+	TemplateKey       EstimateEmailTemplateKey     `json:"templateKey"`
+	To                openapi_types.Email          `json:"to"`
+}
+
+// EstimateEmailLogDeliveryMode defines model for EstimateEmailLog.DeliveryMode.
+type EstimateEmailLogDeliveryMode string
+
+// EstimateEmailLogStatus defines model for EstimateEmailLog.Status.
+type EstimateEmailLogStatus string
+
+// EstimateEmailLogListResponse defines model for EstimateEmailLogListResponse.
+type EstimateEmailLogListResponse struct {
+	Emails    []EstimateEmailLog `json:"emails"`
+	RequestId string             `json:"requestId"`
+}
+
+// EstimateEmailTemplateKey defines model for EstimateEmailTemplateKey.
+type EstimateEmailTemplateKey string
 
 // EstimateInventoryItem defines model for EstimateInventoryItem.
 type EstimateInventoryItem struct {
@@ -647,6 +780,18 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// PublicEstimateDocumentResponse defines model for PublicEstimateDocumentResponse.
+type PublicEstimateDocumentResponse struct {
+	CustomerName       string             `json:"customerName"`
+	Document           EstimateDocument   `json:"document"`
+	EstimateId         openapi_types.UUID `json:"estimateId"`
+	ExpiresAt          time.Time          `json:"expiresAt"`
+	MoveDate           openapi_types.Date `json:"moveDate"`
+	RequestId          string             `json:"requestId"`
+	TotalEstimateCents *int64             `json:"totalEstimateCents,omitempty"`
+	TotalVolumeCf      float64            `json:"totalVolumeCf"`
+}
+
 // PublicInventoryResponse defines model for PublicInventoryResponse.
 type PublicInventoryResponse struct {
 	CustomerName  string                  `json:"customerName"`
@@ -656,6 +801,20 @@ type PublicInventoryResponse struct {
 	MoveDate      openapi_types.Date      `json:"moveDate"`
 	RequestId     string                  `json:"requestId"`
 	TotalVolumeCf float64                 `json:"totalVolumeCf"`
+}
+
+// PublicSignContextResponse defines model for PublicSignContextResponse.
+type PublicSignContextResponse struct {
+	AlreadySigned      bool                `json:"alreadySigned"`
+	CustomerName       string              `json:"customerName"`
+	Document           EstimateDocument    `json:"document"`
+	EstimateId         openapi_types.UUID  `json:"estimateId"`
+	ExpiresAt          time.Time           `json:"expiresAt"`
+	MoveDate           openapi_types.Date  `json:"moveDate"`
+	RequestId          string              `json:"requestId"`
+	SignerEmail        openapi_types.Email `json:"signerEmail"`
+	TotalEstimateCents *int64              `json:"totalEstimateCents,omitempty"`
+	TotalVolumeCf      float64             `json:"totalVolumeCf"`
 }
 
 // ReplaceEstimateChargesRequest defines model for ReplaceEstimateChargesRequest.
@@ -677,6 +836,20 @@ type ReplaceEstimateChargesRequest struct {
 // ReplaceEstimateInventoryRequest defines model for ReplaceEstimateInventoryRequest.
 type ReplaceEstimateInventoryRequest struct {
 	Items []EstimateInventoryItem `json:"items"`
+}
+
+// SendEstimateEmailRequest defines model for SendEstimateEmailRequest.
+type SendEstimateEmailRequest struct {
+	CcMe        *bool                    `json:"ccMe,omitempty"`
+	TemplateKey EstimateEmailTemplateKey `json:"templateKey"`
+	ToEmail     *openapi_types.Email     `json:"toEmail,omitempty"`
+}
+
+// SendEstimateEmailResponse defines model for SendEstimateEmailResponse.
+type SendEstimateEmailResponse struct {
+	Email          EstimateEmailLog             `json:"email"`
+	GeneratedLinks *EstimateEmailGeneratedLinks `json:"generatedLinks,omitempty"`
+	RequestId      string                       `json:"requestId"`
 }
 
 // StorageListItem defines model for StorageListItem.
@@ -918,11 +1091,17 @@ type PatchEstimatesEstimateIdJSONRequestBody = UpdateEstimateRequest
 // PutEstimatesEstimateIdChargesJSONRequestBody defines body for PutEstimatesEstimateIdCharges for application/json ContentType.
 type PutEstimatesEstimateIdChargesJSONRequestBody = ReplaceEstimateChargesRequest
 
+// PostEstimatesEstimateIdEmailsSendJSONRequestBody defines body for PostEstimatesEstimateIdEmailsSend for application/json ContentType.
+type PostEstimatesEstimateIdEmailsSendJSONRequestBody = SendEstimateEmailRequest
+
 // PutEstimatesEstimateIdInventoryJSONRequestBody defines body for PutEstimatesEstimateIdInventory for application/json ContentType.
 type PutEstimatesEstimateIdInventoryJSONRequestBody = ReplaceEstimateInventoryRequest
 
 // PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody defines body for PostEstimatesEstimateIdInventoryShareLinks for application/json ContentType.
 type PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody = CreateInventoryShareLinkRequest
+
+// PostEstimatesEstimateIdSignatureRequestsJSONRequestBody defines body for PostEstimatesEstimateIdSignatureRequests for application/json ContentType.
+type PostEstimatesEstimateIdSignatureRequestsJSONRequestBody = CreateSignatureRequestRequest
 
 // PostImportsApplyMultipartRequestBody defines body for PostImportsApply for multipart/form-data ContentType.
 type PostImportsApplyMultipartRequestBody = ImportUploadRequest
@@ -938,6 +1117,9 @@ type PostJobsJobIdStorageJSONRequestBody = CreateStorageRecordRequest
 
 // PutPublicInventoryTokenJSONRequestBody defines body for PutPublicInventoryToken for application/json ContentType.
 type PutPublicInventoryTokenJSONRequestBody = ReplaceEstimateInventoryRequest
+
+// PostPublicSignTokenJSONRequestBody defines body for PostPublicSignToken for application/json ContentType.
+type PostPublicSignTokenJSONRequestBody = CompleteSignatureRequest
 
 // PutStorageStorageRecordIdJSONRequestBody defines body for PutStorageStorageRecordId for application/json ContentType.
 type PutStorageStorageRecordIdJSONRequestBody = UpdateStorageRecordRequest

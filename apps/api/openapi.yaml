@@ -370,6 +370,117 @@ paths:
                 $ref: '#/components/schemas/EstimateChargesResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/documents/estimate-pdf:
+    post:
+      operationId: PostEstimatesEstimateIdDocumentsEstimatePdf
+      summary: Generate and store estimate PDF document
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Estimate PDF generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateDocumentResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    get:
+      operationId: GetEstimatesEstimateIdDocumentsEstimatePdf
+      summary: Get latest generated estimate PDF document
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Latest estimate PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateDocumentResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/emails:
+    get:
+      operationId: GetEstimatesEstimateIdEmails
+      summary: List estimate transactional emails
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate email history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateEmailLogListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/emails/send:
+    post:
+      operationId: PostEstimatesEstimateIdEmailsSend
+      summary: Send estimate transactional email from a template
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEstimateEmailRequest'
+      responses:
+        '200':
+          description: Email send completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEstimateEmailResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/signature-requests:
+    post:
+      operationId: PostEstimatesEstimateIdSignatureRequests
+      summary: Create a public signature request link for estimate
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSignatureRequestRequest'
+      responses:
+        '201':
+          description: Signature request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSignatureRequestResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /public/inventory/{token}:
     get:
       operationId: GetPublicInventoryToken
@@ -411,6 +522,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicInventoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /public/estimate/{token}:
+    get:
+      operationId: GetPublicEstimateToken
+      summary: Fetch read-only public estimate PDF payload
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public estimate PDF payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicEstimateDocumentResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /public/sign/{token}:
+    get:
+      operationId: GetPublicSignToken
+      summary: Fetch public estimate signature request payload
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public sign payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSignContextResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      operationId: PostPublicSignToken
+      summary: Submit typed signature for estimate
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteSignatureRequest'
+      responses:
+        '200':
+          description: Signature completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteSignatureResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /calendar:
@@ -1582,6 +1755,259 @@ components:
       properties:
         charges:
           $ref: '#/components/schemas/EstimateCharges'
+        requestId:
+          type: string
+    EstimateDocumentType:
+      type: string
+      enum: [estimate_pdf, signed_estimate_pdf]
+    EstimateDocument:
+      type: object
+      required: [id, estimateId, documentType, fileName, mimeType, sizeBytes, contentBase64, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        documentType:
+          $ref: '#/components/schemas/EstimateDocumentType'
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+        contentBase64:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    EstimateDocumentResponse:
+      type: object
+      required: [document, requestId]
+      properties:
+        document:
+          $ref: '#/components/schemas/EstimateDocument'
+        requestId:
+          type: string
+    EstimateEmailTemplateKey:
+      type: string
+      enum:
+        - moving_estimate
+        - update_inventory
+        - signature_request
+        - credit_card_authorization
+        - waiver_cancellation
+        - follow_up_move
+    SendEstimateEmailRequest:
+      type: object
+      required: [templateKey]
+      properties:
+        templateKey:
+          $ref: '#/components/schemas/EstimateEmailTemplateKey'
+        toEmail:
+          type: string
+          format: email
+        ccMe:
+          type: boolean
+    EstimateEmailGeneratedLinks:
+      type: object
+      properties:
+        quoteUrl:
+          type: string
+        inventoryUrl:
+          type: string
+        signatureUrl:
+          type: string
+    EstimateEmailLog:
+      type: object
+      required:
+        - id
+        - estimateId
+        - templateKey
+        - to
+        - from
+        - subject
+        - status
+        - deliveryMode
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        templateKey:
+          $ref: '#/components/schemas/EstimateEmailTemplateKey'
+        to:
+          type: string
+          format: email
+        cc:
+          type: string
+          format: email
+        from:
+          type: string
+          format: email
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [queued, sent, failed]
+        deliveryMode:
+          type: string
+          enum: [log, smtp]
+        providerMessageId:
+          type: string
+        errorMessage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    SendEstimateEmailResponse:
+      type: object
+      required: [email, requestId]
+      properties:
+        email:
+          $ref: '#/components/schemas/EstimateEmailLog'
+        generatedLinks:
+          $ref: '#/components/schemas/EstimateEmailGeneratedLinks'
+        requestId:
+          type: string
+    EstimateEmailLogListResponse:
+      type: object
+      required: [emails, requestId]
+      properties:
+        emails:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateEmailLog'
+        requestId:
+          type: string
+    CreateSignatureRequestRequest:
+      type: object
+      properties:
+        expiresInDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+    CreateSignatureRequestResponse:
+      type: object
+      required: [signatureRequestId, estimateId, recipientEmail, signatureUrl, expiresAt, deliveryMode, requestId]
+      properties:
+        signatureRequestId:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        recipientEmail:
+          type: string
+          format: email
+        signatureUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        deliveryMode:
+          type: string
+          enum: [log, smtp]
+        requestId:
+          type: string
+    PublicEstimateDocumentResponse:
+      type: object
+      required: [estimateId, customerName, moveDate, totalVolumeCf, document, expiresAt, requestId]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        moveDate:
+          type: string
+          format: date
+        totalVolumeCf:
+          type: number
+          format: double
+        totalEstimateCents:
+          type: integer
+          format: int64
+        document:
+          $ref: '#/components/schemas/EstimateDocument'
+        expiresAt:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+    PublicSignContextResponse:
+      type: object
+      required: [estimateId, customerName, moveDate, totalVolumeCf, document, signerEmail, expiresAt, alreadySigned, requestId]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        moveDate:
+          type: string
+          format: date
+        totalVolumeCf:
+          type: number
+          format: double
+        totalEstimateCents:
+          type: integer
+          format: int64
+        document:
+          $ref: '#/components/schemas/EstimateDocument'
+        signerEmail:
+          type: string
+          format: email
+        expiresAt:
+          type: string
+          format: date-time
+        alreadySigned:
+          type: boolean
+        requestId:
+          type: string
+    CompleteSignatureRequest:
+      type: object
+      required: [signerName, signerEmail, signatureText, agreeToTerms]
+      properties:
+        signerName:
+          type: string
+          minLength: 1
+        signerEmail:
+          type: string
+          format: email
+        signatureText:
+          type: string
+          minLength: 1
+        agreeToTerms:
+          type: boolean
+    CompleteSignatureResponse:
+      type: object
+      required: [estimateId, signatureId, signerName, signerEmail, signedAt, document, requestId]
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        signatureId:
+          type: string
+          format: uuid
+        signerName:
+          type: string
+        signerEmail:
+          type: string
+          format: email
+        signedAt:
+          type: string
+          format: date-time
+        document:
+          $ref: '#/components/schemas/EstimateDocument'
         requestId:
           type: string
     EstimateListItem:

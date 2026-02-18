@@ -116,6 +116,39 @@ type EstimateCharge struct {
 	UpdatedAt                     time.Time  `json:"updated_at"`
 }
 
+type EstimateDocument struct {
+	ID            uuid.UUID  `json:"id"`
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	EstimateID    uuid.UUID  `json:"estimate_id"`
+	DocumentType  string     `json:"document_type"`
+	FileName      string     `json:"file_name"`
+	MimeType      string     `json:"mime_type"`
+	ContentBytes  []byte     `json:"content_bytes"`
+	ContentSha256 string     `json:"content_sha256"`
+	SizeBytes     int32      `json:"size_bytes"`
+	MetadataJson  []byte     `json:"metadata_json"`
+	GeneratedBy   *uuid.UUID `json:"generated_by"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+type EstimateEmailLog struct {
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	EstimateID        uuid.UUID  `json:"estimate_id"`
+	TemplateKey       string     `json:"template_key"`
+	EmailTo           string     `json:"email_to"`
+	EmailCc           *string    `json:"email_cc"`
+	EmailFrom         string     `json:"email_from"`
+	Subject           string     `json:"subject"`
+	Status            string     `json:"status"`
+	ProviderMessageID *string    `json:"provider_message_id"`
+	DeliveryMode      string     `json:"delivery_mode"`
+	ErrorMessage      *string    `json:"error_message"`
+	RenderedJson      []byte     `json:"rendered_json"`
+	CreatedBy         *uuid.UUID `json:"created_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+}
+
 type EstimateInventoryItem struct {
 	ID         uuid.UUID `json:"id"`
 	TenantID   uuid.UUID `json:"tenant_id"`
@@ -142,6 +175,52 @@ type EstimateInventoryShareLink struct {
 	LastAccessedAt *time.Time `json:"last_accessed_at"`
 	LastUpdatedAt  *time.Time `json:"last_updated_at"`
 	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type EstimateQuoteShareLink struct {
+	ID             uuid.UUID  `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     uuid.UUID  `json:"estimate_id"`
+	DocumentID     *uuid.UUID `json:"document_id"`
+	TokenHash      string     `json:"token_hash"`
+	RecipientEmail string     `json:"recipient_email"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type EstimateSignature struct {
+	ID                 uuid.UUID  `json:"id"`
+	TenantID           uuid.UUID  `json:"tenant_id"`
+	EstimateID         uuid.UUID  `json:"estimate_id"`
+	SignatureRequestID uuid.UUID  `json:"signature_request_id"`
+	DocumentID         *uuid.UUID `json:"document_id"`
+	SignerName         string     `json:"signer_name"`
+	SignerEmail        string     `json:"signer_email"`
+	SignatureType      string     `json:"signature_type"`
+	SignatureValue     string     `json:"signature_value"`
+	AgreedTerms        bool       `json:"agreed_terms"`
+	IpAddress          *string    `json:"ip_address"`
+	UserAgent          *string    `json:"user_agent"`
+	SignedAt           time.Time  `json:"signed_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+}
+
+type EstimateSignatureRequest struct {
+	ID             uuid.UUID  `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     uuid.UUID  `json:"estimate_id"`
+	DocumentID     *uuid.UUID `json:"document_id"`
+	TokenHash      string     `json:"token_hash"`
+	RecipientEmail string     `json:"recipient_email"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	UsedAt         *time.Time `json:"used_at"`
+	LastAccessedAt *time.Time `json:"last_accessed_at"`
+	RevokedAt      *time.Time `json:"revoked_at"`
+	CreatedBy      *uuid.UUID `json:"created_by"`
 	CreatedAt      time.Time  `json:"created_at"`
 }
 

@@ -85,4 +85,10 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.reload();
   await expect(page.getByLabel("Labor hours")).toHaveValue("3");
   await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
+
+  await page.getByRole("link", { name: "Printed Estimate" }).click();
+  await expect(page).toHaveURL(/\/estimates\/.+\/printed-estimate$/);
+  await page.getByRole("button", { name: "Generate PDF" }).click();
+  await expect(page.getByText("PDF generated", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Regenerate PDF" })).toBeVisible();
 });

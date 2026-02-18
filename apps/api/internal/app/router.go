@@ -74,6 +74,8 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 	importRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(8, time.Minute, cfg.RateLimitMaxIPs)
 	exportRateLimiter := middleware.NewIPRateLimiterWithMaxEntries(30, time.Minute, cfg.RateLimitMaxIPs)
 	publicInventoryLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
+	publicQuoteLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
+	publicSignLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
 
 	api.Group(func(public chi.Router) {
 		public.With(loginLimiter.Middleware).Post("/auth/login", h.PostAuthLogin)
@@ -91,6 +93,27 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 		).Put("/public/inventory/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.PutPublicInventoryToken(w, r, token)
+		})
+
+		public.With(
+			publicQuoteLimiter.Middleware("Too many estimate link requests"),
+		).Get("/public/estimate/{token}", func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimSpace(chi.URLParam(r, "token"))
+			h.GetPublicEstimateToken(w, r, token)
+		})
+
+		public.With(
+			publicSignLimiter.Middleware("Too many signature link requests"),
+		).Get("/public/sign/{token}", func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimSpace(chi.URLParam(r, "token"))
+			h.GetPublicSignToken(w, r, token)
+		})
+
+		public.With(
+			publicSignLimiter.Middleware("Too many signature link requests"),
+		).Post("/public/sign/{token}", func(w http.ResponseWriter, r *http.Request) {
+			token := strings.TrimSpace(chi.URLParam(r, "token"))
+			h.PostPublicSignToken(w, r, token)
 		})
 	})
 
@@ -227,6 +250,59 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 				return
 			}
 			h.PutEstimatesEstimateIdCharges(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates/{estimateId}/documents/estimate-pdf", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostEstimatesEstimateIdDocumentsEstimatePdf(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}/documents/estimate-pdf", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateIdDocumentsEstimatePdf(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}/emails", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateIdEmails(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates/{estimateId}/emails/send", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostEstimatesEstimateIdEmailsSend(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/estimates/{estimateId}/signature-requests", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PostEstimatesEstimateIdSignatureRequests(w, r, estimateID)
 		})
 
 		protected.With(

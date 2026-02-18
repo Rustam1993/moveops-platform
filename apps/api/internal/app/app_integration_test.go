@@ -445,6 +445,172 @@ func TestEstimateChargesCalculationLongDistanceAndLocal(t *testing.T) {
 	}
 }
 
+func TestEstimateDocumentsEmailsAndSignatureRequestTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase4-a", "Tenant Phase4 A", "phase4-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase4-b", "Tenant Phase4 B", "phase4-b@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookieA := login(t, env.router, "phase4-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-phase4-a")
+
+	status, body := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/documents/estimate-pdf", nil, cookieA, csrfA)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 generate estimate pdf, got %d (%s)", status, string(body))
+	}
+
+	cookieB := login(t, env.router, "phase4-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/documents/estimate-pdf", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant document read, got %d", status)
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/emails", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant email history read, got %d", status)
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/emails/send", estimateEmailPayload(map[string]any{
+		"templateKey": "moving_estimate",
+	}), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant email send, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/signature-requests", nil, cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant signature request create, got %d (%s)", status, string(body))
+	}
+}
+
+func TestPublicQuoteAndSignatureTokens(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantID, _ := seedTenantUser(t, ctx, env.pool, "tenant-phase4-public", "Tenant Phase4 Public", "phase4-public@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookie := login(t, env.router, "phase4-public@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "idem-phase4-public")
+
+	status, body := request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/documents/estimate-pdf", nil, cookie, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 generate estimate pdf, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/emails/send", estimateEmailPayload(map[string]any{
+		"templateKey": "moving_estimate",
+	}), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 moving estimate email send, got %d (%s)", status, string(body))
+	}
+	quoteToken := parseGeneratedLinkToken(t, body, "quoteUrl")
+	if quoteToken == "" {
+		t.Fatalf("expected quote token from generated link")
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/estimate/"+quoteToken, nil, nil, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 for valid quote token, got %d (%s)", status, string(body))
+	}
+	if id := parsePublicEstimateID(t, body); id != estimateID {
+		t.Fatalf("expected quote token estimate id %s, got %s", estimateID, id)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/estimate/not-a-real-quote-token", nil, nil, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 invalid quote token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "quote_share_not_found" {
+		t.Fatalf("expected quote_share_not_found, got %s", code)
+	}
+
+	if _, err := env.pool.Exec(ctx, `
+		UPDATE estimate_quote_share_link
+		SET expires_at = NOW() - INTERVAL '1 hour'
+		WHERE token_hash = $1
+	`, auth.HashToken(quoteToken)); err != nil {
+		t.Fatalf("expire quote token: %v", err)
+	}
+	status, body = request(t, env.router, http.MethodGet, "/api/public/estimate/"+quoteToken, nil, nil, "")
+	if status != http.StatusGone {
+		t.Fatalf("expected 410 for expired quote token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "quote_share_expired" {
+		t.Fatalf("expected quote_share_expired, got %s", code)
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/signature-requests", nil, cookie, csrf)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 signature request create, got %d (%s)", status, string(body))
+	}
+	signToken := parseSignatureRequestToken(t, body)
+	if signToken == "" {
+		t.Fatalf("expected signature token")
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/public/sign/"+signToken, nil, nil, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 valid sign token, got %d (%s)", status, string(body))
+	}
+	if id := parsePublicSignEstimateID(t, body); id != estimateID {
+		t.Fatalf("expected sign token estimate id %s, got %s", estimateID, id)
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/public/sign/"+signToken, completeSignaturePayload("Integration Signer", "customer@example.com"), nil, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 signature completion, got %d (%s)", status, string(body))
+	}
+	signatureID := parseSignatureID(t, body)
+	if signatureID == "" {
+		t.Fatalf("expected signature id from completion response")
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/public/sign/"+signToken, completeSignaturePayload("Integration Signer", "customer@example.com"), nil, "")
+	if status != http.StatusConflict {
+		t.Fatalf("expected 409 reused sign token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "signature_already_completed" {
+		t.Fatalf("expected signature_already_completed, got %s", code)
+	}
+
+	var signatureCount int
+	estimateUUID, err := uuid.Parse(estimateID)
+	if err != nil {
+		t.Fatalf("parse estimate id: %v", err)
+	}
+	if err := env.pool.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM estimate_signature
+		WHERE tenant_id = $1
+		  AND estimate_id = $2
+	`, tenantID, estimateUUID).Scan(&signatureCount); err != nil {
+		t.Fatalf("count signatures: %v", err)
+	}
+	if signatureCount != 1 {
+		t.Fatalf("expected exactly one signature row, got %d", signatureCount)
+	}
+
+	if _, err := env.pool.Exec(ctx, `
+		UPDATE estimate_signature_request
+		SET expires_at = NOW() - INTERVAL '1 hour'
+		WHERE token_hash = $1
+	`, auth.HashToken(signToken)); err != nil {
+		t.Fatalf("expire sign token: %v", err)
+	}
+	status, body = request(t, env.router, http.MethodGet, "/api/public/sign/"+signToken, nil, nil, "")
+	if status != http.StatusGone {
+		t.Fatalf("expected 410 for expired sign token, got %d (%s)", status, string(body))
+	}
+	if code := parseErrorCode(t, body); code != "signature_request_expired" {
+		t.Fatalf("expected signature_request_expired, got %s", code)
+	}
+}
+
 func TestEstimateRBACForCreateAndConvert(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
@@ -1056,6 +1222,12 @@ func setupTestEnv(t *testing.T) testEnv {
 		APIMaxBodyBytes:    2 * 1024 * 1024,
 		ImportMaxFileBytes: 25 * 1024 * 1024,
 		ImportMaxRows:      5000,
+		InventoryShareTTL:  336 * time.Hour,
+		QuoteShareTTL:      336 * time.Hour,
+		SignRequestTTL:     336 * time.Hour,
+		EmailMode:          "log",
+		EmailFrom:          "no-reply@moveops.local",
+		EmailReplyTo:       "no-reply@moveops.local",
 		ReadHeaderTimeout:  5 * time.Second,
 		ReadTimeout:        15 * time.Second,
 		WriteTimeout:       30 * time.Second,
@@ -1261,6 +1433,21 @@ func chargesPayload(payload map[string]any) []byte {
 	return body
 }
 
+func estimateEmailPayload(payload map[string]any) []byte {
+	body, _ := json.Marshal(payload)
+	return body
+}
+
+func completeSignaturePayload(signerName, signerEmail string) []byte {
+	body, _ := json.Marshal(map[string]any{
+		"signerName":    signerName,
+		"signerEmail":   signerEmail,
+		"signatureText": signerName,
+		"agreeToTerms":  true,
+	})
+	return body
+}
+
 func parseEstimateID(t *testing.T, body []byte) string {
 	t.Helper()
 	var payload struct {
@@ -1353,6 +1540,84 @@ func parseInventoryShareToken(t *testing.T, body []byte) string {
 		t.Fatalf("unexpected shareUrl format: %s", shareURL)
 	}
 	return trimmed[idx+1:]
+}
+
+func parseGeneratedLinkToken(t *testing.T, body []byte, key string) string {
+	t.Helper()
+	var payload struct {
+		GeneratedLinks map[string]string `json:"generatedLinks"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse generated links: %v", err)
+	}
+	url := strings.TrimSpace(payload.GeneratedLinks[key])
+	if url == "" {
+		t.Fatalf("generated link %s missing", key)
+	}
+	trimmed := strings.TrimRight(url, "/")
+	idx := strings.LastIndex(trimmed, "/")
+	if idx < 0 || idx == len(trimmed)-1 {
+		t.Fatalf("unexpected generated link format: %s", url)
+	}
+	return trimmed[idx+1:]
+}
+
+func parsePublicEstimateID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		EstimateID string `json:"estimateId"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse public estimate payload: %v", err)
+	}
+	if payload.EstimateID == "" {
+		t.Fatalf("public estimate response missing estimateId")
+	}
+	return payload.EstimateID
+}
+
+func parsePublicSignEstimateID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		EstimateID string `json:"estimateId"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse public sign payload: %v", err)
+	}
+	if payload.EstimateID == "" {
+		t.Fatalf("public sign response missing estimateId")
+	}
+	return payload.EstimateID
+}
+
+func parseSignatureRequestToken(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		SignatureURL string `json:"signatureUrl"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse signature request response: %v", err)
+	}
+	trimmed := strings.TrimRight(strings.TrimSpace(payload.SignatureURL), "/")
+	idx := strings.LastIndex(trimmed, "/")
+	if idx < 0 || idx == len(trimmed)-1 {
+		t.Fatalf("unexpected signatureUrl format: %s", payload.SignatureURL)
+	}
+	return trimmed[idx+1:]
+}
+
+func parseSignatureID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		SignatureID string `json:"signatureId"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse signature completion payload: %v", err)
+	}
+	if payload.SignatureID == "" {
+		t.Fatalf("signatureId missing from completion response")
+	}
+	return payload.SignatureID
 }
 
 func parseJobID(t *testing.T, body []byte) string {
