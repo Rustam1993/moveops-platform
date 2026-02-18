@@ -914,13 +914,11 @@ func sendSMTPEmailRich(cfg config.Config, recipientEmail string, ccEmail *string
 	}
 	recipients := []string{toAddress}
 
-	var ccAddress *string
 	if ccEmail != nil && strings.TrimSpace(*ccEmail) != "" {
 		cleanCC, err := sanitizeSMTPAddress(*ccEmail)
 		if err != nil {
 			return fmt.Errorf("invalid cc email: %w", err)
 		}
-		ccAddress = &cleanCC
 		recipients = append(recipients, cleanCC)
 	}
 
