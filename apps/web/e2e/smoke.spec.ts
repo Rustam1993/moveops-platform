@@ -108,8 +108,8 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
   const { estimateId } = await createEstimate(page, suffix);
   await page.goto(`/estimates/${estimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  const inventoryReady = await waitForInventoryTools(page);
-  if (inventoryReady) {
+  const catalogInventoryReady = await waitForInventoryTools(page);
+  if (catalogInventoryReady) {
     await page.getByRole("button", { name: categoryName }).click();
   await page.getByTestId("inventory-search").fill(customItem);
   await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
@@ -120,8 +120,8 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
 
   await page.goto(`/estimates/${flowEstimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  const inventoryReady = await waitForInventoryTools(page);
-  if (inventoryReady) {
+  const flowInventoryReady = await waitForInventoryTools(page);
+  if (flowInventoryReady) {
     await page.locator("#custom-item-name").fill(`Smoke Item ${flowSuffix}`);
     await page.locator("#custom-item-volume").fill("2");
     await page.locator("#custom-item-qty").fill("4");
@@ -137,7 +137,7 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
   await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
 
   await page.getByRole("button", { name: "Long Distance" }).click();
-  if (inventoryReady) {
+  if (flowInventoryReady) {
     await page.locator("#charges-rate-per-cf").fill("5");
   } else {
     await page.getByRole("checkbox", { name: "Use fixed base amount" }).check();
