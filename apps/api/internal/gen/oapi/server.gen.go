@@ -14,6 +14,66 @@ import (
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List tenant audit logs with filters and pagination
+	// (GET /admin/audit-logs)
+	GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams)
+	// List tenant inventory catalog categories
+	// (GET /admin/new-estimate/catalog/categories)
+	GetAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request)
+	// Create tenant inventory catalog category
+	// (POST /admin/new-estimate/catalog/categories)
+	PostAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request)
+	// Delete tenant inventory catalog category
+	// (DELETE /admin/new-estimate/catalog/categories/{categoryId})
+	DeleteAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request, categoryId openapi_types.UUID)
+	// Update tenant inventory catalog category
+	// (PATCH /admin/new-estimate/catalog/categories/{categoryId})
+	PatchAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request, categoryId openapi_types.UUID)
+	// Export tenant inventory catalog CSV
+	// (GET /admin/new-estimate/catalog/export)
+	GetAdminNewEstimateCatalogExport(w http.ResponseWriter, r *http.Request)
+	// Import tenant inventory catalog from CSV
+	// (POST /admin/new-estimate/catalog/import)
+	PostAdminNewEstimateCatalogImport(w http.ResponseWriter, r *http.Request)
+	// List tenant inventory catalog items
+	// (GET /admin/new-estimate/catalog/items)
+	GetAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request)
+	// Create tenant inventory catalog item
+	// (POST /admin/new-estimate/catalog/items)
+	PostAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request)
+	// Delete tenant inventory catalog item
+	// (DELETE /admin/new-estimate/catalog/items/{itemId})
+	DeleteAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Update tenant inventory catalog item
+	// (PATCH /admin/new-estimate/catalog/items/{itemId})
+	PatchAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
+	// Get tenant document branding for printed estimate
+	// (GET /admin/new-estimate/documents)
+	GetAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request)
+	// Update tenant document branding for printed estimate
+	// (PUT /admin/new-estimate/documents)
+	PutAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request)
+	// Get tenant transactional email templates for New Estimate
+	// (GET /admin/new-estimate/email-templates)
+	GetAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request)
+	// Update tenant transactional email templates for New Estimate
+	// (PUT /admin/new-estimate/email-templates)
+	PutAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request)
+	// Test-send a rendered tenant email template
+	// (POST /admin/new-estimate/email-templates/test-send)
+	PostAdminNewEstimateEmailTemplatesTestSend(w http.ResponseWriter, r *http.Request)
+	// Get tenant New Estimate operational metrics
+	// (GET /admin/new-estimate/metrics)
+	GetAdminNewEstimateMetrics(w http.ResponseWriter, r *http.Request, params GetAdminNewEstimateMetricsParams)
+	// Get tenant pricing defaults for New Estimate
+	// (GET /admin/new-estimate/pricing)
+	GetAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request)
+	// Update tenant pricing defaults for New Estimate
+	// (PUT /admin/new-estimate/pricing)
+	PutAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request)
+	// Store internal analytics event (tenant-scoped, no PII)
+	// (POST /analytics/events)
+	PostAnalyticsEvents(w http.ResponseWriter, r *http.Request)
 	// Get csrf token for session
 	// (GET /auth/csrf)
 	GetAuthCsrf(w http.ResponseWriter, r *http.Request)
@@ -86,6 +146,9 @@ type ServerInterface interface {
 	// Create customer inventory share link and send email
 	// (POST /estimates/{estimateId}/inventory-share-links)
 	PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Get effective tenant inventory catalog for this estimate
+	// (GET /estimates/{estimateId}/inventory/catalog)
+	GetEstimatesEstimateIdInventoryCatalog(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// List manual payments and payment summary
 	// (GET /estimates/{estimateId}/payments)
 	GetEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
@@ -193,6 +256,126 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// List tenant audit logs with filters and pagination
+// (GET /admin/audit-logs)
+func (_ Unimplemented) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, params GetAdminAuditLogsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List tenant inventory catalog categories
+// (GET /admin/new-estimate/catalog/categories)
+func (_ Unimplemented) GetAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create tenant inventory catalog category
+// (POST /admin/new-estimate/catalog/categories)
+func (_ Unimplemented) PostAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete tenant inventory catalog category
+// (DELETE /admin/new-estimate/catalog/categories/{categoryId})
+func (_ Unimplemented) DeleteAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request, categoryId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tenant inventory catalog category
+// (PATCH /admin/new-estimate/catalog/categories/{categoryId})
+func (_ Unimplemented) PatchAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request, categoryId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export tenant inventory catalog CSV
+// (GET /admin/new-estimate/catalog/export)
+func (_ Unimplemented) GetAdminNewEstimateCatalogExport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Import tenant inventory catalog from CSV
+// (POST /admin/new-estimate/catalog/import)
+func (_ Unimplemented) PostAdminNewEstimateCatalogImport(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List tenant inventory catalog items
+// (GET /admin/new-estimate/catalog/items)
+func (_ Unimplemented) GetAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create tenant inventory catalog item
+// (POST /admin/new-estimate/catalog/items)
+func (_ Unimplemented) PostAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete tenant inventory catalog item
+// (DELETE /admin/new-estimate/catalog/items/{itemId})
+func (_ Unimplemented) DeleteAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tenant inventory catalog item
+// (PATCH /admin/new-estimate/catalog/items/{itemId})
+func (_ Unimplemented) PatchAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get tenant document branding for printed estimate
+// (GET /admin/new-estimate/documents)
+func (_ Unimplemented) GetAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tenant document branding for printed estimate
+// (PUT /admin/new-estimate/documents)
+func (_ Unimplemented) PutAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get tenant transactional email templates for New Estimate
+// (GET /admin/new-estimate/email-templates)
+func (_ Unimplemented) GetAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tenant transactional email templates for New Estimate
+// (PUT /admin/new-estimate/email-templates)
+func (_ Unimplemented) PutAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Test-send a rendered tenant email template
+// (POST /admin/new-estimate/email-templates/test-send)
+func (_ Unimplemented) PostAdminNewEstimateEmailTemplatesTestSend(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get tenant New Estimate operational metrics
+// (GET /admin/new-estimate/metrics)
+func (_ Unimplemented) GetAdminNewEstimateMetrics(w http.ResponseWriter, r *http.Request, params GetAdminNewEstimateMetricsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get tenant pricing defaults for New Estimate
+// (GET /admin/new-estimate/pricing)
+func (_ Unimplemented) GetAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update tenant pricing defaults for New Estimate
+// (PUT /admin/new-estimate/pricing)
+func (_ Unimplemented) PutAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store internal analytics event (tenant-scoped, no PII)
+// (POST /analytics/events)
+func (_ Unimplemented) PostAnalyticsEvents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Get csrf token for session
 // (GET /auth/csrf)
@@ -335,6 +518,12 @@ func (_ Unimplemented) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r 
 // Create customer inventory share link and send email
 // (POST /estimates/{estimateId}/inventory-share-links)
 func (_ Unimplemented) PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get effective tenant inventory catalog for this estimate
+// (GET /estimates/{estimateId}/inventory/catalog)
+func (_ Unimplemented) GetEstimatesEstimateIdInventoryCatalog(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -550,6 +739,420 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetAdminAuditLogs operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminAuditLogsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", r.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", r.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "actorUserId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "actorUserId", r.URL.Query(), &params.ActorUserId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "actorUserId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "action" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "action", r.URL.Query(), &params.Action)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "action", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "entityType" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "entityType", r.URL.Query(), &params.EntityType)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityType", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "entityId" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "entityId", r.URL.Query(), &params.EntityId)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entityId", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", r.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminAuditLogs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateCatalogCategories operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateCatalogCategories(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminNewEstimateCatalogCategories operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminNewEstimateCatalogCategories(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminNewEstimateCatalogCategories(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminNewEstimateCatalogCategoriesCategoryId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "categoryId" -------------
+	var categoryId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "categoryId", chi.URLParam(r, "categoryId"), &categoryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "categoryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminNewEstimateCatalogCategoriesCategoryId(w, r, categoryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminNewEstimateCatalogCategoriesCategoryId operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminNewEstimateCatalogCategoriesCategoryId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "categoryId" -------------
+	var categoryId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "categoryId", chi.URLParam(r, "categoryId"), &categoryId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "categoryId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminNewEstimateCatalogCategoriesCategoryId(w, r, categoryId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateCatalogExport operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateCatalogExport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateCatalogExport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminNewEstimateCatalogImport operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminNewEstimateCatalogImport(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminNewEstimateCatalogImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateCatalogItems operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateCatalogItems(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminNewEstimateCatalogItems operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminNewEstimateCatalogItems(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminNewEstimateCatalogItemsItemId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminNewEstimateCatalogItemsItemId(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminNewEstimateCatalogItemsItemId operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "itemId" -------------
+	var itemId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "itemId", chi.URLParam(r, "itemId"), &itemId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "itemId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminNewEstimateCatalogItemsItemId(w, r, itemId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateDocuments operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateDocuments(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutAdminNewEstimateDocuments operation middleware
+func (siw *ServerInterfaceWrapper) PutAdminNewEstimateDocuments(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutAdminNewEstimateDocuments(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateEmailTemplates operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateEmailTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutAdminNewEstimateEmailTemplates operation middleware
+func (siw *ServerInterfaceWrapper) PutAdminNewEstimateEmailTemplates(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutAdminNewEstimateEmailTemplates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminNewEstimateEmailTemplatesTestSend operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminNewEstimateEmailTemplatesTestSend(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminNewEstimateEmailTemplatesTestSend(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimateMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimateMetrics(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAdminNewEstimateMetricsParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", r.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", r.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimateMetrics(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminNewEstimatePricing operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminNewEstimatePricing(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutAdminNewEstimatePricing operation middleware
+func (siw *ServerInterfaceWrapper) PutAdminNewEstimatePricing(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutAdminNewEstimatePricing(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAnalyticsEvents operation middleware
+func (siw *ServerInterfaceWrapper) PostAnalyticsEvents(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAnalyticsEvents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetAuthCsrf operation middleware
 func (siw *ServerInterfaceWrapper) GetAuthCsrf(w http.ResponseWriter, r *http.Request) {
@@ -1205,6 +1808,31 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdInventoryShareLinks(w 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostEstimatesEstimateIdInventoryShareLinks(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimatesEstimateIdInventoryCatalog operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdInventoryCatalog(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdInventoryCatalog(w, r, estimateId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2259,6 +2887,66 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/audit-logs", wrapper.GetAdminAuditLogs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/catalog/categories", wrapper.GetAdminNewEstimateCatalogCategories)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/new-estimate/catalog/categories", wrapper.PostAdminNewEstimateCatalogCategories)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/new-estimate/catalog/categories/{categoryId}", wrapper.DeleteAdminNewEstimateCatalogCategoriesCategoryId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/new-estimate/catalog/categories/{categoryId}", wrapper.PatchAdminNewEstimateCatalogCategoriesCategoryId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/catalog/export", wrapper.GetAdminNewEstimateCatalogExport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/new-estimate/catalog/import", wrapper.PostAdminNewEstimateCatalogImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/catalog/items", wrapper.GetAdminNewEstimateCatalogItems)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/new-estimate/catalog/items", wrapper.PostAdminNewEstimateCatalogItems)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/new-estimate/catalog/items/{itemId}", wrapper.DeleteAdminNewEstimateCatalogItemsItemId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/new-estimate/catalog/items/{itemId}", wrapper.PatchAdminNewEstimateCatalogItemsItemId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/documents", wrapper.GetAdminNewEstimateDocuments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/admin/new-estimate/documents", wrapper.PutAdminNewEstimateDocuments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/email-templates", wrapper.GetAdminNewEstimateEmailTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/admin/new-estimate/email-templates", wrapper.PutAdminNewEstimateEmailTemplates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/new-estimate/email-templates/test-send", wrapper.PostAdminNewEstimateEmailTemplatesTestSend)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/metrics", wrapper.GetAdminNewEstimateMetrics)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/new-estimate/pricing", wrapper.GetAdminNewEstimatePricing)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/admin/new-estimate/pricing", wrapper.PutAdminNewEstimatePricing)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/events", wrapper.PostAnalyticsEvents)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/auth/csrf", wrapper.GetAuthCsrf)
 	})
 	r.Group(func(r chi.Router) {
@@ -2329,6 +3017,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/estimates/{estimateId}/inventory-share-links", wrapper.PostEstimatesEstimateIdInventoryShareLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/inventory/catalog", wrapper.GetEstimatesEstimateIdInventoryCatalog)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/estimates/{estimateId}/payments", wrapper.GetEstimatesEstimateIdPayments)

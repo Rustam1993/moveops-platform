@@ -43,6 +43,29 @@ export type PublicInventoryResponse = {
   requestId: string;
 };
 
+export type CatalogCategory = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type CatalogItem = {
+  id: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  itemName: string;
+  volumeCf: number;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type EstimateInventoryCatalogResponse = {
+  categories: CatalogCategory[];
+  items: CatalogItem[];
+  requestId: string;
+};
+
 export async function getEstimateInventory(estimateId: string) {
   return api.request<EstimateInventoryResponse>(`/estimates/${estimateId}/inventory`);
 }
@@ -59,6 +82,10 @@ export async function createEstimateInventoryShareLink(estimateId: string, paylo
     method: "POST",
     body: JSON.stringify(payload ?? {}),
   });
+}
+
+export async function getEstimateInventoryCatalog(estimateId: string) {
+  return api.request<EstimateInventoryCatalogResponse>(`/estimates/${estimateId}/inventory/catalog`);
 }
 
 export async function getPublicInventory(token: string) {

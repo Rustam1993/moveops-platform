@@ -88,6 +88,7 @@ func main() {
 		"imports.read":      "Read import run reports and downloads",
 		"imports.write":     "Run import dry-runs and apply imports",
 		"exports.read":      "Download tenant data exports",
+		"admin.new_estimate": "Manage tenant New Estimate admin settings and metrics",
 	}
 
 	for perm, description := range permissionDescriptions {
@@ -106,7 +107,7 @@ func main() {
 	}{
 		"admin": {
 			description: "Tenant administrator",
-			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write", "imports.read", "imports.write", "exports.read"},
+			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write", "imports.read", "imports.write", "exports.read", "admin.new_estimate"},
 		},
 		"sales": {
 			description: "Sales role",

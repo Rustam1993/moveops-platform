@@ -169,6 +169,11 @@ func (s *Server) PatchEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http
 			"priority":   persisted.Priority,
 		},
 	})
+	if workflow.FollowUpAt != nil {
+		s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimate.ID, "estimate.follow_up_set", map[string]any{
+			"status": workflow.Status,
+		})
+	}
 
 	httpx.WriteJSON(w, http.StatusOK, oapi.EstimateWorkflowResponse{
 		Workflow:  mapEstimateWorkflow(estimate.ID, persisted),
@@ -219,6 +224,9 @@ func (s *Server) PostEstimatesEstimateIdBook(w http.ResponseWriter, r *http.Requ
 			"toStatus":   persisted.Status,
 			"bookedAt":   persisted.BookedAt.UTC().Format(time.RFC3339),
 		},
+	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimate.ID, "estimate.booked", map[string]any{
+		"status": workflow.Status,
 	})
 
 	httpx.WriteJSON(w, http.StatusOK, oapi.EstimateWorkflowResponse{

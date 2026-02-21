@@ -256,6 +256,14 @@ func (s *Server) PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *htt
 			"deliveryMode": delivery.Mode,
 		},
 	})
+	switch req.TemplateKey {
+	case oapi.MovingEstimate:
+		s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.quote_sent", map[string]any{"via": "email_center"})
+	case oapi.UpdateInventory:
+		s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.inventory_link_sent", map[string]any{"via": "email_center"})
+	case oapi.SignatureRequest:
+		s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.sign_requested", map[string]any{"via": "email_center"})
+	}
 
 	mappedEmail, err := mapEstimateEmailLog(emailLog)
 	if err != nil {
@@ -333,6 +341,7 @@ func (s *Server) PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter,
 			"deliveryMode":       delivery.Mode,
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.sign_requested", map[string]any{"via": "signature_request_endpoint"})
 
 	httpx.WriteJSON(w, http.StatusCreated, oapi.CreateSignatureRequestResponse{
 		SignatureRequestId: signatureRequest.ID,
@@ -569,6 +578,7 @@ func (s *Server) PostPublicSignToken(w http.ResponseWriter, r *http.Request, tok
 			"signedAt":           signatureRow.SignedAt.UTC().Format(time.RFC3339),
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), signReq.TenantID, nil, &signedEstimate.ID, "estimate.sign_completed", map[string]any{"via": "public_sign"})
 
 	mappedDoc, err := mapEstimateDocument(signedDoc)
 	if err != nil {
@@ -599,6 +609,12 @@ func (s *Server) prepareEstimateEmailTemplate(
 		"estimateId": estimate.ID,
 		"customer":   estimate.CustomerName,
 	}
+	tenantTemplates, _ := s.getTenantEmailTemplates(ctx, tenantID)
+	baseVars := map[string]string{
+		"customer_name":  estimate.CustomerName,
+		"estimate_number": estimate.EstimateNumber,
+		"move_date":      estimate.MoveDate.Format("2006-01-02"),
+	}
 
 	switch templateKey {
 	case oapi.MovingEstimate:
@@ -624,10 +640,13 @@ func (s *Server) prepareEstimateEmailTemplate(
 			return "", "", nil, nil, err
 		}
 		_ = share
-		subject := "Your moving estimate"
-		body := "Your moving estimate is ready.\n\n" +
-			"View and download your estimate here:\n" + quoteURL + "\n\n" +
-			"Thank you,\nMoveOps"
+		defaultSubject := "Your moving estimate"
+		defaultBody := "Hi {{customer_name}},\n\nYour moving estimate is ready.\n\nView and download your estimate here:\n{{quote_link}}\n\nThank you,\nMoveOps"
+		subjectTmpl, bodyTmpl := resolveTenantTemplateCopy(tenantTemplates, templateKey, defaultSubject, defaultBody)
+		templateVars := cloneStringMap(baseVars)
+		templateVars["quote_link"] = quoteURL
+		subject := renderEmailTemplateText(subjectTmpl, templateVars)
+		body := renderEmailTemplateText(bodyTmpl, templateVars)
 		links := &oapi.EstimateEmailGeneratedLinks{QuoteUrl: &quoteURL}
 		rendered["quoteUrl"] = quoteURL
 		return subject, body, links, rendered, nil
@@ -661,10 +680,13 @@ func (s *Server) prepareEstimateEmailTemplate(
 				"deliveryMode":   "email_center",
 			},
 		})
-		subject := "Please update your inventory"
-		body := "Please complete your inventory for your move.\n\n" +
-			"Use this secure link:\n" + shareURL + "\n\n" +
-			"Thank you,\nMoveOps"
+		defaultSubject := "Please complete your inventory for your move"
+		defaultBody := "Hi {{customer_name}},\n\nPlease complete your inventory so we can finalize your quote.\n\nUse this secure link:\n{{inventory_link}}\n\nThank you,\nMoveOps"
+		subjectTmpl, bodyTmpl := resolveTenantTemplateCopy(tenantTemplates, templateKey, defaultSubject, defaultBody)
+		templateVars := cloneStringMap(baseVars)
+		templateVars["inventory_link"] = shareURL
+		subject := renderEmailTemplateText(subjectTmpl, templateVars)
+		body := renderEmailTemplateText(bodyTmpl, templateVars)
 		links := &oapi.EstimateEmailGeneratedLinks{InventoryUrl: &shareURL}
 		rendered["inventoryUrl"] = shareURL
 		return subject, body, links, rendered, nil
@@ -687,10 +709,13 @@ func (s *Server) prepareEstimateEmailTemplate(
 				"via":                "email_center",
 			},
 		})
-		subject := "Please sign your estimate"
-		body := "Please sign your estimate using the secure link below.\n\n" +
-			"Sign here:\n" + signatureURL + "\n\n" +
-			"Thank you,\nMoveOps"
+		defaultSubject := "Please sign your estimate"
+		defaultBody := "Hi {{customer_name}},\n\nPlease sign your estimate using the secure link below.\n\nSign here:\n{{signature_link}}\n\nThank you,\nMoveOps"
+		subjectTmpl, bodyTmpl := resolveTenantTemplateCopy(tenantTemplates, templateKey, defaultSubject, defaultBody)
+		templateVars := cloneStringMap(baseVars)
+		templateVars["signature_link"] = signatureURL
+		subject := renderEmailTemplateText(subjectTmpl, templateVars)
+		body := renderEmailTemplateText(bodyTmpl, templateVars)
 		links := &oapi.EstimateEmailGeneratedLinks{SignatureUrl: &signatureURL}
 		rendered["signatureUrl"] = signatureURL
 		return subject, body, links, rendered, nil
@@ -1012,7 +1037,8 @@ func (s *Server) generateAndStoreEstimatePDFDocument(
 		return gen.Estimate{}, gen.EstimateDocument{}, err
 	}
 
-	pdfBytes, err := renderEstimatePDF(estimate, charges, signed)
+	branding, _ := s.getTenantDocumentBranding(ctx, tenantID)
+	pdfBytes, err := renderEstimatePDF(estimate, charges, signed, branding)
 	if err != nil {
 		return gen.Estimate{}, gen.EstimateDocument{}, err
 	}
@@ -1087,15 +1113,35 @@ func createEstimateDocumentRow(
 	})
 }
 
-func renderEstimatePDF(estimate gen.Estimate, charges *gen.EstimateCharge, signed *signatureStamp) ([]byte, error) {
+func renderEstimatePDF(
+	estimate gen.Estimate,
+	charges *gen.EstimateCharge,
+	signed *signatureStamp,
+	branding oapi.NewEstimateDocumentBranding,
+) ([]byte, error) {
 	pdf := gofpdf.New("P", "mm", "Letter", "")
 	pdf.SetMargins(14, 14, 14)
 	pdf.SetAutoPageBreak(true, 12)
 	pdf.AddPage()
 
+	brandName := valueOrDefault(branding.CompanyDisplayName, "MoveOps")
+	brandPhone := valueOrDefault(branding.CompanyPhone, "")
+	brandEmail := valueOrDefault(emailToString(branding.CompanyEmail), "")
+	termsSnippet := valueOrDefault(branding.TermsSnippet, "This estimate is provided for planning purposes and is subject to final confirmation.\nAll services are governed by MoveOps terms and applicable federal/state regulations.")
+
 	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 10, "Moving Estimate", "", 1, "L", false, 0, "")
+	pdf.CellFormat(0, 10, brandName+" - Moving Estimate", "", 1, "L", false, 0, "")
 	pdf.SetFont("Arial", "", 10)
+	if brandPhone != "" || brandEmail != "" {
+		parts := make([]string, 0, 2)
+		if brandPhone != "" {
+			parts = append(parts, "Phone: "+brandPhone)
+		}
+		if brandEmail != "" {
+			parts = append(parts, "Email: "+brandEmail)
+		}
+		pdf.CellFormat(0, 6, strings.Join(parts, "  |  "), "", 1, "L", false, 0, "")
+	}
 	pdf.CellFormat(0, 6, fmt.Sprintf("Estimate %s", estimate.EstimateNumber), "", 1, "L", false, 0, "")
 	pdf.CellFormat(0, 6, fmt.Sprintf("Generated %s", time.Now().UTC().Format("Jan 2, 2006 15:04 UTC")), "", 1, "L", false, 0, "")
 	pdf.Ln(2)
@@ -1144,7 +1190,7 @@ func renderEstimatePDF(estimate gen.Estimate, charges *gen.EstimateCharge, signe
 	pdf.SetFont("Arial", "B", 12)
 	pdf.CellFormat(0, 7, "Terms", "", 1, "L", false, 0, "")
 	pdf.SetFont("Arial", "", 9)
-	pdf.MultiCell(0, 5, "This estimate is provided for planning purposes and is subject to final confirmation.\nAll services are governed by MoveOps terms and applicable federal/state regulations.", "", "L", false)
+	pdf.MultiCell(0, 5, termsSnippet, "", "L", false)
 
 	if signed != nil {
 		pdf.Ln(3)

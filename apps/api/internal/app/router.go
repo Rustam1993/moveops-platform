@@ -76,6 +76,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 	publicInventoryLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
 	publicQuoteLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
 	publicSignLimiter := middleware.NewIPRateLimiterWithMaxEntries(60, time.Minute, cfg.RateLimitMaxIPs)
+	publicTokenAttemptLimiter := middleware.NewIPRateLimiterWithMaxEntries(20, time.Minute, cfg.RateLimitMaxIPs)
 
 	api.Group(func(public chi.Router) {
 		public.With(loginLimiter.Middleware).Post("/auth/login", h.PostAuthLogin)
@@ -83,6 +84,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 		public.With(
 			publicInventoryLimiter.Middleware("Too many inventory link requests"),
+			publicTokenAttemptLimiter.Middleware("Too many token attempts"),
 		).Get("/public/inventory/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.GetPublicInventoryToken(w, r, token)
@@ -90,6 +92,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 		public.With(
 			publicInventoryLimiter.Middleware("Too many inventory link requests"),
+			publicTokenAttemptLimiter.Middleware("Too many token attempts"),
 		).Put("/public/inventory/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.PutPublicInventoryToken(w, r, token)
@@ -97,6 +100,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 		public.With(
 			publicQuoteLimiter.Middleware("Too many estimate link requests"),
+			publicTokenAttemptLimiter.Middleware("Too many token attempts"),
 		).Get("/public/estimate/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.GetPublicEstimateToken(w, r, token)
@@ -104,6 +108,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 		public.With(
 			publicSignLimiter.Middleware("Too many signature link requests"),
+			publicTokenAttemptLimiter.Middleware("Too many token attempts"),
 		).Get("/public/sign/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.GetPublicSignToken(w, r, token)
@@ -111,6 +116,7 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 
 		public.With(
 			publicSignLimiter.Middleware("Too many signature link requests"),
+			publicTokenAttemptLimiter.Middleware("Too many token attempts"),
 		).Post("/public/sign/{token}", func(w http.ResponseWriter, r *http.Request) {
 			token := strings.TrimSpace(chi.URLParam(r, "token"))
 			h.PostPublicSignToken(w, r, token)
@@ -141,6 +147,201 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 			middleware.RequirePermission(q, "customers.write"),
 			middleware.EnforceCSRF(cfg.CSRFEnforce),
 		).Post("/customers", h.PostCustomers)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/catalog/categories", h.GetAdminNewEstimateCatalogCategories)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/admin/new-estimate/catalog/categories", h.PostAdminNewEstimateCatalogCategories)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Patch("/admin/new-estimate/catalog/categories/{categoryId}", func(w http.ResponseWriter, r *http.Request) {
+			categoryID, ok := parseUUIDParam(w, r, chi.URLParam(r, "categoryId"), "invalid_category_id", "Category id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PatchAdminNewEstimateCatalogCategoriesCategoryId(w, r, categoryID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Delete("/admin/new-estimate/catalog/categories/{categoryId}", func(w http.ResponseWriter, r *http.Request) {
+			categoryID, ok := parseUUIDParam(w, r, chi.URLParam(r, "categoryId"), "invalid_category_id", "Category id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.DeleteAdminNewEstimateCatalogCategoriesCategoryId(w, r, categoryID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/catalog/items", h.GetAdminNewEstimateCatalogItems)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/admin/new-estimate/catalog/items", h.PostAdminNewEstimateCatalogItems)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Patch("/admin/new-estimate/catalog/items/{itemId}", func(w http.ResponseWriter, r *http.Request) {
+			itemID, ok := parseUUIDParam(w, r, chi.URLParam(r, "itemId"), "invalid_item_id", "Item id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.PatchAdminNewEstimateCatalogItemsItemId(w, r, itemID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Delete("/admin/new-estimate/catalog/items/{itemId}", func(w http.ResponseWriter, r *http.Request) {
+			itemID, ok := parseUUIDParam(w, r, chi.URLParam(r, "itemId"), "invalid_item_id", "Item id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.DeleteAdminNewEstimateCatalogItemsItemId(w, r, itemID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/admin/new-estimate/catalog/import", h.PostAdminNewEstimateCatalogImport)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/catalog/export", h.GetAdminNewEstimateCatalogExport)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/pricing", h.GetAdminNewEstimatePricing)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/admin/new-estimate/pricing", h.PutAdminNewEstimatePricing)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/email-templates", h.GetAdminNewEstimateEmailTemplates)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/admin/new-estimate/email-templates", h.PutAdminNewEstimateEmailTemplates)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/admin/new-estimate/email-templates/test-send", h.PostAdminNewEstimateEmailTemplatesTestSend)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/documents", h.GetAdminNewEstimateDocuments)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Put("/admin/new-estimate/documents", h.PutAdminNewEstimateDocuments)
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/new-estimate/metrics", func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+			params := oapi.GetAdminNewEstimateMetricsParams{}
+			if fromRaw := strings.TrimSpace(query.Get("from")); fromRaw != "" {
+				parsed, err := time.Parse(time.RFC3339, fromRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "from must be RFC3339 datetime", nil)
+					return
+				}
+				params.From = &parsed
+			}
+			if toRaw := strings.TrimSpace(query.Get("to")); toRaw != "" {
+				parsed, err := time.Parse(time.RFC3339, toRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "to must be RFC3339 datetime", nil)
+					return
+				}
+				params.To = &parsed
+			}
+			h.GetAdminNewEstimateMetrics(w, r, params)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "admin.new_estimate"),
+		).Get("/admin/audit-logs", func(w http.ResponseWriter, r *http.Request) {
+			query := r.URL.Query()
+			params := oapi.GetAdminAuditLogsParams{}
+
+			if fromRaw := strings.TrimSpace(query.Get("from")); fromRaw != "" {
+				parsed, err := time.Parse(time.RFC3339, fromRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "from must be RFC3339 datetime", nil)
+					return
+				}
+				params.From = &parsed
+			}
+			if toRaw := strings.TrimSpace(query.Get("to")); toRaw != "" {
+				parsed, err := time.Parse(time.RFC3339, toRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "to must be RFC3339 datetime", nil)
+					return
+				}
+				params.To = &parsed
+			}
+			if actorRaw := strings.TrimSpace(query.Get("actorUserId")); actorRaw != "" {
+				actorID, ok := parseUUIDParam(w, r, actorRaw, "invalid_actor_user_id", "actorUserId must be a valid UUID")
+				if !ok {
+					return
+				}
+				typed := openapi_types.UUID(actorID)
+				params.ActorUserId = &typed
+			}
+			if actionRaw := strings.TrimSpace(query.Get("action")); actionRaw != "" {
+				params.Action = &actionRaw
+			}
+			if entityTypeRaw := strings.TrimSpace(query.Get("entityType")); entityTypeRaw != "" {
+				params.EntityType = &entityTypeRaw
+			}
+			if entityIDRaw := strings.TrimSpace(query.Get("entityId")); entityIDRaw != "" {
+				entityID, ok := parseUUIDParam(w, r, entityIDRaw, "invalid_entity_id", "entityId must be a valid UUID")
+				if !ok {
+					return
+				}
+				typed := openapi_types.UUID(entityID)
+				params.EntityId = &typed
+			}
+			if limitRaw := strings.TrimSpace(query.Get("limit")); limitRaw != "" {
+				limit, err := strconv.Atoi(limitRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "limit must be an integer", nil)
+					return
+				}
+				params.Limit = &limit
+			}
+			if offsetRaw := strings.TrimSpace(query.Get("offset")); offsetRaw != "" {
+				offset, err := strconv.Atoi(offsetRaw)
+				if err != nil {
+					httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "offset must be an integer", nil)
+					return
+				}
+				params.Offset = &offset
+			}
+			h.GetAdminAuditLogs(w, r, params)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.write"),
+			middleware.EnforceCSRF(cfg.CSRFEnforce),
+		).Post("/analytics/events", h.PostAnalyticsEvents)
 
 		protected.With(
 			middleware.RequirePermission(q, "estimates.write"),
@@ -229,6 +430,16 @@ func NewRouter(cfg config.Config, q *gen.Queries, pool *pgxpool.Pool, logger *sl
 				return
 			}
 			h.PostEstimatesEstimateIdInventoryShareLinks(w, r, estimateID)
+		})
+
+		protected.With(
+			middleware.RequirePermission(q, "estimates.read"),
+		).Get("/estimates/{estimateId}/inventory/catalog", func(w http.ResponseWriter, r *http.Request) {
+			estimateID, ok := parseUUIDParam(w, r, chi.URLParam(r, "estimateId"), "invalid_estimate_id", "Estimate id must be a valid UUID")
+			if !ok {
+				return
+			}
+			h.GetEstimatesEstimateIdInventoryCatalog(w, r, estimateID)
 		})
 
 		protected.With(

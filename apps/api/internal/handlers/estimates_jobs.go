@@ -181,6 +181,9 @@ func (s *Server) PostEstimates(w http.ResponseWriter, r *http.Request, params oa
 			"moveDate":       estimate.MoveDate.Format("2006-01-02"),
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.entry_started", map[string]any{
+		"source": "entry_form",
+	})
 
 	s.writeEstimateResponse(w, r, tenantID, estimate.ID, http.StatusCreated)
 }

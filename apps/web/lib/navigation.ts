@@ -1,5 +1,15 @@
 import type { LucideIcon } from "lucide-react";
-import { Briefcase, CalendarDays, Database, FileInput, FileText, LayoutDashboard, PlusSquare } from "lucide-react";
+import {
+  Briefcase,
+  CalendarDays,
+  ClipboardList,
+  Database,
+  FileInput,
+  FileText,
+  LayoutDashboard,
+  PlusSquare,
+  Settings2,
+} from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -50,5 +60,17 @@ export const navItems: NavItem[] = [
     href: "/import",
     icon: FileInput,
     description: "Migrate and export tenant data",
+  },
+  {
+    title: "New Estimate Admin",
+    href: "/admin/new-estimate/catalog",
+    icon: Settings2,
+    description: "Tenant settings for catalog, pricing, templates, and metrics",
+  },
+  {
+    title: "Audit Logs",
+    href: "/admin/audit-logs",
+    icon: ClipboardList,
+    description: "Review tenant-scoped audit activity",
   },
 ];

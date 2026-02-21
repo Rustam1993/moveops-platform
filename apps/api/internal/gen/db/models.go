@@ -10,6 +10,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type AnalyticsEvent struct {
+	ID             int64      `json:"id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     *uuid.UUID `json:"estimate_id"`
+	UserID         *uuid.UUID `json:"user_id"`
+	EventName      string     `json:"event_name"`
+	PropertiesJson []byte     `json:"properties_json"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
 type AuditLog struct {
 	ID         int64      `json:"id"`
 	TenantID   uuid.UUID  `json:"tenant_id"`
@@ -324,6 +334,32 @@ type Job struct {
 	UpdatedAt             time.Time  `json:"updated_at"`
 }
 
+type NewEstimateCatalogCategory struct {
+	ID        uuid.UUID  `json:"id"`
+	TenantID  uuid.UUID  `json:"tenant_id"`
+	Name      string     `json:"name"`
+	SortOrder int32      `json:"sort_order"`
+	Active    bool       `json:"active"`
+	CreatedBy *uuid.UUID `json:"created_by"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type NewEstimateCatalogItem struct {
+	ID         uuid.UUID  `json:"id"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	CategoryID *uuid.UUID `json:"category_id"`
+	Name       string     `json:"name"`
+	VolumeCf   float64    `json:"volume_cf"`
+	SortOrder  int32      `json:"sort_order"`
+	Active     bool       `json:"active"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+}
+
 type Permission struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -393,6 +429,16 @@ type TenantCounter struct {
 	CounterType string    `json:"counter_type"`
 	NextValue   int64     `json:"next_value"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type TenantNewEstimateSetting struct {
+	TenantID             uuid.UUID  `json:"tenant_id"`
+	PricingDefaultsJson  []byte     `json:"pricing_defaults_json"`
+	EmailTemplatesJson   []byte     `json:"email_templates_json"`
+	DocumentBrandingJson []byte     `json:"document_branding_json"`
+	UpdatedBy            *uuid.UUID `json:"updated_by"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
 type User struct {

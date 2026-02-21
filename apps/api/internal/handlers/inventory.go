@@ -149,6 +149,11 @@ func (s *Server) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.
 			"totalVolumeCf": totalCF,
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.inventory_updated", map[string]any{
+		"via":           "internal",
+		"item_count":    len(items),
+		"total_cf":      totalCF,
+	})
 
 	httpx.WriteJSON(w, http.StatusOK, estimateInventoryResponse{
 		EstimateID:    estimateID,
@@ -251,6 +256,10 @@ func (s *Server) PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWrite
 			"deliveryError":  deliveryErr != nil,
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.inventory_link_sent", map[string]any{
+		"via":           "inventory_tab",
+		"delivery_mode": deliveryMode,
+	})
 
 	httpx.WriteJSON(w, http.StatusCreated, createInventoryShareLinkResponse{
 		ShareLinkID:    share.ID,
@@ -303,7 +312,7 @@ func (s *Server) PutPublicInventoryToken(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	items, _, err := normalizeInventoryItems(req.Items)
+	items, totalCF, err := normalizeInventoryItems(req.Items)
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", err.Error(), nil)
 		return
@@ -353,6 +362,11 @@ func (s *Server) PutPublicInventoryToken(w http.ResponseWriter, r *http.Request,
 			"itemCount":     len(items),
 			"totalVolumeCf": roundCF(updatedEstimate.TotalVolumeCf),
 		},
+	})
+	s.trackAnalyticsEvent(r.Context(), share.TenantID, nil, &share.EstimateID, "estimate.inventory_updated", map[string]any{
+		"via":        "public_link",
+		"item_count": len(items),
+		"total_cf":   totalCF,
 	})
 
 	httpx.WriteJSON(w, http.StatusOK, publicInventoryResponse{

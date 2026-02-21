@@ -161,6 +161,20 @@ const (
 	JobListItemStatusScheduled JobListItemStatus = "scheduled"
 )
 
+// Defines values for NewEstimateEmailTemplateTestSendRequestTemplateKey.
+const (
+	EQuote        NewEstimateEmailTemplateTestSendRequestTemplateKey = "e_quote"
+	ESign         NewEstimateEmailTemplateTestSendRequestTemplateKey = "e_sign"
+	InventoryLink NewEstimateEmailTemplateTestSendRequestTemplateKey = "inventory_link"
+)
+
+// Defines values for NewEstimateEmailTemplateTestSendResponseStatus.
+const (
+	Failed NewEstimateEmailTemplateTestSendResponseStatus = "failed"
+	Logged NewEstimateEmailTemplateTestSendResponseStatus = "logged"
+	Sent   NewEstimateEmailTemplateTestSendResponseStatus = "sent"
+)
+
 // Defines values for StorageListItemStatus.
 const (
 	StorageListItemStatusInStorage StorageListItemStatus = "in_storage"
@@ -218,6 +232,27 @@ const (
 	LongDistance GetJobsParamsJobType = "long_distance"
 	Other        GetJobsParamsJobType = "other"
 )
+
+// AdminAuditLogEntry defines model for AdminAuditLogEntry.
+type AdminAuditLogEntry struct {
+	Action     string                 `json:"action"`
+	CreatedAt  time.Time              `json:"createdAt"`
+	EntityId   *openapi_types.UUID    `json:"entityId,omitempty"`
+	EntityType string                 `json:"entityType"`
+	Id         int64                  `json:"id"`
+	Metadata   map[string]interface{} `json:"metadata"`
+	RequestId  *string                `json:"requestId,omitempty"`
+	UserId     *openapi_types.UUID    `json:"userId,omitempty"`
+}
+
+// AdminAuditLogListResponse defines model for AdminAuditLogListResponse.
+type AdminAuditLogListResponse struct {
+	Items     []AdminAuditLogEntry `json:"items"`
+	Limit     int                  `json:"limit"`
+	Offset    int                  `json:"offset"`
+	RequestId string               `json:"requestId"`
+	Total     int64                `json:"total"`
+}
 
 // AuthSessionResponse defines model for AuthSessionResponse.
 type AuthSessionResponse struct {
@@ -331,6 +366,22 @@ type CreateInventoryShareLinkResponse struct {
 
 // CreateInventoryShareLinkResponseDeliveryMode defines model for CreateInventoryShareLinkResponse.DeliveryMode.
 type CreateInventoryShareLinkResponseDeliveryMode string
+
+// CreateNewEstimateCatalogCategoryRequest defines model for CreateNewEstimateCatalogCategoryRequest.
+type CreateNewEstimateCatalogCategoryRequest struct {
+	Active    *bool  `json:"active,omitempty"`
+	Name      string `json:"name"`
+	SortOrder *int   `json:"sortOrder,omitempty"`
+}
+
+// CreateNewEstimateCatalogItemRequest defines model for CreateNewEstimateCatalogItemRequest.
+type CreateNewEstimateCatalogItemRequest struct {
+	Active     *bool               `json:"active,omitempty"`
+	CategoryId *openapi_types.UUID `json:"categoryId,omitempty"`
+	ItemName   string              `json:"itemName"`
+	SortOrder  *int                `json:"sortOrder,omitempty"`
+	VolumeCf   float64             `json:"volumeCf"`
+}
 
 // CreateSignatureRequestRequest defines model for CreateSignatureRequestRequest.
 type CreateSignatureRequestRequest struct {
@@ -887,6 +938,169 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// NewEstimateCatalogCategory defines model for NewEstimateCatalogCategory.
+type NewEstimateCatalogCategory struct {
+	Active    bool               `json:"active"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+	SortOrder int                `json:"sortOrder"`
+}
+
+// NewEstimateCatalogCategoryListResponse defines model for NewEstimateCatalogCategoryListResponse.
+type NewEstimateCatalogCategoryListResponse struct {
+	Categories []NewEstimateCatalogCategory `json:"categories"`
+	RequestId  string                       `json:"requestId"`
+}
+
+// NewEstimateCatalogCategoryResponse defines model for NewEstimateCatalogCategoryResponse.
+type NewEstimateCatalogCategoryResponse struct {
+	Category  NewEstimateCatalogCategory `json:"category"`
+	RequestId string                     `json:"requestId"`
+}
+
+// NewEstimateCatalogImportResponse defines model for NewEstimateCatalogImportResponse.
+type NewEstimateCatalogImportResponse struct {
+	CategoriesImported int       `json:"categoriesImported"`
+	Errors             *[]string `json:"errors,omitempty"`
+	ItemsImported      int       `json:"itemsImported"`
+	RequestId          string    `json:"requestId"`
+}
+
+// NewEstimateCatalogItem defines model for NewEstimateCatalogItem.
+type NewEstimateCatalogItem struct {
+	Active       bool                `json:"active"`
+	CategoryId   *openapi_types.UUID `json:"categoryId"`
+	CategoryName *string             `json:"categoryName"`
+	Id           openapi_types.UUID  `json:"id"`
+	ItemName     string              `json:"itemName"`
+	SortOrder    int                 `json:"sortOrder"`
+	VolumeCf     float64             `json:"volumeCf"`
+}
+
+// NewEstimateCatalogItemListResponse defines model for NewEstimateCatalogItemListResponse.
+type NewEstimateCatalogItemListResponse struct {
+	Items     []NewEstimateCatalogItem `json:"items"`
+	RequestId string                   `json:"requestId"`
+}
+
+// NewEstimateCatalogItemResponse defines model for NewEstimateCatalogItemResponse.
+type NewEstimateCatalogItemResponse struct {
+	Item      NewEstimateCatalogItem `json:"item"`
+	RequestId string                 `json:"requestId"`
+}
+
+// NewEstimateCatalogResponse defines model for NewEstimateCatalogResponse.
+type NewEstimateCatalogResponse struct {
+	Categories []NewEstimateCatalogCategory `json:"categories"`
+	Items      []NewEstimateCatalogItem     `json:"items"`
+	RequestId  string                       `json:"requestId"`
+}
+
+// NewEstimateConversionMetric defines model for NewEstimateConversionMetric.
+type NewEstimateConversionMetric struct {
+	ConvertedCount int64   `json:"convertedCount"`
+	Rate           float64 `json:"rate"`
+	TotalCount     int64   `json:"totalCount"`
+}
+
+// NewEstimateDocumentBranding defines model for NewEstimateDocumentBranding.
+type NewEstimateDocumentBranding struct {
+	CompanyDisplayName *string              `json:"companyDisplayName,omitempty"`
+	CompanyEmail       *openapi_types.Email `json:"companyEmail,omitempty"`
+	CompanyPhone       *string              `json:"companyPhone,omitempty"`
+	LogoUrl            *string              `json:"logoUrl,omitempty"`
+	TermsSnippet       *string              `json:"termsSnippet,omitempty"`
+}
+
+// NewEstimateDocumentBrandingResponse defines model for NewEstimateDocumentBrandingResponse.
+type NewEstimateDocumentBrandingResponse struct {
+	Branding  NewEstimateDocumentBranding `json:"branding"`
+	RequestId string                      `json:"requestId"`
+}
+
+// NewEstimateEmailTemplate defines model for NewEstimateEmailTemplate.
+type NewEstimateEmailTemplate struct {
+	HtmlBody *string `json:"htmlBody,omitempty"`
+	Subject  *string `json:"subject,omitempty"`
+	TextBody *string `json:"textBody,omitempty"`
+}
+
+// NewEstimateEmailTemplateTestSendRequest defines model for NewEstimateEmailTemplateTestSendRequest.
+type NewEstimateEmailTemplateTestSendRequest struct {
+	TemplateKey NewEstimateEmailTemplateTestSendRequestTemplateKey `json:"templateKey"`
+	ToEmail     openapi_types.Email                                `json:"toEmail"`
+}
+
+// NewEstimateEmailTemplateTestSendRequestTemplateKey defines model for NewEstimateEmailTemplateTestSendRequest.TemplateKey.
+type NewEstimateEmailTemplateTestSendRequestTemplateKey string
+
+// NewEstimateEmailTemplateTestSendResponse defines model for NewEstimateEmailTemplateTestSendResponse.
+type NewEstimateEmailTemplateTestSendResponse struct {
+	RequestId string                                         `json:"requestId"`
+	Status    NewEstimateEmailTemplateTestSendResponseStatus `json:"status"`
+}
+
+// NewEstimateEmailTemplateTestSendResponseStatus defines model for NewEstimateEmailTemplateTestSendResponse.Status.
+type NewEstimateEmailTemplateTestSendResponseStatus string
+
+// NewEstimateEmailTemplates defines model for NewEstimateEmailTemplates.
+type NewEstimateEmailTemplates struct {
+	EQuote        *NewEstimateEmailTemplate `json:"eQuote,omitempty"`
+	ESign         *NewEstimateEmailTemplate `json:"eSign,omitempty"`
+	InventoryLink *NewEstimateEmailTemplate `json:"inventoryLink,omitempty"`
+}
+
+// NewEstimateEmailTemplatesResponse defines model for NewEstimateEmailTemplatesResponse.
+type NewEstimateEmailTemplatesResponse struct {
+	AllowedVariables []string                  `json:"allowedVariables"`
+	RequestId        string                    `json:"requestId"`
+	Templates        NewEstimateEmailTemplates `json:"templates"`
+}
+
+// NewEstimateMetrics defines model for NewEstimateMetrics.
+type NewEstimateMetrics struct {
+	InventoryCompletion      NewEstimateConversionMetric `json:"inventoryCompletion"`
+	MedianTimeToQuoteMinutes float64                     `json:"medianTimeToQuoteMinutes"`
+	QuoteToSign              NewEstimateConversionMetric `json:"quoteToSign"`
+	SignToBook               NewEstimateConversionMetric `json:"signToBook"`
+	StuckEstimatesCount      int64                       `json:"stuckEstimatesCount"`
+}
+
+// NewEstimateMetricsResponse defines model for NewEstimateMetricsResponse.
+type NewEstimateMetricsResponse struct {
+	Metrics   NewEstimateMetrics `json:"metrics"`
+	RequestId string             `json:"requestId"`
+}
+
+// NewEstimatePricingDefaults defines model for NewEstimatePricingDefaults.
+type NewEstimatePricingDefaults struct {
+	Discounts *struct {
+		CouponPct *float64 `json:"couponPct,omitempty"`
+		SeniorPct *float64 `json:"seniorPct,omitempty"`
+	} `json:"discounts,omitempty"`
+	Liability *struct {
+		Type                 *EstimateLiabilityType `json:"type,omitempty"`
+		ValuationChargeCents *int64                 `json:"valuationChargeCents,omitempty"`
+	} `json:"liability,omitempty"`
+	Local *struct {
+		FuelSurchargePct *float64 `json:"fuelSurchargePct,omitempty"`
+		LaborRateCents   *int64   `json:"laborRateCents,omitempty"`
+		TaxRatePct       *float64 `json:"taxRatePct,omitempty"`
+		TravelRateCents  *int64   `json:"travelRateCents,omitempty"`
+	} `json:"local,omitempty"`
+	LongDistance *struct {
+		FuelSurchargePct *float64 `json:"fuelSurchargePct,omitempty"`
+		RatePerCf        *float64 `json:"ratePerCf,omitempty"`
+		TaxRatePct       *float64 `json:"taxRatePct,omitempty"`
+	} `json:"longDistance,omitempty"`
+}
+
+// NewEstimatePricingDefaultsResponse defines model for NewEstimatePricingDefaultsResponse.
+type NewEstimatePricingDefaultsResponse struct {
+	Pricing   NewEstimatePricingDefaults `json:"pricing"`
+	RequestId string                     `json:"requestId"`
+}
+
 // PublicEstimateDocumentResponse defines model for PublicEstimateDocumentResponse.
 type PublicEstimateDocumentResponse struct {
 	CustomerName       string             `json:"customerName"`
@@ -1041,6 +1255,13 @@ type Tenant struct {
 	Slug string             `json:"slug"`
 }
 
+// TrackAnalyticsEventRequest defines model for TrackAnalyticsEventRequest.
+type TrackAnalyticsEventRequest struct {
+	EstimateId *openapi_types.UUID     `json:"estimateId,omitempty"`
+	EventName  string                  `json:"eventName"`
+	Properties *map[string]interface{} `json:"properties,omitempty"`
+}
+
 // UpdateEstimateRequest defines model for UpdateEstimateRequest.
 type UpdateEstimateRequest struct {
 	CustomerName            *string              `json:"customerName,omitempty"`
@@ -1094,6 +1315,22 @@ type UpdateJobRequest struct {
 // UpdateJobRequestStatus defines model for UpdateJobRequest.Status.
 type UpdateJobRequestStatus string
 
+// UpdateNewEstimateCatalogCategoryRequest defines model for UpdateNewEstimateCatalogCategoryRequest.
+type UpdateNewEstimateCatalogCategoryRequest struct {
+	Active    *bool   `json:"active,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	SortOrder *int    `json:"sortOrder,omitempty"`
+}
+
+// UpdateNewEstimateCatalogItemRequest defines model for UpdateNewEstimateCatalogItemRequest.
+type UpdateNewEstimateCatalogItemRequest struct {
+	Active     *bool               `json:"active,omitempty"`
+	CategoryId *openapi_types.UUID `json:"categoryId"`
+	ItemName   *string             `json:"itemName,omitempty"`
+	SortOrder  *int                `json:"sortOrder,omitempty"`
+	VolumeCf   *float64            `json:"volumeCf,omitempty"`
+}
+
 // UpdateStorageRecordRequest defines model for UpdateStorageRecordRequest.
 type UpdateStorageRecordRequest struct {
 	DateIn              *openapi_types.Date `json:"dateIn,omitempty"`
@@ -1127,6 +1364,24 @@ type IdempotencyKey = string
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse = ErrorEnvelope
+
+// GetAdminAuditLogsParams defines parameters for GetAdminAuditLogs.
+type GetAdminAuditLogsParams struct {
+	From        *time.Time          `form:"from,omitempty" json:"from,omitempty"`
+	To          *time.Time          `form:"to,omitempty" json:"to,omitempty"`
+	ActorUserId *openapi_types.UUID `form:"actorUserId,omitempty" json:"actorUserId,omitempty"`
+	Action      *string             `form:"action,omitempty" json:"action,omitempty"`
+	EntityType  *string             `form:"entityType,omitempty" json:"entityType,omitempty"`
+	EntityId    *openapi_types.UUID `form:"entityId,omitempty" json:"entityId,omitempty"`
+	Limit       *int                `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset      *int                `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// GetAdminNewEstimateMetricsParams defines parameters for GetAdminNewEstimateMetrics.
+type GetAdminNewEstimateMetricsParams struct {
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+	To   *time.Time `form:"to,omitempty" json:"to,omitempty"`
+}
 
 // GetCalendarParams defines parameters for GetCalendar.
 type GetCalendarParams struct {
@@ -1201,6 +1456,33 @@ type GetStorageParams struct {
 	Limit         *int           `form:"limit,omitempty" json:"limit,omitempty"`
 	Cursor        *string        `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
+
+// PostAdminNewEstimateCatalogCategoriesJSONRequestBody defines body for PostAdminNewEstimateCatalogCategories for application/json ContentType.
+type PostAdminNewEstimateCatalogCategoriesJSONRequestBody = CreateNewEstimateCatalogCategoryRequest
+
+// PatchAdminNewEstimateCatalogCategoriesCategoryIdJSONRequestBody defines body for PatchAdminNewEstimateCatalogCategoriesCategoryId for application/json ContentType.
+type PatchAdminNewEstimateCatalogCategoriesCategoryIdJSONRequestBody = UpdateNewEstimateCatalogCategoryRequest
+
+// PostAdminNewEstimateCatalogItemsJSONRequestBody defines body for PostAdminNewEstimateCatalogItems for application/json ContentType.
+type PostAdminNewEstimateCatalogItemsJSONRequestBody = CreateNewEstimateCatalogItemRequest
+
+// PatchAdminNewEstimateCatalogItemsItemIdJSONRequestBody defines body for PatchAdminNewEstimateCatalogItemsItemId for application/json ContentType.
+type PatchAdminNewEstimateCatalogItemsItemIdJSONRequestBody = UpdateNewEstimateCatalogItemRequest
+
+// PutAdminNewEstimateDocumentsJSONRequestBody defines body for PutAdminNewEstimateDocuments for application/json ContentType.
+type PutAdminNewEstimateDocumentsJSONRequestBody = NewEstimateDocumentBranding
+
+// PutAdminNewEstimateEmailTemplatesJSONRequestBody defines body for PutAdminNewEstimateEmailTemplates for application/json ContentType.
+type PutAdminNewEstimateEmailTemplatesJSONRequestBody = NewEstimateEmailTemplates
+
+// PostAdminNewEstimateEmailTemplatesTestSendJSONRequestBody defines body for PostAdminNewEstimateEmailTemplatesTestSend for application/json ContentType.
+type PostAdminNewEstimateEmailTemplatesTestSendJSONRequestBody = NewEstimateEmailTemplateTestSendRequest
+
+// PutAdminNewEstimatePricingJSONRequestBody defines body for PutAdminNewEstimatePricing for application/json ContentType.
+type PutAdminNewEstimatePricingJSONRequestBody = NewEstimatePricingDefaults
+
+// PostAnalyticsEventsJSONRequestBody defines body for PostAnalyticsEvents for application/json ContentType.
+type PostAnalyticsEventsJSONRequestBody = TrackAnalyticsEventRequest
 
 // PostAuthLoginJSONRequestBody defines body for PostAuthLogin for application/json ContentType.
 type PostAuthLoginJSONRequestBody = LoginRequest

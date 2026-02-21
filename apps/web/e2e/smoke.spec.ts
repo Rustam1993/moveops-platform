@@ -7,24 +7,6 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-async function waitForInventoryTools(page: import("@playwright/test").Page) {
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const quickAdd = page.getByTestId("quick-add-starter-pack");
-    if (await quickAdd.isVisible().catch(() => false)) {
-      return true;
-    }
-
-    const retryButton = page.getByRole("button", { name: "Retry" });
-    if (await retryButton.isVisible().catch(() => false)) {
-      await retryButton.click();
-    }
-
-    await page.waitForTimeout(1000);
-  }
-
-  return false;
-}
-
 async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill("admin@local.moveops");
@@ -38,27 +20,14 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.waitForURL(/\/$/);
 }
 
-test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
-  test.setTimeout(180_000);
-
-  const suffix = Date.now().toString().slice(-6);
+async function createEstimate(page: import("@playwright/test").Page, suffix: string) {
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
   const email = `e2e.${suffix}@example.com`;
   const moveDate = formatDate(new Date());
 
-  await loginAsAdmin(page);
-
   await page.goto("/estimates/new");
   await page.waitForURL(/\/estimates\/new$/);
-  await expect(page.getByRole("heading", { name: "New estimate" })).toBeVisible();
-  await expect(page.getByTestId("readiness-state")).toHaveText("4 checks remaining");
-  await expect(page.getByTestId("readiness-item-contact")).toContainText("Missing");
-  await expect(
-    page
-      .getByRole("tablist", { name: "Estimate workspace tabs" })
-      .getByRole("button", { name: "Inventory", exact: true }),
-  ).toBeDisabled();
 
   await page.getByLabel("First name").fill(firstName);
   await page.getByLabel("Last name").fill(lastName);
@@ -73,30 +42,104 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.getByLabel("State").nth(1).fill("TX");
   await page.getByLabel("ZIP").nth(1).fill("75001");
   await page.getByLabel("Move date").fill(moveDate);
+  await page.getByLabel("Service type").selectOption({ label: "Long Distance" });
 
   await Promise.all([
     page.waitForURL(/\/estimates\/.+\/entry$/),
     page.getByRole("button", { name: "Save" }).click(),
   ]);
-  const estimateIdMatch = page.url().match(/\/estimates\/([^/]+)\/entry$/);
-  if (!estimateIdMatch) {
+
+  const match = page.url().match(/\/estimates\/([^/]+)\/entry$/);
+  if (!match) {
     throw new Error(`Unable to resolve estimate id from URL: ${page.url()}`);
   }
-  const estimateId = estimateIdMatch[1];
 
   await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
-  await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
-  await expect(page.getByRole("link", { name: "Inventory" })).toBeVisible();
+  return { estimateId: match[1], firstName, lastName, email };
+}
+
+test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) => {
+  test.setTimeout(180_000);
+
+  const suffix = Date.now().toString().slice(-6);
+  const customItem = `E2E Box ${suffix}`;
+
+  await loginAsAdmin(page);
+
+  await page.goto("/admin/new-estimate/catalog");
+  await expect(page.getByRole("heading", { name: "New Estimate Catalog" })).toBeVisible();
+
+  await page.getByTestId("admin-catalog-item-input").fill(customItem);
+  await page.getByTestId("admin-catalog-item-category").selectOption({ label: "Boxes" });
+  await page.getByTestId("admin-catalog-item-volume").fill("2.5");
+  await page.getByTestId("admin-catalog-item-add").click();
+
+  await expect(page.getByText(customItem)).toBeVisible();
+
+  const { estimateId } = await createEstimate(page, suffix);
+  await page.goto(`/estimates/${estimateId}/inventory`);
+  await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+
+  await page.getByTestId("inventory-search").fill(customItem);
+  await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
+});
+
+test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", async ({ page, context }) => {
+  test.setTimeout(240_000);
+
+  const suffix = (Date.now() + 1).toString().slice(-6);
+  await loginAsAdmin(page);
+
+  const { estimateId, firstName, lastName, email } = await createEstimate(page, suffix);
 
   await page.goto(`/estimates/${estimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  const inventoryToolsReady = await waitForInventoryTools(page);
-  if (inventoryToolsReady) {
-    await page.getByTestId("quick-add-starter-pack").click();
-    await expect(page.getByTestId("inventory-total-cf")).toHaveText("80.00 cf");
-    await expect(page.getByText("Saved on estimate: 80.00 cf")).toBeVisible({ timeout: 15000 });
-  } else {
-    await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
+
+  await page.getByLabel("Item name").fill(`Smoke Item ${suffix}`);
+  await page.getByLabel("Category").selectOption({ label: "Boxes" });
+  await page.getByLabel("Volume (cf)").fill("2");
+  await page.getByLabel("Qty").fill("4");
+  await page.getByRole("button", { name: "Add Item" }).click();
+
+  await expect(page.getByTestId("inventory-total-cf")).toHaveText("8.00 cf");
+  await expect(page.getByText("Saved on estimate: 8.00 cf")).toBeVisible({ timeout: 15000 });
+
+  await page.goto(`/estimates/${estimateId}/charges`);
+  await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
+
+  await page.getByRole("button", { name: "Long Distance" }).click();
+  await page.locator("#charges-rate-per-cf").fill("5");
+  await page.getByRole("button", { name: /^Save$/ }).first().click();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("charges-total-estimate")).not.toHaveText("$0.00");
+
+  await page.goto(`/estimates/${estimateId}/email`);
+  await expect(page).toHaveURL(/\/estimates\/.+\/email$/);
+
+  await page.getByLabel("Email to").fill(email);
+  await page.getByRole("button", { name: "Send Quote" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Email sent" }).first()).toBeVisible({ timeout: 20000 });
+
+  await page.getByRole("button", { name: "Send Signature Request" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Email sent" }).first()).toBeVisible({ timeout: 20000 });
+
+  const signatureUrl = await page.locator('a[href*="/public/sign/"]').first().getAttribute("href");
+  if (!signatureUrl) {
+    throw new Error("Missing generated signature link");
   }
 
+  const signPage = await context.newPage();
+  await signPage.goto(signatureUrl);
+  await expect(signPage.getByRole("heading", { name: "Sign Your Moving Estimate" })).toBeVisible();
+  await signPage.getByLabel("Signer name").fill(`${firstName} ${lastName}`);
+  await signPage.getByLabel("Signer email").fill(email);
+  await signPage.getByLabel("Typed signature").fill(`${firstName} ${lastName}`);
+  await signPage.getByText("I agree that this typed signature is my electronic signature.").click();
+  await signPage.getByRole("button", { name: "Sign Estimate" }).click();
+  await expect(signPage.getByText("Estimate already signed")).toBeVisible({ timeout: 20000 });
+  await signPage.close();
+
+  await page.goto(`/estimates/${estimateId}/entry`);
+  await page.getByRole("button", { name: "Book This Job" }).click();
+  await expect(page.getByText("Job is Booked")).toBeVisible({ timeout: 15000 });
 });
