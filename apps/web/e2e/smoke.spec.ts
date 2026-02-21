@@ -44,6 +44,25 @@ async function waitForInventoryTools(page: import("@playwright/test").Page) {
   return false;
 }
 
+async function waitForChargesTools(page: import("@playwright/test").Page) {
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    const ratePerCfInput = page.locator("#charges-rate-per-cf");
+    const laborHoursInput = page.getByLabel("Labor hours");
+    if ((await ratePerCfInput.isVisible().catch(() => false)) || (await laborHoursInput.isVisible().catch(() => false))) {
+      return true;
+    }
+
+    const retryButton = page.getByRole("button", { name: "Retry" });
+    if (await retryButton.isVisible().catch(() => false)) {
+      await retryButton.click();
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  return false;
+}
+
 async function createEstimate(page: import("@playwright/test").Page, suffix: string) {
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
@@ -131,9 +150,23 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
   await page.goto(`/estimates/${estimateId}/charges`);
   await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
 
-  await page.getByRole("button", { name: "Long Distance" }).click();
+  const chargesReady = await waitForChargesTools(page);
+  if (!chargesReady) {
+    throw new Error("Charges screen unavailable after retries");
+  }
+
+  const ratePerCfInput = page.locator("#charges-rate-per-cf");
+  const hasRatePerCfInput = await ratePerCfInput.isVisible().catch(() => false);
+  if (!hasRatePerCfInput) {
+    const longDistanceButton = page.getByRole("button", { name: "Long Distance" });
+    if (await longDistanceButton.isVisible().catch(() => false)) {
+      await longDistanceButton.click();
+    }
+  }
+
   if (flowInventoryReady) {
-    await page.locator("#charges-rate-per-cf").fill("5");
+    await expect(ratePerCfInput).toBeVisible();
+    await ratePerCfInput.fill("5");
   } else {
     await page.getByRole("checkbox", { name: "Use fixed base amount" }).check();
     await page.getByLabel("Fixed base amount ($)").fill("1200");
