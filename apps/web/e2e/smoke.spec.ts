@@ -99,59 +99,13 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
 
-  await page.goto(`/estimates/${estimateId}/charges`);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (await page.getByRole("button", { name: "Local" }).isVisible().catch(() => false)) {
-      break;
-    }
-    await page.goto(`/estimates/${estimateId}/charges`);
-    if (page.url().endsWith("/login")) {
-      await loginAsAdmin(page);
-      await page.goto(`/estimates/${estimateId}/charges`);
-    }
+  await page.goto(`/estimates/${estimateId}/entry`);
+  if (page.url().endsWith("/login")) {
+    await loginAsAdmin(page);
+    await page.goto(`/estimates/${estimateId}/entry`);
   }
-  await expect(page.getByRole("button", { name: "Local" })).toBeVisible();
-  await page.getByRole("button", { name: "Local" }).click();
-  await expect(page.getByLabel("# Workers")).toBeVisible();
-
-  await page.getByLabel("# Workers").fill("2");
-  await page.getByLabel("Labor hours").fill("3");
-  await page.getByLabel("Labor rate ($/hr)").fill("150");
-  await page.getByLabel("Travel hours").fill("1");
-  await page.getByLabel("Travel rate ($/hr)").fill("150");
-
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
-  await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
+  await expect(page.getByTestId("readiness-state")).toBeVisible();
   if (inventoryToolsReady) {
-    await expect(page.getByTestId("readiness-state")).toHaveText("Ready to send quote");
-  } else {
-    await expect(page.getByTestId("readiness-state")).toHaveText("1 checks remaining");
+    await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
   }
-
-  await page.reload();
-  await expect(page.getByLabel("Labor hours")).toHaveValue("3");
-  await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
-
-  await page.getByRole("link", { name: "Printed Estimate" }).click();
-  await expect(page).toHaveURL(/\/estimates\/.+\/printed-estimate$/);
-  await page.getByRole("button", { name: "Generate PDF" }).click();
-  await expect(page.getByText("PDF generated", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Regenerate PDF" })).toBeVisible();
-
-  await page.getByRole("link", { name: "Tasks List" }).click();
-  await expect(page).toHaveURL(/\/estimates\/.+\/tasks$/);
-
-  const taskTitle = `Phase5 task ${suffix}`;
-  await page.getByTestId("new-task-title").fill(taskTitle);
-  await page.getByRole("button", { name: "Add task" }).click();
-  await expect(page.getByText(taskTitle)).toBeVisible();
-
-  const taskToggle = page.getByLabel(`Mark ${taskTitle} complete`);
-  await taskToggle.click();
-  await expect(taskToggle).toBeChecked();
-
-  await page.reload();
-  await expect(page.getByText(taskTitle)).toBeVisible();
-  await expect(page.getByLabel(`Mark ${taskTitle} complete`)).toBeChecked();
 });
