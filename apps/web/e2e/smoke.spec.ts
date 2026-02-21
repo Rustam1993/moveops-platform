@@ -20,6 +20,24 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.waitForURL(/\/$/);
 }
 
+async function waitForInventoryTools(page: import("@playwright/test").Page) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const customItemInput = page.locator("#custom-item-name");
+    if (await customItemInput.isVisible().catch(() => false)) {
+      return true;
+    }
+
+    const retryButton = page.getByRole("button", { name: "Retry" });
+    if (await retryButton.isVisible().catch(() => false)) {
+      await retryButton.click();
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  return false;
+}
+
 async function createEstimate(page: import("@playwright/test").Page, suffix: string) {
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
@@ -62,6 +80,7 @@ test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) 
   test.setTimeout(180_000);
 
   const suffix = Date.now().toString().slice(-6);
+  const categoryName = `E2E Category ${suffix}`;
   const customItem = `E2E Box ${suffix}`;
 
   await loginAsAdmin(page);
@@ -69,8 +88,12 @@ test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) 
   await page.goto("/admin/new-estimate/catalog");
   await expect(page.getByRole("heading", { name: "New Estimate Catalog" })).toBeVisible();
 
+  await page.getByTestId("admin-catalog-category-input").fill(categoryName);
+  await page.getByTestId("admin-catalog-category-add").click();
+  await expect(page.getByText(categoryName)).toBeVisible();
+
   await page.getByTestId("admin-catalog-item-input").fill(customItem);
-  await page.getByTestId("admin-catalog-item-category").selectOption({ label: "Boxes" });
+  await page.getByTestId("admin-catalog-item-category").selectOption({ label: categoryName });
   await page.getByTestId("admin-catalog-item-volume").fill("2.5");
   await page.getByTestId("admin-catalog-item-add").click();
 
@@ -79,7 +102,10 @@ test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) 
   const { estimateId } = await createEstimate(page, suffix);
   await page.goto(`/estimates/${estimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+  const inventoryReady = await waitForInventoryTools(page);
+  expect(inventoryReady).toBeTruthy();
 
+  await page.getByRole("button", { name: categoryName }).click();
   await page.getByTestId("inventory-search").fill(customItem);
   await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
 });
@@ -94,11 +120,12 @@ test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", asyn
 
   await page.goto(`/estimates/${estimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+  const inventoryReady = await waitForInventoryTools(page);
+  expect(inventoryReady).toBeTruthy();
 
-  await page.getByLabel("Item name").fill(`Smoke Item ${suffix}`);
-  await page.getByLabel("Category").selectOption({ label: "Boxes" });
-  await page.getByLabel("Volume (cf)").fill("2");
-  await page.getByLabel("Qty").fill("4");
+  await page.locator("#custom-item-name").fill(`Smoke Item ${suffix}`);
+  await page.locator("#custom-item-volume").fill("2");
+  await page.locator("#custom-item-qty").fill("4");
   await page.getByRole("button", { name: "Add Item" }).click();
 
   await expect(page.getByTestId("inventory-total-cf")).toHaveText("8.00 cf");
