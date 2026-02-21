@@ -150,9 +150,9 @@ func (s *Server) PutEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.
 		},
 	})
 	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &estimateID, "estimate.inventory_updated", map[string]any{
-		"via":           "internal",
-		"item_count":    len(items),
-		"total_cf":      totalCF,
+		"via":        "internal",
+		"item_count": len(items),
+		"total_cf":   totalCF,
 	})
 
 	httpx.WriteJSON(w, http.StatusOK, estimateInventoryResponse{

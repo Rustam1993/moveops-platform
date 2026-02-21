@@ -279,9 +279,9 @@ func (s *Server) PutEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Re
 		},
 	})
 	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &targetEstimateID, "estimate.charges_updated", map[string]any{
-		"mode":       normalized.Mode,
+		"mode":        normalized.Mode,
 		"total_cents": computed.TotalCents,
-		"total_cf":   computed.TotalCf,
+		"total_cf":    computed.TotalCf,
 	})
 
 	charges, mapErr := mapEstimateCharges(row)

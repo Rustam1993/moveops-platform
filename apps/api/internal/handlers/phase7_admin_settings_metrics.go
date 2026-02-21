@@ -33,15 +33,15 @@ const (
 
 var (
 	allowedAnalyticsEvents = map[string]struct{}{
-		"estimate.entry_started":         {},
-		"estimate.inventory_updated":     {},
-		"estimate.inventory_link_sent":   {},
-		"estimate.charges_updated":       {},
-		"estimate.quote_sent":            {},
-		"estimate.sign_requested":        {},
-		"estimate.sign_completed":        {},
-		"estimate.booked":                {},
-		"estimate.follow_up_set":         {},
+		"estimate.entry_started":       {},
+		"estimate.inventory_updated":   {},
+		"estimate.inventory_link_sent": {},
+		"estimate.charges_updated":     {},
+		"estimate.quote_sent":          {},
+		"estimate.sign_requested":      {},
+		"estimate.sign_completed":      {},
+		"estimate.booked":              {},
+		"estimate.follow_up_set":       {},
 	}
 
 	emailTemplateAllowedVariables = []string{
@@ -722,12 +722,12 @@ func (s *Server) PostAdminNewEstimateEmailTemplatesTestSend(w http.ResponseWrite
 	subject := strings.TrimSpace(valueOrDefault(chosen.Subject, "MoveOps test email"))
 	bodyTemplate := valueOrDefault(chosen.TextBody, "Hello {{customer_name}},\n\nThis is a test message from MoveOps.\n\nMoveOps Team")
 	body := renderEmailTemplateText(bodyTemplate, map[string]string{
-		"customer_name":  "Sample Customer",
-		"quote_link":     "https://example.com/public/estimate/token",
-		"inventory_link": "https://example.com/public/inventory/token",
-		"signature_link": "https://example.com/public/sign/token",
+		"customer_name":   "Sample Customer",
+		"quote_link":      "https://example.com/public/estimate/token",
+		"inventory_link":  "https://example.com/public/inventory/token",
+		"signature_link":  "https://example.com/public/sign/token",
 		"estimate_number": "E-000001",
-		"move_date":      "2026-02-21",
+		"move_date":       "2026-02-21",
 	})
 
 	delivery := s.sendTransactionalEmailWithContext(r.Context(), string(req.ToEmail), nil, subject, body)
@@ -739,8 +739,8 @@ func (s *Server) PostAdminNewEstimateEmailTemplatesTestSend(w http.ResponseWrite
 	}
 
 	s.logAdminAudit(r, tenantID, userID, "email_templates.test_sent", "tenant_new_estimate_settings", nil, map[string]any{
-		"templateKey": req.TemplateKey,
-		"status":      status,
+		"templateKey":  req.TemplateKey,
+		"status":       status,
 		"deliveryMode": delivery.Mode,
 	})
 

@@ -611,9 +611,9 @@ func (s *Server) prepareEstimateEmailTemplate(
 	}
 	tenantTemplates, _ := s.getTenantEmailTemplates(ctx, tenantID)
 	baseVars := map[string]string{
-		"customer_name":  estimate.CustomerName,
+		"customer_name":   estimate.CustomerName,
 		"estimate_number": estimate.EstimateNumber,
-		"move_date":      estimate.MoveDate.Format("2006-01-02"),
+		"move_date":       estimate.MoveDate.Format("2006-01-02"),
 	}
 
 	switch templateKey {
