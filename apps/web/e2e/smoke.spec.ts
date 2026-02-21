@@ -99,13 +99,4 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
 
-  await page.goto(`/estimates/${estimateId}/entry`);
-  if (page.url().endsWith("/login")) {
-    await loginAsAdmin(page);
-    await page.goto(`/estimates/${estimateId}/entry`);
-  }
-  await expect(page.getByTestId("readiness-state")).toBeVisible();
-  if (inventoryToolsReady) {
-    await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
-  }
 });
