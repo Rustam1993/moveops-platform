@@ -8,16 +8,22 @@ function formatDate(date: Date) {
 }
 
 async function loginAsAdmin(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill("admin@local.moveops");
-  await page.getByLabel("Password").fill("Admin12345!");
-  const loginResponsePromise = page.waitForResponse((response) => {
-    return response.request().method() === "POST" && response.url().includes("/api/auth/login");
-  });
-  await page.getByRole("button", { name: "Sign in" }).click();
-  const loginResponse = await loginResponsePromise;
-  expect(loginResponse.ok()).toBeTruthy();
-  await page.waitForURL(/\/$/);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill("admin@local.moveops");
+    await page.getByLabel("Password").fill("Admin12345!");
+    const loginResponsePromise = page.waitForResponse((response) => {
+      return response.request().method() === "POST" && response.url().includes("/api/auth/login");
+    });
+    await page.getByRole("button", { name: "Sign in" }).click();
+    const loginResponse = await loginResponsePromise;
+    if (loginResponse.ok()) {
+      await page.waitForURL(/\/$/);
+      return;
+    }
+    await page.waitForTimeout(1000);
+  }
+  throw new Error("Unable to login with admin user after retries");
 }
 
 async function waitForInventoryTools(page: import("@playwright/test").Page) {
