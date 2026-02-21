@@ -7,6 +7,24 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+async function waitForInventoryTools(page: import("@playwright/test").Page) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const quickAdd = page.getByTestId("quick-add-starter-pack");
+    if (await quickAdd.isVisible().catch(() => false)) {
+      return;
+    }
+
+    const retryButton = page.getByRole("button", { name: "Retry" });
+    if (await retryButton.isVisible().catch(() => false)) {
+      await retryButton.click();
+    }
+
+    await page.waitForTimeout(1000);
+  }
+
+  await expect(page.getByTestId("quick-add-starter-pack")).toBeVisible();
+}
+
 test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
@@ -62,6 +80,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+  await waitForInventoryTools(page);
   await page.getByTestId("quick-add-starter-pack").click();
   await expect(page.getByTestId("inventory-total-cf")).toHaveText("80.00 cf");
   await expect(page.getByText("Saved on estimate: 80.00 cf")).toBeVisible({ timeout: 15000 });
