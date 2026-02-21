@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 
+import { SaveStatusIndicator, type SaveStatusState } from "@/components/estimates/save-status-indicator";
 import { useEstimateWorkspace } from "@/components/estimates/estimate-workspace-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
 } from "@/lib/phase4-api";
 import { getApiErrorMessage } from "@/lib/phase2-api";
 
-type SaveState = "idle" | "sending" | "sent" | "error";
+type SendState = "idle" | "sending" | "sent" | "error";
 
 type TemplateOption = {
   key: EstimateEmailTemplateKey;
@@ -75,7 +76,7 @@ export function EstimateEmailCenter() {
 
   const [emails, setEmails] = useState<EstimateEmailLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [state, setState] = useState<SaveState>("idle");
+  const [state, setState] = useState<SendState>("idle");
   const [statusMessage, setStatusMessage] = useState("Loading email history...");
   const [lastResult, setLastResult] = useState<SendEstimateEmailResponse | null>(null);
 
@@ -84,6 +85,24 @@ export function EstimateEmailCenter() {
     [selectedTemplate],
   );
 
+  const sendIndicatorState: SaveStatusState =
+    state === "sending" ? "saving" : state === "sent" ? "saved" : state === "error" ? "error" : "idle";
+
+  const lastSentByTemplate = useMemo(() => {
+    const map = new Map<EstimateEmailTemplateKey, EstimateEmailLog>();
+    for (const email of emails) {
+      if (!map.has(email.templateKey)) {
+        map.set(email.templateKey, email);
+      }
+    }
+    return map;
+  }, [emails]);
+
+  const preview = useMemo(() => {
+    const recipient = toEmail.trim() || estimate.email || "customer@example.com";
+    return buildTemplatePreview(selectedTemplate, estimate.customerName || "Customer", recipient);
+  }, [estimate.customerName, estimate.email, selectedTemplate, toEmail]);
+
   const loadHistory = useCallback(async () => {
     setLoading(true);
     setStatusMessage("Loading email history...");
@@ -91,8 +110,10 @@ export function EstimateEmailCenter() {
       const response = await listEstimateEmails(estimate.id);
       setEmails(response.emails);
       setStatusMessage("Ready to send");
+      setState("idle");
     } catch (error) {
       setStatusMessage(getApiErrorMessage(error));
+      setState("error");
     } finally {
       setLoading(false);
     }
@@ -102,14 +123,17 @@ export function EstimateEmailCenter() {
     void loadHistory();
   }, [loadHistory]);
 
-  async function handleSendEmail() {
+  async function handleSendEmail(templateOverride?: EstimateEmailTemplateKey, recipientOverride?: string) {
+    const templateKey = templateOverride ?? selectedTemplate;
+    const recipient = recipientOverride ?? toEmail;
+
     setState("sending");
     setStatusMessage("Sending email...");
 
     try {
       const response = await sendEstimateEmail(estimate.id, {
-        templateKey: selectedTemplate,
-        toEmail: toEmail.trim() || undefined,
+        templateKey,
+        toEmail: recipient.trim() || undefined,
         ccMe,
       });
       setLastResult(response);
@@ -135,11 +159,9 @@ export function EstimateEmailCenter() {
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <p className="text-sm font-medium">Email Center</p>
-            <p className="text-xs text-muted-foreground" aria-live="polite" role="status">
-              {statusMessage}
-            </p>
+            <SaveStatusIndicator state={sendIndicatorState} message={statusMessage} onRetry={loadHistory} />
           </div>
-          <Button onClick={handleSendEmail} disabled={state === "sending" || loading}>
+          <Button onClick={() => void handleSendEmail()} disabled={state === "sending" || loading}>
             {state === "sending" ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,6 +179,27 @@ export function EstimateEmailCenter() {
 
       <Card className="border-border/70 bg-card/70">
         <CardHeader className="pb-3">
+          <CardTitle className="text-base">Quick actions</CardTitle>
+          <CardDescription>Primary customer communication shortcuts.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 md:grid-cols-3">
+          <Button type="button" variant="secondary" onClick={() => void handleSendEmail("moving_estimate")}
+            disabled={state === "sending" || loading}>
+            Send Quote
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => void handleSendEmail("update_inventory")}
+            disabled={state === "sending" || loading}>
+            Send Inventory Link
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => void handleSendEmail("signature_request")}
+            disabled={state === "sending" || loading}>
+            Send Signature Request
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/70">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">Templates</CardTitle>
           <CardDescription>Select a transactional template and send to the customer.</CardDescription>
         </CardHeader>
@@ -164,6 +207,7 @@ export function EstimateEmailCenter() {
           <div className="grid gap-2">
             {TEMPLATE_OPTIONS.map((option) => {
               const active = option.key === selectedTemplate;
+              const lastSent = lastSentByTemplate.get(option.key);
               return (
                 <button
                   key={option.key}
@@ -180,6 +224,9 @@ export function EstimateEmailCenter() {
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">{option.description}</p>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{option.helper}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Last sent: {lastSent ? new Date(lastSent.createdAt).toLocaleString() : "Never"}
+                  </p>
                 </button>
               );
             })}
@@ -213,6 +260,12 @@ export function EstimateEmailCenter() {
             <p className="mt-1 text-xs text-muted-foreground">Delivery target: {toEmail || estimate.email || "Not set"}</p>
           </div>
 
+          <div className="rounded-md border border-border/70 bg-muted/10 p-3">
+            <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Preview</p>
+            <p className="text-sm font-medium">{preview.subject}</p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{preview.body}</pre>
+          </div>
+
           {lastResult?.generatedLinks ? (
             <div className="rounded-md border border-border/70 bg-muted/10 p-3 text-sm">
               <p className="mb-2 font-medium">Last generated links</p>
@@ -243,7 +296,7 @@ export function EstimateEmailCenter() {
             <div className="py-8 text-sm text-muted-foreground">No emails sent yet.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b border-border/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-2 py-2">Sent At</th>
@@ -251,6 +304,7 @@ export function EstimateEmailCenter() {
                     <th className="px-2 py-2">To</th>
                     <th className="px-2 py-2">Template</th>
                     <th className="px-2 py-2">Status</th>
+                    <th className="px-2 py-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -279,6 +333,17 @@ export function EstimateEmailCenter() {
                         </span>
                         <p className="mt-1 text-xs text-muted-foreground">{email.deliveryMode}</p>
                       </td>
+                      <td className="px-2 py-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void handleSendEmail(email.templateKey, email.to)}
+                          disabled={state === "sending"}
+                        >
+                          Resend
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -289,6 +354,31 @@ export function EstimateEmailCenter() {
       </Card>
     </div>
   );
+}
+
+function buildTemplatePreview(template: EstimateEmailTemplateKey, customerName: string, recipientEmail: string) {
+  switch (template) {
+    case "moving_estimate":
+      return {
+        subject: "Your moving estimate is ready",
+        body: `Hi ${customerName},\n\nYour moving estimate is ready to review.\n\nOpen estimate: {{quote_link}}\n\nReply to this email with any questions.\n\nMoveOps Team`,
+      };
+    case "update_inventory":
+      return {
+        subject: "Please complete your moving inventory",
+        body: `Hi ${customerName},\n\nPlease update your inventory so we can finalize your quote.\n\nUpdate inventory: {{inventory_link}}\n\nThank you,\nMoveOps Team`,
+      };
+    case "signature_request":
+      return {
+        subject: "Signature request for your moving estimate",
+        body: `Hi ${customerName},\n\nPlease review and sign your estimate using the secure link below.\n\nSign estimate: {{signature_link}}\n\nThank you,\nMoveOps Team`,
+      };
+    default:
+      return {
+        subject: `${customerName} - MoveOps update`,
+        body: `Hi ${customerName},\n\nThis is a transactional update regarding your move.\n\nRecipient: ${recipientEmail}\n\nMoveOps Team`,
+      };
+  }
 }
 
 function LinkRow({ label, url }: { label: string; url: string }) {

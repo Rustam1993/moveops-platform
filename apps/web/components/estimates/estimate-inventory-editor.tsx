@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
+import { SaveStatusIndicator } from "@/components/estimates/save-status-indicator";
 import { useEstimateWorkspace } from "@/components/estimates/estimate-workspace-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,8 +40,43 @@ type InventoryRow = {
   isCustom?: boolean;
 };
 
+type BoxQuickAddPreset = {
+  id: string;
+  label: string;
+  items: Array<{ itemName: string; qty: number }>;
+};
+
+const BOX_QUICK_ADD_PRESETS: BoxQuickAddPreset[] = [
+  {
+    id: "starter-pack",
+    label: "Starter pack",
+    items: [
+      { itemName: "Box, Book Small", qty: 10 },
+      { itemName: "Box, Medium 18x18x16", qty: 10 },
+      { itemName: "Box, Large 18x18x24", qty: 4 },
+      { itemName: "Box, Wardrobe", qty: 1 },
+    ],
+  },
+  {
+    id: "small-10",
+    label: "+10 Small Boxes",
+    items: [{ itemName: "Box, Book Small", qty: 10 }],
+  },
+  {
+    id: "medium-5",
+    label: "+5 Medium Boxes",
+    items: [{ itemName: "Box, Medium 18x18x16", qty: 5 }],
+  },
+  {
+    id: "large-5",
+    label: "+5 Large Boxes",
+    items: [{ itemName: "Box, Large 18x18x24", qty: 5 }],
+  },
+];
+
 export function EstimateInventoryEditor() {
   const { estimate, setEstimate } = useEstimateWorkspace();
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +105,26 @@ export function EstimateInventoryEditor() {
     const unique = new Set([...INVENTORY_CATEGORIES, ...dynamicCategories]);
     return Array.from(unique);
   }, [items]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "/") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const itemMap = useMemo(() => {
     const map = new Map<string, InventoryItem>();
@@ -304,6 +360,44 @@ export function EstimateInventoryEditor() {
     setCustomQty("1");
   }
 
+  function handleQuickAddPreset(preset: BoxQuickAddPreset) {
+    setItems((previous) => {
+      const next = [...previous];
+
+      for (const entry of preset.items) {
+        const catalogItem = INVENTORY_CATALOG.find(
+          (item) => item.category === "Boxes" && normalize(item.itemName) === normalize(entry.itemName),
+        );
+        if (!catalogItem) continue;
+
+        const key = inventoryItemKey({ ...catalogItem, isCustom: false });
+        const index = next.findIndex((item) => inventoryItemKey(item) === key);
+        if (index === -1) {
+          next.push({
+            category: catalogItem.category,
+            itemName: catalogItem.itemName,
+            volumeCf: catalogItem.volumeCf,
+            qty: entry.qty,
+            isCustom: false,
+          });
+        } else {
+          next[index] = {
+            ...next[index],
+            qty: next[index].qty + entry.qty,
+          };
+        }
+      }
+
+      return sortInventoryItems(next);
+    });
+
+    setSelectedCategory("Boxes");
+    setSearch("");
+    setSaveState("idle");
+    setSaveMessage("Unsaved changes");
+    toast.success(`${preset.label} added`);
+  }
+
   if (loading) {
     return (
       <Card className="border-border/70 bg-card/70">
@@ -340,9 +434,7 @@ export function EstimateInventoryEditor() {
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <p className="text-sm font-medium">Inventory</p>
-            <p className="text-xs text-muted-foreground" aria-live="polite" role="status">
-              {saveMessage}
-            </p>
+            <SaveStatusIndicator state={saveState} message={saveMessage} onRetry={handleSaveClick} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={handleSaveClick} disabled={isSaving || !hasChanges}>
@@ -497,14 +589,36 @@ export function EstimateInventoryEditor() {
             <CardDescription>Search and add custom items without leaving this estimate.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="space-y-2 rounded-md border border-border/70 bg-muted/10 p-3">
+              <p className="text-sm font-medium">Quick-add boxes</p>
+              <p className="text-xs text-muted-foreground">Most common pack presets for faster entry.</p>
+              <div className="grid gap-2">
+                {BOX_QUICK_ADD_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuickAddPreset(preset)}
+                    data-testid={`quick-add-${preset.id}`}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="inventory-search">Search by item name</Label>
               <Input
                 id="inventory-search"
+                ref={searchInputRef}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="e.g., box"
+                data-testid="inventory-search"
               />
+              <p className="text-xs text-muted-foreground">Shortcut: press `/` to jump to search.</p>
             </div>
 
             <div className="space-y-2 rounded-md border border-border/70 p-3">

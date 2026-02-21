@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+import { SaveStatusIndicator } from "@/components/estimates/save-status-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -207,9 +208,7 @@ export function EstimateWorkflowSidebar({ mode, estimate }: Props) {
           </p>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground" aria-live="polite">
-              {saveMessage}
-            </p>
+            <SaveStatusIndicator state={saveState} message={saveMessage} onRetry={() => void loadWorkflow()} />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
             {workflow?.status === "booked" ? (

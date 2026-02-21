@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EstimateForm } from "@/components/estimates/estimate-form";
+import { SaveStatusIndicator } from "@/components/estimates/save-status-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -184,14 +185,7 @@ export function EstimateEntryEditor({ mode, estimate, estimateId, onEstimateSave
     <div className="space-y-4">
       <Card className="border-border/70 bg-card/70">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <p
-            className="text-sm text-muted-foreground"
-            aria-live="polite"
-            role="status"
-            data-save-state={saveState}
-          >
-            {saveMessage}
-          </p>
+          <SaveStatusIndicator state={saveState} message={saveMessage} onRetry={handleSaveClick} />
           <div className="flex items-center gap-2">
             <Button onClick={handleSaveClick} disabled={isSaving}>
               {actionLoading === "save" ? (
