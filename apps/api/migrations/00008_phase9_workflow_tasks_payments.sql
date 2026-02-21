@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE estimate_workflow (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -54,3 +56,18 @@ CREATE INDEX estimate_payment_tenant_estimate_idx
 CREATE INDEX estimate_payment_active_idx
     ON estimate_payment (tenant_id, estimate_id)
     WHERE deleted_at IS NULL;
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP INDEX IF EXISTS estimate_payment_active_idx;
+DROP INDEX IF EXISTS estimate_payment_tenant_estimate_idx;
+DROP TABLE IF EXISTS estimate_payment;
+
+DROP INDEX IF EXISTS estimate_task_active_idx;
+DROP INDEX IF EXISTS estimate_task_tenant_estimate_idx;
+DROP TABLE IF EXISTS estimate_task;
+
+DROP INDEX IF EXISTS estimate_workflow_tenant_status_idx;
+DROP TABLE IF EXISTS estimate_workflow;
+-- +goose StatementEnd
