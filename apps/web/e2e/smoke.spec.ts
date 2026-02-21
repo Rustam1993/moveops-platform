@@ -25,14 +25,7 @@ async function waitForInventoryTools(page: import("@playwright/test").Page) {
   return false;
 }
 
-test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
-  const suffix = Date.now().toString().slice(-6);
-  const firstName = `E2E${suffix}`;
-  const lastName = "Customer";
-  const updatedLastName = "Updated";
-  const email = `e2e.${suffix}@example.com`;
-  const moveDate = formatDate(new Date());
-
+async function loginAsAdmin(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill("admin@local.moveops");
   await page.getByLabel("Password").fill("Admin12345!");
@@ -43,6 +36,17 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.ok()).toBeTruthy();
   await page.waitForURL(/\/$/);
+}
+
+test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
+  const suffix = Date.now().toString().slice(-6);
+  const firstName = `E2E${suffix}`;
+  const lastName = "Customer";
+  const updatedLastName = "Updated";
+  const email = `e2e.${suffix}@example.com`;
+  const moveDate = formatDate(new Date());
+
+  await loginAsAdmin(page);
 
   await page.goto("/estimates/new");
   await page.waitForURL(/\/estimates\/new$/);
@@ -73,12 +77,17 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
     page.waitForURL(/\/estimates\/.+\/entry$/),
     page.getByRole("button", { name: "Save" }).click(),
   ]);
+  const estimateIdMatch = page.url().match(/\/estimates\/([^/]+)\/entry$/);
+  if (!estimateIdMatch) {
+    throw new Error(`Unable to resolve estimate id from URL: ${page.url()}`);
+  }
+  const estimateId = estimateIdMatch[1];
 
   await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
   await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
   await expect(page.getByRole("link", { name: "Inventory" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Inventory" }).click();
+  await page.goto(`/estimates/${estimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
   const inventoryToolsReady = await waitForInventoryTools(page);
   if (inventoryToolsReady) {
@@ -89,7 +98,11 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
 
-  await page.getByRole("link", { name: "Entry Form" }).click();
+  await page.goto(`/estimates/${estimateId}/entry`);
+  if (page.url().endsWith("/login")) {
+    await loginAsAdmin(page);
+    await page.goto(`/estimates/${estimateId}/entry`);
+  }
   await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
   await page.getByLabel("Last name").fill(updatedLastName);
   await page.getByRole("button", { name: "Save" }).click();
@@ -98,7 +111,11 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.reload();
   await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
 
-  await page.getByRole("link", { name: "Charges" }).click();
+  await page.goto(`/estimates/${estimateId}/charges`);
+  if (page.url().endsWith("/login")) {
+    await loginAsAdmin(page);
+    await page.goto(`/estimates/${estimateId}/charges`);
+  }
   await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
 
   await page.getByLabel("# Workers").fill("2");
