@@ -29,6 +29,8 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.goto("/estimates/new");
   await page.waitForURL(/\/estimates\/new$/);
   await expect(page.getByRole("heading", { name: "New estimate" })).toBeVisible();
+  await expect(page.getByTestId("readiness-state")).toHaveText("4 checks remaining");
+  await expect(page.getByTestId("readiness-item-contact")).toContainText("Missing");
   await expect(
     page
       .getByRole("tablist", { name: "Estimate workspace tabs" })
@@ -55,10 +57,14 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   ]);
 
   await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
   await expect(page.getByRole("link", { name: "Inventory" })).toBeVisible();
 
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
+  await page.getByTestId("quick-add-starter-pack").click();
+  await expect(page.getByTestId("inventory-total-cf")).toHaveText("80.00 cf");
+  await expect(page.getByText("Saved on estimate: 80.00 cf")).toBeVisible({ timeout: 15000 });
 
   await page.getByRole("link", { name: "Entry Form" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
@@ -81,6 +87,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
   await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
+  await expect(page.getByTestId("readiness-state")).toHaveText("Ready to send quote");
 
   await page.reload();
   await expect(page.getByLabel("Labor hours")).toHaveValue("3");

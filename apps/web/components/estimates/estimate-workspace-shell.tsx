@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Mail, MessageSquare, ShieldAlert } from "lucide-react";
 
+import { EstimateReadinessChecklist } from "@/components/estimates/estimate-readiness-checklist";
 import { EstimateWorkflowSidebar } from "@/components/estimates/estimate-workflow-sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import type { Estimate } from "@/lib/phase2-api";
 type Props = {
   mode: "new" | "existing";
   activeTab: EstimateWorkspaceTabKey;
-  estimate?: Pick<Estimate, "id" | "estimateNumber" | "customerName" | "status" | "totalVolumeCf" | "locationType" | "estimatedTotalCents">;
+  estimate?: Estimate;
   children: React.ReactNode;
 };
 
@@ -132,6 +133,8 @@ export function EstimateWorkspaceShell({ mode, activeTab, estimate, children }: 
           </CardContent>
         </Card>
       </div>
+
+      <EstimateReadinessChecklist mode={mode} estimate={estimate} />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0">{children}</main>
