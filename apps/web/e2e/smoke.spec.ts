@@ -56,7 +56,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
     page.getByRole("button", { name: "Save" }).click(),
   ]);
 
-  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
   await expect(page.getByTestId("readiness-state")).toHaveText("2 checks remaining");
   await expect(page.getByRole("link", { name: "Inventory" })).toBeVisible();
 
@@ -70,7 +70,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
   await page.getByLabel("Last name").fill(updatedLastName);
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
 
   await page.reload();
   await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
@@ -85,7 +85,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.getByLabel("Travel rate ($/hr)").fill("150");
 
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
   await expect(page.getByTestId("charges-total-estimate")).toHaveText("$1,050.00");
   await expect(page.getByTestId("readiness-state")).toHaveText("Ready to send quote");
 
