@@ -101,7 +101,7 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
 
   await page.goto(`/estimates/${estimateId}/charges`);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (await page.getByLabel("# Workers").isVisible().catch(() => false)) {
+    if (await page.getByRole("button", { name: "Local" }).isVisible().catch(() => false)) {
       break;
     }
     await page.goto(`/estimates/${estimateId}/charges`);
@@ -110,6 +110,8 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
       await page.goto(`/estimates/${estimateId}/charges`);
     }
   }
+  await expect(page.getByRole("button", { name: "Local" })).toBeVisible();
+  await page.getByRole("button", { name: "Local" }).click();
   await expect(page.getByLabel("# Workers")).toBeVisible();
 
   await page.getByLabel("# Workers").fill("2");
