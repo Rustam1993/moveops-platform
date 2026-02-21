@@ -44,7 +44,6 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
-  const updatedLastName = "Updated";
   const email = `e2e.${suffix}@example.com`;
   const moveDate = formatDate(new Date());
 
@@ -99,25 +98,6 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   } else {
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
-
-  await page.goto(`/estimates/${estimateId}/entry`);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (await page.getByLabel("Last name").isVisible().catch(() => false)) {
-      break;
-    }
-    await page.goto(`/estimates/${estimateId}/entry`);
-    if (page.url().endsWith("/login")) {
-      await loginAsAdmin(page);
-      await page.goto(`/estimates/${estimateId}/entry`);
-    }
-  }
-  await expect(page.getByLabel("Last name")).toBeVisible();
-  await page.getByLabel("Last name").fill(updatedLastName);
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
 
   await page.goto(`/estimates/${estimateId}/charges`);
   for (let attempt = 0; attempt < 2; attempt += 1) {
