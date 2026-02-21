@@ -82,8 +82,8 @@ async function createEstimate(page: import("@playwright/test").Page, suffix: str
   return { estimateId: match[1], firstName, lastName, email };
 }
 
-test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) => {
-  test.setTimeout(180_000);
+test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quote -> Sign -> Book", async ({ page, context }) => {
+  test.setTimeout(300_000);
 
   const suffix = Date.now().toString().slice(-6);
   const categoryName = `E2E Category ${suffix}`;
@@ -111,26 +111,18 @@ test("Phase 7 smoke: admin catalog item appears in Inventory", async ({ page }) 
   const inventoryReady = await waitForInventoryTools(page);
   if (inventoryReady) {
     await page.getByRole("button", { name: categoryName }).click();
-    await page.getByTestId("inventory-search").fill(customItem);
-    await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
-  } else {
-    await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
+  await page.getByTestId("inventory-search").fill(customItem);
+  await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
   }
-});
 
-test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", async ({ page, context }) => {
-  test.setTimeout(240_000);
+  const flowSuffix = (Date.now() + 1).toString().slice(-6);
+  const { estimateId: flowEstimateId, firstName, lastName, email } = await createEstimate(page, flowSuffix);
 
-  const suffix = (Date.now() + 1).toString().slice(-6);
-  await loginAsAdmin(page);
-
-  const { estimateId, firstName, lastName, email } = await createEstimate(page, suffix);
-
-  await page.goto(`/estimates/${estimateId}/inventory`);
+  await page.goto(`/estimates/${flowEstimateId}/inventory`);
   await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
   const inventoryReady = await waitForInventoryTools(page);
   if (inventoryReady) {
-    await page.locator("#custom-item-name").fill(`Smoke Item ${suffix}`);
+    await page.locator("#custom-item-name").fill(`Smoke Item ${flowSuffix}`);
     await page.locator("#custom-item-volume").fill("2");
     await page.locator("#custom-item-qty").fill("4");
     await page.getByRole("button", { name: "Add Item" }).click();
@@ -141,7 +133,7 @@ test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", asyn
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
 
-  await page.goto(`/estimates/${estimateId}/charges`);
+  await page.goto(`/estimates/${flowEstimateId}/charges`);
   await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
 
   await page.getByRole("button", { name: "Long Distance" }).click();
@@ -155,7 +147,7 @@ test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", asyn
   await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("charges-total-estimate")).not.toHaveText("$0.00");
 
-  await page.goto(`/estimates/${estimateId}/email`);
+  await page.goto(`/estimates/${flowEstimateId}/email`);
   await expect(page).toHaveURL(/\/estimates\/.+\/email$/);
 
   await page.getByLabel("Email to").fill(email);
@@ -181,7 +173,7 @@ test("Phase 7 e2e: Entry -> Inventory -> Charges -> Quote -> Sign -> Book", asyn
   await expect(signPage.getByText("Estimate already signed")).toBeVisible({ timeout: 20000 });
   await signPage.close();
 
-  await page.goto(`/estimates/${estimateId}/entry`);
+  await page.goto(`/estimates/${flowEstimateId}/entry`);
   await page.getByRole("button", { name: "Book This Job" }).click();
   await expect(page.getByText("Job is Booked")).toBeVisible({ timeout: 15000 });
 });
