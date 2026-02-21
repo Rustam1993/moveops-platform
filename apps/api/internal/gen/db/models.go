@@ -178,6 +178,19 @@ type EstimateInventoryShareLink struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
+type EstimatePayment struct {
+	ID          uuid.UUID  `json:"id"`
+	TenantID    uuid.UUID  `json:"tenant_id"`
+	EstimateID  uuid.UUID  `json:"estimate_id"`
+	AmountCents int64      `json:"amount_cents"`
+	Method      string     `json:"method"`
+	PaidAt      time.Time  `json:"paid_at"`
+	Notes       *string    `json:"notes"`
+	CreatedBy   *uuid.UUID `json:"created_by"`
+	CreatedAt   time.Time  `json:"created_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+}
+
 type EstimateQuoteShareLink struct {
 	ID             uuid.UUID  `json:"id"`
 	TenantID       uuid.UUID  `json:"tenant_id"`
@@ -222,6 +235,37 @@ type EstimateSignatureRequest struct {
 	RevokedAt      *time.Time `json:"revoked_at"`
 	CreatedBy      *uuid.UUID `json:"created_by"`
 	CreatedAt      time.Time  `json:"created_at"`
+}
+
+type EstimateTask struct {
+	ID         uuid.UUID  `json:"id"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	EstimateID uuid.UUID  `json:"estimate_id"`
+	Title      string     `json:"title"`
+	IsDone     bool       `json:"is_done"`
+	DueAt      *time.Time `json:"due_at"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+	DeletedAt  *time.Time `json:"deleted_at"`
+}
+
+type EstimateWorkflow struct {
+	ID            uuid.UUID  `json:"id"`
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	EstimateID    uuid.UUID  `json:"estimate_id"`
+	Status        string     `json:"status"`
+	PriorityLevel int32      `json:"priority_level"`
+	FollowUpAt    *time.Time `json:"follow_up_at"`
+	FollowUpNote  *string    `json:"follow_up_note"`
+	Vip           bool       `json:"vip"`
+	BookedAt      *time.Time `json:"booked_at"`
+	HoldReason    *string    `json:"hold_reason"`
+	CreatedBy     *uuid.UUID `json:"created_by"`
+	UpdatedBy     *uuid.UUID `json:"updated_by"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type ImportIdempotency struct {

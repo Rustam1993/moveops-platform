@@ -606,6 +606,63 @@ func (q *Queries) CreateEstimateInventoryShareLink(ctx context.Context, arg Crea
 	return i, err
 }
 
+const createEstimatePayment = `-- name: CreateEstimatePayment :one
+INSERT INTO estimate_payment (
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7
+)
+RETURNING id, tenant_id, estimate_id, amount_cents, method, paid_at, notes, created_by, created_at, deleted_at
+`
+
+type CreateEstimatePaymentParams struct {
+	TenantID    uuid.UUID  `json:"tenant_id"`
+	EstimateID  uuid.UUID  `json:"estimate_id"`
+	AmountCents int64      `json:"amount_cents"`
+	Method      string     `json:"method"`
+	PaidAt      time.Time  `json:"paid_at"`
+	Notes       *string    `json:"notes"`
+	CreatedBy   *uuid.UUID `json:"created_by"`
+}
+
+func (q *Queries) CreateEstimatePayment(ctx context.Context, arg CreateEstimatePaymentParams) (EstimatePayment, error) {
+	row := q.db.QueryRow(ctx, createEstimatePayment,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.AmountCents,
+		arg.Method,
+		arg.PaidAt,
+		arg.Notes,
+		arg.CreatedBy,
+	)
+	var i EstimatePayment
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.AmountCents,
+		&i.Method,
+		&i.PaidAt,
+		&i.Notes,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const createEstimateQuoteShareLink = `-- name: CreateEstimateQuoteShareLink :one
 INSERT INTO estimate_quote_share_link (
   tenant_id,
@@ -820,6 +877,64 @@ func (q *Queries) CreateEstimateSignatureRequest(ctx context.Context, arg Create
 		&i.RevokedAt,
 		&i.CreatedBy,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createEstimateTask = `-- name: CreateEstimateTask :one
+INSERT INTO estimate_task (
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  COALESCE($4::boolean, FALSE),
+  $5,
+  $6,
+  $7
+)
+RETURNING id, tenant_id, estimate_id, title, is_done, due_at, created_by, updated_by, created_at, updated_at, deleted_at
+`
+
+type CreateEstimateTaskParams struct {
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	EstimateID uuid.UUID  `json:"estimate_id"`
+	Title      string     `json:"title"`
+	IsDone     *bool      `json:"is_done"`
+	DueAt      *time.Time `json:"due_at"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) CreateEstimateTask(ctx context.Context, arg CreateEstimateTaskParams) (EstimateTask, error) {
+	row := q.db.QueryRow(ctx, createEstimateTask,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.Title,
+		arg.IsDone,
+		arg.DueAt,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	var i EstimateTask
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Title,
+		&i.IsDone,
+		&i.DueAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -2185,6 +2300,49 @@ func (q *Queries) GetEstimateInventoryShareLinkByTokenHash(ctx context.Context, 
 	return i, err
 }
 
+const getEstimatePaymentByID = `-- name: GetEstimatePaymentByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by,
+  created_at,
+  deleted_at
+FROM estimate_payment
+WHERE id = $1
+  AND tenant_id = $2
+  AND estimate_id = $3
+  AND deleted_at IS NULL
+`
+
+type GetEstimatePaymentByIDParams struct {
+	ID         uuid.UUID `json:"id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) GetEstimatePaymentByID(ctx context.Context, arg GetEstimatePaymentByIDParams) (EstimatePayment, error) {
+	row := q.db.QueryRow(ctx, getEstimatePaymentByID, arg.ID, arg.TenantID, arg.EstimateID)
+	var i EstimatePayment
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.AmountCents,
+		&i.Method,
+		&i.PaidAt,
+		&i.Notes,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getEstimateQuoteShareLinkByTokenHash = `-- name: GetEstimateQuoteShareLinkByTokenHash :one
 SELECT
   id,
@@ -2257,6 +2415,99 @@ func (q *Queries) GetEstimateSignatureRequestByTokenHash(ctx context.Context, to
 		&i.RevokedAt,
 		&i.CreatedBy,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEstimateTaskByID = `-- name: GetEstimateTaskByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at,
+  deleted_at
+FROM estimate_task
+WHERE id = $1
+  AND tenant_id = $2
+  AND estimate_id = $3
+  AND deleted_at IS NULL
+`
+
+type GetEstimateTaskByIDParams struct {
+	ID         uuid.UUID `json:"id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) GetEstimateTaskByID(ctx context.Context, arg GetEstimateTaskByIDParams) (EstimateTask, error) {
+	row := q.db.QueryRow(ctx, getEstimateTaskByID, arg.ID, arg.TenantID, arg.EstimateID)
+	var i EstimateTask
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Title,
+		&i.IsDone,
+		&i.DueAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getEstimateWorkflowByEstimateID = `-- name: GetEstimateWorkflowByEstimateID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  status,
+  priority_level,
+  follow_up_at,
+  follow_up_note,
+  vip,
+  booked_at,
+  hold_reason,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM estimate_workflow
+WHERE tenant_id = $1
+  AND estimate_id = $2
+`
+
+type GetEstimateWorkflowByEstimateIDParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) GetEstimateWorkflowByEstimateID(ctx context.Context, arg GetEstimateWorkflowByEstimateIDParams) (EstimateWorkflow, error) {
+	row := q.db.QueryRow(ctx, getEstimateWorkflowByEstimateID, arg.TenantID, arg.EstimateID)
+	var i EstimateWorkflow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Status,
+		&i.PriorityLevel,
+		&i.FollowUpAt,
+		&i.FollowUpNote,
+		&i.Vip,
+		&i.BookedAt,
+		&i.HoldReason,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -3294,6 +3545,118 @@ func (q *Queries) ListEstimateEmailLogs(ctx context.Context, arg ListEstimateEma
 	return items, nil
 }
 
+const listEstimatePayments = `-- name: ListEstimatePayments :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by,
+  created_at,
+  deleted_at
+FROM estimate_payment
+WHERE tenant_id = $1
+  AND estimate_id = $2
+  AND deleted_at IS NULL
+ORDER BY paid_at DESC, created_at DESC, id DESC
+`
+
+type ListEstimatePaymentsParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) ListEstimatePayments(ctx context.Context, arg ListEstimatePaymentsParams) ([]EstimatePayment, error) {
+	rows, err := q.db.Query(ctx, listEstimatePayments, arg.TenantID, arg.EstimateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EstimatePayment{}
+	for rows.Next() {
+		var i EstimatePayment
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.EstimateID,
+			&i.AmountCents,
+			&i.Method,
+			&i.PaidAt,
+			&i.Notes,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEstimateTasks = `-- name: ListEstimateTasks :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at,
+  deleted_at
+FROM estimate_task
+WHERE tenant_id = $1
+  AND estimate_id = $2
+  AND deleted_at IS NULL
+ORDER BY is_done ASC, due_at ASC NULLS LAST, created_at DESC, id DESC
+`
+
+type ListEstimateTasksParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) ListEstimateTasks(ctx context.Context, arg ListEstimateTasksParams) ([]EstimateTask, error) {
+	rows, err := q.db.Query(ctx, listEstimateTasks, arg.TenantID, arg.EstimateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []EstimateTask{}
+	for rows.Next() {
+		var i EstimateTask
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.EstimateID,
+			&i.Title,
+			&i.IsDone,
+			&i.DueAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEstimates = `-- name: ListEstimates :many
 SELECT
   e.id AS estimate_id,
@@ -4013,6 +4376,72 @@ func (q *Queries) RevokeSessionByTokenHash(ctx context.Context, tokenHash string
 	return result.RowsAffected(), nil
 }
 
+const softDeleteEstimatePayment = `-- name: SoftDeleteEstimatePayment :execrows
+UPDATE estimate_payment
+SET deleted_at = NOW()
+WHERE id = $1
+  AND tenant_id = $2
+  AND estimate_id = $3
+  AND deleted_at IS NULL
+`
+
+type SoftDeleteEstimatePaymentParams struct {
+	ID         uuid.UUID `json:"id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) SoftDeleteEstimatePayment(ctx context.Context, arg SoftDeleteEstimatePaymentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteEstimatePayment, arg.ID, arg.TenantID, arg.EstimateID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const softDeleteEstimateTask = `-- name: SoftDeleteEstimateTask :execrows
+UPDATE estimate_task
+SET deleted_at = NOW()
+WHERE id = $1
+  AND tenant_id = $2
+  AND estimate_id = $3
+  AND deleted_at IS NULL
+`
+
+type SoftDeleteEstimateTaskParams struct {
+	ID         uuid.UUID `json:"id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) SoftDeleteEstimateTask(ctx context.Context, arg SoftDeleteEstimateTaskParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteEstimateTask, arg.ID, arg.TenantID, arg.EstimateID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const sumEstimatePayments = `-- name: SumEstimatePayments :one
+SELECT COALESCE(SUM(amount_cents), 0)::bigint AS amount_paid_cents
+FROM estimate_payment
+WHERE tenant_id = $1
+  AND estimate_id = $2
+  AND deleted_at IS NULL
+`
+
+type SumEstimatePaymentsParams struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	EstimateID uuid.UUID `json:"estimate_id"`
+}
+
+func (q *Queries) SumEstimatePayments(ctx context.Context, arg SumEstimatePaymentsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, sumEstimatePayments, arg.TenantID, arg.EstimateID)
+	var amount_paid_cents int64
+	err := row.Scan(&amount_paid_cents)
+	return amount_paid_cents, err
+}
+
 const touchEstimateInventoryShareLink = `-- name: TouchEstimateInventoryShareLink :execrows
 UPDATE estimate_inventory_share_link
 SET
@@ -4427,6 +4856,64 @@ func (q *Queries) UpdateEstimatePricingSummary(ctx context.Context, arg UpdateEs
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const updateEstimateTask = `-- name: UpdateEstimateTask :one
+UPDATE estimate_task
+SET
+  title = COALESCE($1, title),
+  is_done = COALESCE($2::boolean, is_done),
+  due_at = CASE
+    WHEN $3::boolean THEN NULL
+    WHEN $4::timestamptz IS NOT NULL THEN $4::timestamptz
+    ELSE due_at
+  END,
+  updated_by = COALESCE($5, updated_by),
+  updated_at = NOW()
+WHERE id = $6
+  AND tenant_id = $7
+  AND estimate_id = $8
+  AND deleted_at IS NULL
+RETURNING id, tenant_id, estimate_id, title, is_done, due_at, created_by, updated_by, created_at, updated_at, deleted_at
+`
+
+type UpdateEstimateTaskParams struct {
+	Title      *string    `json:"title"`
+	IsDone     *bool      `json:"is_done"`
+	ClearDueAt bool       `json:"clear_due_at"`
+	DueAt      *time.Time `json:"due_at"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+	ID         uuid.UUID  `json:"id"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	EstimateID uuid.UUID  `json:"estimate_id"`
+}
+
+func (q *Queries) UpdateEstimateTask(ctx context.Context, arg UpdateEstimateTaskParams) (EstimateTask, error) {
+	row := q.db.QueryRow(ctx, updateEstimateTask,
+		arg.Title,
+		arg.IsDone,
+		arg.ClearDueAt,
+		arg.DueAt,
+		arg.UpdatedBy,
+		arg.ID,
+		arg.TenantID,
+		arg.EstimateID,
+	)
+	var i EstimateTask
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Title,
+		&i.IsDone,
+		&i.DueAt,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const updateEstimateTotalVolumeCf = `-- name: UpdateEstimateTotalVolumeCf :execrows
@@ -4917,6 +5404,94 @@ func (q *Queries) UpsertEstimateCharges(ctx context.Context, arg UpsertEstimateC
 		&i.ComputedDiscountsCents,
 		&i.ComputedTaxCents,
 		&i.ComputedTotalCents,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertEstimateWorkflow = `-- name: UpsertEstimateWorkflow :one
+INSERT INTO estimate_workflow (
+  tenant_id,
+  estimate_id,
+  status,
+  priority_level,
+  follow_up_at,
+  follow_up_note,
+  vip,
+  booked_at,
+  hold_reason,
+  created_by,
+  updated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11
+)
+ON CONFLICT (tenant_id, estimate_id) DO UPDATE
+SET
+  status = EXCLUDED.status,
+  priority_level = EXCLUDED.priority_level,
+  follow_up_at = EXCLUDED.follow_up_at,
+  follow_up_note = EXCLUDED.follow_up_note,
+  vip = EXCLUDED.vip,
+  booked_at = EXCLUDED.booked_at,
+  hold_reason = EXCLUDED.hold_reason,
+  updated_by = COALESCE(EXCLUDED.updated_by, estimate_workflow.updated_by),
+  updated_at = NOW()
+RETURNING id, tenant_id, estimate_id, status, priority_level, follow_up_at, follow_up_note, vip, booked_at, hold_reason, created_by, updated_by, created_at, updated_at
+`
+
+type UpsertEstimateWorkflowParams struct {
+	TenantID      uuid.UUID  `json:"tenant_id"`
+	EstimateID    uuid.UUID  `json:"estimate_id"`
+	Status        string     `json:"status"`
+	PriorityLevel int32      `json:"priority_level"`
+	FollowUpAt    *time.Time `json:"follow_up_at"`
+	FollowUpNote  *string    `json:"follow_up_note"`
+	Vip           bool       `json:"vip"`
+	BookedAt      *time.Time `json:"booked_at"`
+	HoldReason    *string    `json:"hold_reason"`
+	CreatedBy     *uuid.UUID `json:"created_by"`
+	UpdatedBy     *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpsertEstimateWorkflow(ctx context.Context, arg UpsertEstimateWorkflowParams) (EstimateWorkflow, error) {
+	row := q.db.QueryRow(ctx, upsertEstimateWorkflow,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.Status,
+		arg.PriorityLevel,
+		arg.FollowUpAt,
+		arg.FollowUpNote,
+		arg.Vip,
+		arg.BookedAt,
+		arg.HoldReason,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	var i EstimateWorkflow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.EstimateID,
+		&i.Status,
+		&i.PriorityLevel,
+		&i.FollowUpAt,
+		&i.FollowUpNote,
+		&i.Vip,
+		&i.BookedAt,
+		&i.HoldReason,
 		&i.CreatedBy,
 		&i.UpdatedBy,
 		&i.CreatedAt,

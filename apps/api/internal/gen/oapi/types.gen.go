@@ -57,9 +57,9 @@ const (
 
 // Defines values for EstimateEmailLogStatus.
 const (
-	Failed EstimateEmailLogStatus = "failed"
-	Queued EstimateEmailLogStatus = "queued"
-	Sent   EstimateEmailLogStatus = "sent"
+	EstimateEmailLogStatusFailed EstimateEmailLogStatus = "failed"
+	EstimateEmailLogStatusQueued EstimateEmailLogStatus = "queued"
+	EstimateEmailLogStatusSent   EstimateEmailLogStatus = "sent"
 )
 
 // Defines values for EstimateEmailTemplateKey.
@@ -82,6 +82,17 @@ const (
 const (
 	EstimateListItemStatusConverted EstimateListItemStatus = "converted"
 	EstimateListItemStatusDraft     EstimateListItemStatus = "draft"
+)
+
+// Defines values for EstimateWorkflowStatus.
+const (
+	EstimateWorkflowStatusBooked   EstimateWorkflowStatus = "booked"
+	EstimateWorkflowStatusCanceled EstimateWorkflowStatus = "canceled"
+	EstimateWorkflowStatusDraft    EstimateWorkflowStatus = "draft"
+	EstimateWorkflowStatusFollowUp EstimateWorkflowStatus = "follow_up"
+	EstimateWorkflowStatusOnHold   EstimateWorkflowStatus = "on_hold"
+	EstimateWorkflowStatusOpen     EstimateWorkflowStatus = "open"
+	EstimateWorkflowStatusQuoted   EstimateWorkflowStatus = "quoted"
 )
 
 // Defines values for ImportMode.
@@ -264,6 +275,14 @@ type CreateCustomerRequest struct {
 	Phone     *string              `json:"phone,omitempty"`
 }
 
+// CreateEstimatePaymentRequest defines model for CreateEstimatePaymentRequest.
+type CreateEstimatePaymentRequest struct {
+	AmountCents int64      `json:"amountCents"`
+	Method      string     `json:"method"`
+	Notes       *string    `json:"notes,omitempty"`
+	PaidAt      *time.Time `json:"paidAt,omitempty"`
+}
+
 // CreateEstimateRequest defines model for CreateEstimateRequest.
 type CreateEstimateRequest struct {
 	CustomerName            string              `json:"customerName"`
@@ -286,6 +305,12 @@ type CreateEstimateRequest struct {
 	PickupTime              *string             `json:"pickupTime,omitempty"`
 	PrimaryPhone            string              `json:"primaryPhone"`
 	SecondaryPhone          *string             `json:"secondaryPhone,omitempty"`
+}
+
+// CreateEstimateTaskRequest defines model for CreateEstimateTaskRequest.
+type CreateEstimateTaskRequest struct {
+	DueAt *time.Time `json:"dueAt,omitempty"`
+	Title string     `json:"title"`
 }
 
 // CreateInventoryShareLinkRequest defines model for CreateInventoryShareLinkRequest.
@@ -609,10 +634,92 @@ type EstimateListResponse struct {
 	RequestId  string             `json:"requestId"`
 }
 
+// EstimatePayment defines model for EstimatePayment.
+type EstimatePayment struct {
+	AmountCents int64              `json:"amountCents"`
+	CreatedAt   time.Time          `json:"createdAt"`
+	EstimateId  openapi_types.UUID `json:"estimateId"`
+	Id          openapi_types.UUID `json:"id"`
+	Method      string             `json:"method"`
+	Notes       *string            `json:"notes,omitempty"`
+	PaidAt      time.Time          `json:"paidAt"`
+}
+
+// EstimatePaymentListResponse defines model for EstimatePaymentListResponse.
+type EstimatePaymentListResponse struct {
+	Payments  []EstimatePayment      `json:"payments"`
+	RequestId string                 `json:"requestId"`
+	Summary   EstimatePaymentSummary `json:"summary"`
+}
+
+// EstimatePaymentResponse defines model for EstimatePaymentResponse.
+type EstimatePaymentResponse struct {
+	Payment   EstimatePayment `json:"payment"`
+	RequestId string          `json:"requestId"`
+}
+
+// EstimatePaymentSummary defines model for EstimatePaymentSummary.
+type EstimatePaymentSummary struct {
+	AmountPaidCents       int64  `json:"amountPaidCents"`
+	DepositRequiredCents  *int64 `json:"depositRequiredCents,omitempty"`
+	RemainingBalanceCents *int64 `json:"remainingBalanceCents,omitempty"`
+	TotalEstimateCents    *int64 `json:"totalEstimateCents,omitempty"`
+}
+
 // EstimateResponse defines model for EstimateResponse.
 type EstimateResponse struct {
 	Estimate  Estimate `json:"estimate"`
 	RequestId string   `json:"requestId"`
+}
+
+// EstimateTask defines model for EstimateTask.
+type EstimateTask struct {
+	CreatedAt  time.Time          `json:"createdAt"`
+	DueAt      *time.Time         `json:"dueAt,omitempty"`
+	EstimateId openapi_types.UUID `json:"estimateId"`
+	Id         openapi_types.UUID `json:"id"`
+	IsDone     bool               `json:"isDone"`
+	Title      string             `json:"title"`
+	UpdatedAt  time.Time          `json:"updatedAt"`
+}
+
+// EstimateTaskListResponse defines model for EstimateTaskListResponse.
+type EstimateTaskListResponse struct {
+	RequestId string         `json:"requestId"`
+	Tasks     []EstimateTask `json:"tasks"`
+}
+
+// EstimateTaskResponse defines model for EstimateTaskResponse.
+type EstimateTaskResponse struct {
+	RequestId string       `json:"requestId"`
+	Task      EstimateTask `json:"task"`
+}
+
+// EstimateWorkflow defines model for EstimateWorkflow.
+type EstimateWorkflow struct {
+	BookedAt      *time.Time             `json:"bookedAt,omitempty"`
+	EstimateId    openapi_types.UUID     `json:"estimateId"`
+	FollowUpAt    *time.Time             `json:"followUpAt,omitempty"`
+	FollowUpNote  *string                `json:"followUpNote,omitempty"`
+	HoldReason    *string                `json:"holdReason,omitempty"`
+	PriorityLevel int                    `json:"priorityLevel"`
+	Status        EstimateWorkflowStatus `json:"status"`
+	UpdatedAt     time.Time              `json:"updatedAt"`
+	Vip           bool                   `json:"vip"`
+}
+
+// EstimateWorkflowResponse defines model for EstimateWorkflowResponse.
+type EstimateWorkflowResponse struct {
+	RequestId string           `json:"requestId"`
+	Workflow  EstimateWorkflow `json:"workflow"`
+}
+
+// EstimateWorkflowStatus defines model for EstimateWorkflowStatus.
+type EstimateWorkflowStatus string
+
+// HoldEstimateRequest defines model for HoldEstimateRequest.
+type HoldEstimateRequest struct {
+	HoldReason *string `json:"holdReason,omitempty"`
 }
 
 // ImportDownloadUrls defines model for ImportDownloadUrls.
@@ -958,6 +1065,25 @@ type UpdateEstimateRequest struct {
 	SecondaryPhone          *string              `json:"secondaryPhone,omitempty"`
 }
 
+// UpdateEstimateTaskRequest defines model for UpdateEstimateTaskRequest.
+type UpdateEstimateTaskRequest struct {
+	ClearDueAt *bool      `json:"clearDueAt,omitempty"`
+	DueAt      *time.Time `json:"dueAt,omitempty"`
+	IsDone     *bool      `json:"isDone,omitempty"`
+	Title      *string    `json:"title,omitempty"`
+}
+
+// UpdateEstimateWorkflowRequest defines model for UpdateEstimateWorkflowRequest.
+type UpdateEstimateWorkflowRequest struct {
+	ClearFollowUpAt   *bool                   `json:"clearFollowUpAt,omitempty"`
+	ClearFollowUpNote *bool                   `json:"clearFollowUpNote,omitempty"`
+	FollowUpAt        *time.Time              `json:"followUpAt,omitempty"`
+	FollowUpNote      *string                 `json:"followUpNote,omitempty"`
+	PriorityLevel     *int                    `json:"priorityLevel,omitempty"`
+	Status            *EstimateWorkflowStatus `json:"status,omitempty"`
+	Vip               *bool                   `json:"vip,omitempty"`
+}
+
 // UpdateJobRequest defines model for UpdateJobRequest.
 type UpdateJobRequest struct {
 	PickupTime    *string                 `json:"pickupTime,omitempty"`
@@ -1094,14 +1220,29 @@ type PutEstimatesEstimateIdChargesJSONRequestBody = ReplaceEstimateChargesReques
 // PostEstimatesEstimateIdEmailsSendJSONRequestBody defines body for PostEstimatesEstimateIdEmailsSend for application/json ContentType.
 type PostEstimatesEstimateIdEmailsSendJSONRequestBody = SendEstimateEmailRequest
 
+// PostEstimatesEstimateIdHoldJSONRequestBody defines body for PostEstimatesEstimateIdHold for application/json ContentType.
+type PostEstimatesEstimateIdHoldJSONRequestBody = HoldEstimateRequest
+
 // PutEstimatesEstimateIdInventoryJSONRequestBody defines body for PutEstimatesEstimateIdInventory for application/json ContentType.
 type PutEstimatesEstimateIdInventoryJSONRequestBody = ReplaceEstimateInventoryRequest
 
 // PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody defines body for PostEstimatesEstimateIdInventoryShareLinks for application/json ContentType.
 type PostEstimatesEstimateIdInventoryShareLinksJSONRequestBody = CreateInventoryShareLinkRequest
 
+// PostEstimatesEstimateIdPaymentsJSONRequestBody defines body for PostEstimatesEstimateIdPayments for application/json ContentType.
+type PostEstimatesEstimateIdPaymentsJSONRequestBody = CreateEstimatePaymentRequest
+
 // PostEstimatesEstimateIdSignatureRequestsJSONRequestBody defines body for PostEstimatesEstimateIdSignatureRequests for application/json ContentType.
 type PostEstimatesEstimateIdSignatureRequestsJSONRequestBody = CreateSignatureRequestRequest
+
+// PostEstimatesEstimateIdTasksJSONRequestBody defines body for PostEstimatesEstimateIdTasks for application/json ContentType.
+type PostEstimatesEstimateIdTasksJSONRequestBody = CreateEstimateTaskRequest
+
+// PatchEstimatesEstimateIdTasksTaskIdJSONRequestBody defines body for PatchEstimatesEstimateIdTasksTaskId for application/json ContentType.
+type PatchEstimatesEstimateIdTasksTaskIdJSONRequestBody = UpdateEstimateTaskRequest
+
+// PatchEstimatesEstimateIdWorkflowJSONRequestBody defines body for PatchEstimatesEstimateIdWorkflow for application/json ContentType.
+type PatchEstimatesEstimateIdWorkflowJSONRequestBody = UpdateEstimateWorkflowRequest
 
 // PostImportsApplyMultipartRequestBody defines body for PostImportsApply for multipart/form-data ContentType.
 type PostImportsApplyMultipartRequestBody = ImportUploadRequest
