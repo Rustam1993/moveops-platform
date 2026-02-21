@@ -101,11 +101,17 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   }
 
   await page.goto(`/estimates/${estimateId}/entry`);
-  if (page.url().endsWith("/login")) {
-    await loginAsAdmin(page);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (await page.getByLabel("Last name").isVisible().catch(() => false)) {
+      break;
+    }
     await page.goto(`/estimates/${estimateId}/entry`);
+    if (page.url().endsWith("/login")) {
+      await loginAsAdmin(page);
+      await page.goto(`/estimates/${estimateId}/entry`);
+    }
   }
-  await expect(page).toHaveURL(/\/estimates\/.+\/entry$/);
+  await expect(page.getByLabel("Last name")).toBeVisible();
   await page.getByLabel("Last name").fill(updatedLastName);
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved" }).first()).toBeVisible();
@@ -114,11 +120,17 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await expect(page.getByLabel("Last name")).toHaveValue(updatedLastName);
 
   await page.goto(`/estimates/${estimateId}/charges`);
-  if (page.url().endsWith("/login")) {
-    await loginAsAdmin(page);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (await page.getByLabel("# Workers").isVisible().catch(() => false)) {
+      break;
+    }
     await page.goto(`/estimates/${estimateId}/charges`);
+    if (page.url().endsWith("/login")) {
+      await loginAsAdmin(page);
+      await page.goto(`/estimates/${estimateId}/charges`);
+    }
   }
-  await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
+  await expect(page.getByLabel("# Workers")).toBeVisible();
 
   await page.getByLabel("# Workers").fill("2");
   await page.getByLabel("Labor hours").fill("3");
