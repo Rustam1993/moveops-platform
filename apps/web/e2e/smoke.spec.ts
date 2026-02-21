@@ -88,7 +88,14 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
 
   await page.getByRole("link", { name: "Printed Estimate" }).click();
   await expect(page).toHaveURL(/\/estimates\/.+\/printed-estimate$/);
+  const generatePdfResponsePromise = page.waitForResponse((response) => {
+    return (
+      response.request().method() === "POST" &&
+      response.url().includes("/documents/estimate-pdf")
+    );
+  });
   await page.getByRole("button", { name: "Generate PDF" }).click();
-  await expect(page.getByText("PDF generated", { exact: true })).toBeVisible();
+  const generatePdfResponse = await generatePdfResponsePromise;
+  expect(generatePdfResponse.ok()).toBeTruthy();
   await expect(page.getByRole("button", { name: "Regenerate PDF" })).toBeVisible();
 });

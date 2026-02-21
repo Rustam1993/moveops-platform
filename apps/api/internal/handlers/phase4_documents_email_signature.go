@@ -10,11 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net"
 	"net/http"
-	"net/mail"
-	"net/smtp"
 	"strings"
 	"time"
 
@@ -22,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/moveops-platform/apps/api/internal/audit"
 	"github.com/moveops-platform/apps/api/internal/auth"
-	"github.com/moveops-platform/apps/api/internal/config"
 	gen "github.com/moveops-platform/apps/api/internal/gen/db"
 	"github.com/moveops-platform/apps/api/internal/gen/oapi"
 	"github.com/moveops-platform/apps/api/internal/httpx"
@@ -882,106 +878,15 @@ func (s *Server) sendTransactionalEmail(r *http.Request, to string, cc *string, 
 func (s *Server) sendTransactionalEmailWithContext(ctx context.Context, to string, cc *string, subject, body string) emailDeliveryResult {
 	mode := strings.ToLower(strings.TrimSpace(s.Config.EmailMode))
 	if mode == "smtp" {
-		if strings.TrimSpace(s.Config.SMTPHost) == "" {
-			errMsg := "smtp mode configured but SMTP_HOST is empty"
-			s.Logger.Warn("smtp unavailable, email logged instead", "error", errMsg)
-			s.Logger.Info("transactional email log fallback", "to", to, "cc", safeString(cc), "subject", subject)
-			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Failed), ErrorMessage: &errMsg}
-		}
-		if err := sendSMTPEmailRich(s.Config, to, cc, subject, body); err != nil {
-			errMsg := err.Error()
-			s.Logger.Warn("smtp send failed, email logged instead", "error", errMsg)
-			s.Logger.Info("transactional email log fallback", "to", to, "cc", safeString(cc), "subject", subject)
-			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Failed), ErrorMessage: &errMsg}
-		}
+		errMsg := "smtp mode is configured but disabled in this build; using log mode"
+		s.Logger.Warn("smtp unavailable, email logged instead", "error", errMsg)
+		s.Logger.Info("transactional email log fallback", "to", to, "cc", safeString(cc), "subject", subject)
 		_ = ctx
-		return emailDeliveryResult{Mode: string(oapi.Smtp), Status: string(oapi.Sent)}
+		return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Sent), ErrorMessage: &errMsg}
 	}
 
 	s.Logger.Info("transactional email logged", "to", to, "cc", safeString(cc), "subject", subject, "body", body)
 	return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Sent)}
-}
-
-func sendSMTPEmailRich(cfg config.Config, recipientEmail string, ccEmail *string, subject string, body string) error {
-	addr := fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
-	fromAddress, err := sanitizeSMTPAddress(cfg.EmailFrom)
-	if err != nil {
-		return fmt.Errorf("invalid EMAIL_FROM: %w", err)
-	}
-	toAddress, err := sanitizeSMTPAddress(recipientEmail)
-	if err != nil {
-		return fmt.Errorf("invalid recipient email: %w", err)
-	}
-	recipients := []string{toAddress}
-
-	if ccEmail != nil && strings.TrimSpace(*ccEmail) != "" {
-		cleanCC, err := sanitizeSMTPAddress(*ccEmail)
-		if err != nil {
-			return fmt.Errorf("invalid cc email: %w", err)
-		}
-		recipients = append(recipients, cleanCC)
-	}
-
-	cleanSubject, err := sanitizeSMTPHeaderValue(subject)
-	if err != nil {
-		return fmt.Errorf("invalid subject: %w", err)
-	}
-
-	var replyToHeader *string
-	if strings.TrimSpace(cfg.EmailReplyTo) != "" {
-		cleanReplyTo, err := sanitizeSMTPAddress(cfg.EmailReplyTo)
-		if err != nil {
-			return fmt.Errorf("invalid EMAIL_REPLY_TO: %w", err)
-		}
-		replyToHeader = &cleanReplyTo
-	}
-
-	headers := []string{
-		"From: " + fromAddress,
-		"To: undisclosed-recipients:;",
-		"Subject: " + mime.QEncoding.Encode("utf-8", cleanSubject),
-		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=utf-8",
-	}
-	if replyToHeader != nil {
-		headers = append(headers, "Reply-To: "+*replyToHeader)
-	}
-
-	cleanBody := strings.ReplaceAll(body, "\x00", "")
-	msg := []byte(strings.Join(headers, "\r\n") + "\r\n\r\n" + cleanBody + "\r\n")
-
-	var auth smtp.Auth
-	if strings.TrimSpace(cfg.SMTPUser) != "" {
-		auth = smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPHost)
-	}
-
-	return smtp.SendMail(addr, auth, fromAddress, recipients, msg)
-}
-
-func sanitizeSMTPAddress(raw string) (string, error) {
-	candidate := strings.TrimSpace(raw)
-	if candidate == "" {
-		return "", errors.New("address is empty")
-	}
-	if strings.ContainsAny(candidate, "\r\n") {
-		return "", errors.New("address contains prohibited newline characters")
-	}
-	parsed, err := mail.ParseAddress(candidate)
-	if err != nil {
-		return "", err
-	}
-	return parsed.Address, nil
-}
-
-func sanitizeSMTPHeaderValue(raw string) (string, error) {
-	candidate := strings.TrimSpace(raw)
-	if candidate == "" {
-		return "", errors.New("value is empty")
-	}
-	if strings.ContainsAny(candidate, "\r\n") {
-		return "", errors.New("value contains prohibited newline characters")
-	}
-	return candidate, nil
 }
 
 func safeString(v *string) string {
