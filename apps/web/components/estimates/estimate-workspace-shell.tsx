@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Mail, MessageSquare, ShieldAlert } from "lucide-react";
 
+import { EstimateWorkflowSidebar } from "@/components/estimates/estimate-workflow-sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,6 @@ import {
   estimateWorkspaceTabs,
   type EstimateWorkspaceTabKey,
 } from "@/lib/estimate-workspace";
-import { formatCf } from "@/lib/inventory-catalog";
 import type { Estimate } from "@/lib/phase2-api";
 
 type Props = {
@@ -136,24 +136,7 @@ export function EstimateWorkspaceShell({ mode, activeTab, estimate, children }: 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <main className="min-w-0">{children}</main>
         <aside>
-          <Card className="border-border/70 bg-card/70">
-            <CardContent className="space-y-4 p-4 text-sm">
-              <SidebarGroupTitle title="Job panel (phase scaffold)" />
-              <SidebarField label="Status" value={estimate?.status ? (statusLabel[estimate.status] ?? estimate.status) : "Draft"} />
-              <SidebarField label="Priority" value="Level 0" />
-              <SidebarField label="Follow-up" value="—" />
-              <SidebarField label="VIP" value="No" />
-              <SidebarField label="Booked state" value="Not booked" />
-
-              <div className="h-px bg-border/70" />
-
-              <SidebarGroupTitle title="Derived totals" />
-              <SidebarField label="Service type" value={formatServiceType(estimate?.locationType)} />
-              <SidebarField label="Total CF" value={formatCf(estimate?.totalVolumeCf)} />
-              <SidebarField label="Total LBS" value="—" />
-              <SidebarField label="Total estimate" value={formatCurrency(estimate?.estimatedTotalCents)} />
-            </CardContent>
-          </Card>
+          <EstimateWorkflowSidebar mode={mode} estimate={estimate} />
         </aside>
       </div>
     </div>
@@ -167,30 +150,4 @@ function MetaItem({ label, value }: { label: string; value: string }) {
       <span className="font-medium">{value}</span>
     </p>
   );
-}
-
-function SidebarGroupTitle({ title }: { title: string }) {
-  return <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>;
-}
-
-function SidebarField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function formatServiceType(locationType?: string | null) {
-  if (!locationType) return "Local";
-  return locationType.toLowerCase().includes("long") ? "Long Distance" : "Local";
-}
-
-function formatCurrency(value: number | null | undefined) {
-  if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value / 100);
 }

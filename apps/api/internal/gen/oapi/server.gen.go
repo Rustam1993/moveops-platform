@@ -50,6 +50,9 @@ type ServerInterface interface {
 	// Update estimate fields
 	// (PATCH /estimates/{estimateId})
 	PatchEstimatesEstimateId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Mark estimate as booked
+	// (POST /estimates/{estimateId}/book)
+	PostEstimatesEstimateIdBook(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Get estimate charges and computed totals
 	// (GET /estimates/{estimateId}/charges)
 	GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
@@ -71,6 +74,9 @@ type ServerInterface interface {
 	// Send estimate transactional email from a template
 	// (POST /estimates/{estimateId}/emails/send)
 	PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Move estimate to on-hold status
+	// (POST /estimates/{estimateId}/hold)
+	PostEstimatesEstimateIdHold(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Get estimate inventory
 	// (GET /estimates/{estimateId}/inventory)
 	GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
@@ -80,9 +86,39 @@ type ServerInterface interface {
 	// Create customer inventory share link and send email
 	// (POST /estimates/{estimateId}/inventory-share-links)
 	PostEstimatesEstimateIdInventoryShareLinks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// List manual payments and payment summary
+	// (GET /estimates/{estimateId}/payments)
+	GetEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Add manual payment entry
+	// (POST /estimates/{estimateId}/payments)
+	PostEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Delete manual payment entry (soft delete)
+	// (DELETE /estimates/{estimateId}/payments/{paymentId})
+	DeleteEstimatesEstimateIdPaymentsPaymentId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, paymentId openapi_types.UUID)
+	// Release booked estimate back to open status
+	// (POST /estimates/{estimateId}/release-book)
+	PostEstimatesEstimateIdReleaseBook(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Create a public signature request link for estimate
 	// (POST /estimates/{estimateId}/signature-requests)
 	PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// List estimate tasks
+	// (GET /estimates/{estimateId}/tasks)
+	GetEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Create estimate task
+	// (POST /estimates/{estimateId}/tasks)
+	PostEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Delete estimate task (soft delete)
+	// (DELETE /estimates/{estimateId}/tasks/{taskId})
+	DeleteEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, taskId openapi_types.UUID)
+	// Update estimate task
+	// (PATCH /estimates/{estimateId}/tasks/{taskId})
+	PatchEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, taskId openapi_types.UUID)
+	// Get estimate workflow controls for sidebar
+	// (GET /estimates/{estimateId}/workflow)
+	GetEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
+	// Update estimate workflow controls
+	// (PATCH /estimates/{estimateId}/workflow)
+	PatchEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID)
 	// Export tenant customers CSV
 	// (GET /exports/customers.csv)
 	GetExportsCustomersCsv(w http.ResponseWriter, r *http.Request)
@@ -230,6 +266,12 @@ func (_ Unimplemented) PatchEstimatesEstimateId(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Mark estimate as booked
+// (POST /estimates/{estimateId}/book)
+func (_ Unimplemented) PostEstimatesEstimateIdBook(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get estimate charges and computed totals
 // (GET /estimates/{estimateId}/charges)
 func (_ Unimplemented) GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
@@ -272,6 +314,12 @@ func (_ Unimplemented) PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Move estimate to on-hold status
+// (POST /estimates/{estimateId}/hold)
+func (_ Unimplemented) PostEstimatesEstimateIdHold(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Get estimate inventory
 // (GET /estimates/{estimateId}/inventory)
 func (_ Unimplemented) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
@@ -290,9 +338,69 @@ func (_ Unimplemented) PostEstimatesEstimateIdInventoryShareLinks(w http.Respons
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List manual payments and payment summary
+// (GET /estimates/{estimateId}/payments)
+func (_ Unimplemented) GetEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add manual payment entry
+// (POST /estimates/{estimateId}/payments)
+func (_ Unimplemented) PostEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete manual payment entry (soft delete)
+// (DELETE /estimates/{estimateId}/payments/{paymentId})
+func (_ Unimplemented) DeleteEstimatesEstimateIdPaymentsPaymentId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, paymentId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Release booked estimate back to open status
+// (POST /estimates/{estimateId}/release-book)
+func (_ Unimplemented) PostEstimatesEstimateIdReleaseBook(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a public signature request link for estimate
 // (POST /estimates/{estimateId}/signature-requests)
 func (_ Unimplemented) PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List estimate tasks
+// (GET /estimates/{estimateId}/tasks)
+func (_ Unimplemented) GetEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create estimate task
+// (POST /estimates/{estimateId}/tasks)
+func (_ Unimplemented) PostEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete estimate task (soft delete)
+// (DELETE /estimates/{estimateId}/tasks/{taskId})
+func (_ Unimplemented) DeleteEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, taskId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update estimate task
+// (PATCH /estimates/{estimateId}/tasks/{taskId})
+func (_ Unimplemented) PatchEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID, taskId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get estimate workflow controls for sidebar
+// (GET /estimates/{estimateId}/workflow)
+func (_ Unimplemented) GetEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update estimate workflow controls
+// (PATCH /estimates/{estimateId}/workflow)
+func (_ Unimplemented) PatchEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request, estimateId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -778,6 +886,31 @@ func (siw *ServerInterfaceWrapper) PatchEstimatesEstimateId(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// PostEstimatesEstimateIdBook operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdBook(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetEstimatesEstimateIdCharges operation middleware
 func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Request) {
 
@@ -981,6 +1114,31 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdEmailsSend(w http.Resp
 	handler.ServeHTTP(w, r)
 }
 
+// PostEstimatesEstimateIdHold operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdHold(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdHold(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetEstimatesEstimateIdInventory operation middleware
 func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdInventory(w http.ResponseWriter, r *http.Request) {
 
@@ -1056,6 +1214,115 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdInventoryShareLinks(w 
 	handler.ServeHTTP(w, r)
 }
 
+// GetEstimatesEstimateIdPayments operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdPayments(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdPayments operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdPayments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdPayments(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteEstimatesEstimateIdPaymentsPaymentId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteEstimatesEstimateIdPaymentsPaymentId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "paymentId" -------------
+	var paymentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "paymentId", chi.URLParam(r, "paymentId"), &paymentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "paymentId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteEstimatesEstimateIdPaymentsPaymentId(w, r, estimateId, paymentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdReleaseBook operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdReleaseBook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdReleaseBook(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostEstimatesEstimateIdSignatureRequests operation middleware
 func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdSignatureRequests(w http.ResponseWriter, r *http.Request) {
 
@@ -1072,6 +1339,174 @@ func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdSignatureRequests(w ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostEstimatesEstimateIdSignatureRequests(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimatesEstimateIdTasks operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdTasks(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEstimatesEstimateIdTasks operation middleware
+func (siw *ServerInterfaceWrapper) PostEstimatesEstimateIdTasks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEstimatesEstimateIdTasks(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteEstimatesEstimateIdTasksTaskId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "taskId" -------------
+	var taskId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "taskId", chi.URLParam(r, "taskId"), &taskId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteEstimatesEstimateIdTasksTaskId(w, r, estimateId, taskId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchEstimatesEstimateIdTasksTaskId operation middleware
+func (siw *ServerInterfaceWrapper) PatchEstimatesEstimateIdTasksTaskId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "taskId" -------------
+	var taskId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "taskId", chi.URLParam(r, "taskId"), &taskId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "taskId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchEstimatesEstimateIdTasksTaskId(w, r, estimateId, taskId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEstimatesEstimateIdWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) GetEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEstimatesEstimateIdWorkflow(w, r, estimateId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchEstimatesEstimateIdWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) PatchEstimatesEstimateIdWorkflow(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "estimateId" -------------
+	var estimateId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "estimateId", chi.URLParam(r, "estimateId"), &estimateId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "estimateId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchEstimatesEstimateIdWorkflow(w, r, estimateId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1860,6 +2295,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/estimates/{estimateId}", wrapper.PatchEstimatesEstimateId)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/book", wrapper.PostEstimatesEstimateIdBook)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/estimates/{estimateId}/charges", wrapper.GetEstimatesEstimateIdCharges)
 	})
 	r.Group(func(r chi.Router) {
@@ -1881,6 +2319,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/estimates/{estimateId}/emails/send", wrapper.PostEstimatesEstimateIdEmailsSend)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/hold", wrapper.PostEstimatesEstimateIdHold)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/estimates/{estimateId}/inventory", wrapper.GetEstimatesEstimateIdInventory)
 	})
 	r.Group(func(r chi.Router) {
@@ -1890,7 +2331,37 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/estimates/{estimateId}/inventory-share-links", wrapper.PostEstimatesEstimateIdInventoryShareLinks)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/payments", wrapper.GetEstimatesEstimateIdPayments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/payments", wrapper.PostEstimatesEstimateIdPayments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/estimates/{estimateId}/payments/{paymentId}", wrapper.DeleteEstimatesEstimateIdPaymentsPaymentId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/release-book", wrapper.PostEstimatesEstimateIdReleaseBook)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/estimates/{estimateId}/signature-requests", wrapper.PostEstimatesEstimateIdSignatureRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/tasks", wrapper.GetEstimatesEstimateIdTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/estimates/{estimateId}/tasks", wrapper.PostEstimatesEstimateIdTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/estimates/{estimateId}/tasks/{taskId}", wrapper.DeleteEstimatesEstimateIdTasksTaskId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/estimates/{estimateId}/tasks/{taskId}", wrapper.PatchEstimatesEstimateIdTasksTaskId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/estimates/{estimateId}/workflow", wrapper.GetEstimatesEstimateIdWorkflow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/estimates/{estimateId}/workflow", wrapper.PatchEstimatesEstimateIdWorkflow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/exports/customers.csv", wrapper.GetExportsCustomersCsv)

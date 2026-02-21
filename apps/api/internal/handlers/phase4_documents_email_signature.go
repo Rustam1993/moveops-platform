@@ -239,7 +239,7 @@ func (s *Server) PostEstimatesEstimateIdEmailsSend(w http.ResponseWriter, r *htt
 	}
 
 	auditAction := "email.sent"
-	if delivery.Status == string(oapi.Failed) {
+	if delivery.Status == string(oapi.EstimateEmailLogStatusFailed) {
 		auditAction = "email.failed"
 	}
 	_ = s.Audit.Log(r.Context(), audit.Entry{
@@ -886,20 +886,20 @@ func (s *Server) sendTransactionalEmailWithContext(ctx context.Context, to strin
 			errMsg := "smtp mode configured but SMTP_HOST is empty"
 			s.Logger.Warn("smtp unavailable, email logged instead", "error", errMsg)
 			s.Logger.Info("transactional email log fallback", "to", to, "cc", safeString(cc), "subject", subject)
-			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Failed), ErrorMessage: &errMsg}
+			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.EstimateEmailLogStatusFailed), ErrorMessage: &errMsg}
 		}
 		if err := sendSMTPEmailRich(s.Config, to, cc, subject, body); err != nil {
 			errMsg := err.Error()
 			s.Logger.Warn("smtp send failed, email logged instead", "error", errMsg)
 			s.Logger.Info("transactional email log fallback", "to", to, "cc", safeString(cc), "subject", subject)
-			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Failed), ErrorMessage: &errMsg}
+			return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.EstimateEmailLogStatusFailed), ErrorMessage: &errMsg}
 		}
 		_ = ctx
-		return emailDeliveryResult{Mode: string(oapi.Smtp), Status: string(oapi.Sent)}
+		return emailDeliveryResult{Mode: string(oapi.Smtp), Status: string(oapi.EstimateEmailLogStatusSent)}
 	}
 
 	s.Logger.Info("transactional email logged", "to", to, "cc", safeString(cc), "subject", subject, "body", body)
-	return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.Sent)}
+	return emailDeliveryResult{Mode: string(oapi.Log), Status: string(oapi.EstimateEmailLogStatusSent)}
 }
 
 func sendSMTPEmailRich(cfg config.Config, recipientEmail string, ccEmail *string, subject string, body string) error {

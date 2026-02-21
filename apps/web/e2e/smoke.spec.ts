@@ -91,4 +91,20 @@ test("Phase 3 smoke: login -> create estimate -> charges update persists", async
   await page.getByRole("button", { name: "Generate PDF" }).click();
   await expect(page.getByText("PDF generated", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Regenerate PDF" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Tasks List" }).click();
+  await expect(page).toHaveURL(/\/estimates\/.+\/tasks$/);
+
+  const taskTitle = `Phase5 task ${suffix}`;
+  await page.getByTestId("new-task-title").fill(taskTitle);
+  await page.getByRole("button", { name: "Add task" }).click();
+  await expect(page.getByText(taskTitle)).toBeVisible();
+
+  const taskToggle = page.getByLabel(`Mark ${taskTitle} complete`);
+  await taskToggle.click();
+  await expect(taskToggle).toBeChecked();
+
+  await page.reload();
+  await expect(page.getByText(taskTitle)).toBeVisible();
+  await expect(page.getByLabel(`Mark ${taskTitle} complete`)).toBeChecked();
 });

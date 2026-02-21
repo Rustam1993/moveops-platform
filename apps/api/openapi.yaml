@@ -370,6 +370,282 @@ paths:
                 $ref: '#/components/schemas/EstimateChargesResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/workflow:
+    get:
+      operationId: GetEstimatesEstimateIdWorkflow
+      summary: Get estimate workflow controls for sidebar
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateWorkflowResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      operationId: PatchEstimatesEstimateIdWorkflow
+      summary: Update estimate workflow controls
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEstimateWorkflowRequest'
+      responses:
+        '200':
+          description: Workflow updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateWorkflowResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/book:
+    post:
+      operationId: PostEstimatesEstimateIdBook
+      summary: Mark estimate as booked
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate booked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateWorkflowResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/release-book:
+    post:
+      operationId: PostEstimatesEstimateIdReleaseBook
+      summary: Release booked estimate back to open status
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate booking released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateWorkflowResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/hold:
+    post:
+      operationId: PostEstimatesEstimateIdHold
+      summary: Move estimate to on-hold status
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldEstimateRequest'
+      responses:
+        '200':
+          description: Estimate moved on hold
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateWorkflowResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/tasks:
+    get:
+      operationId: GetEstimatesEstimateIdTasks
+      summary: List estimate tasks
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateTaskListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      operationId: PostEstimatesEstimateIdTasks
+      summary: Create estimate task
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEstimateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateTaskResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/tasks/{taskId}:
+    patch:
+      operationId: PatchEstimatesEstimateIdTasksTaskId
+      summary: Update estimate task
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEstimateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateTaskResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      operationId: DeleteEstimatesEstimateIdTasksTaskId
+      summary: Delete estimate task (soft delete)
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Task deleted
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/payments:
+    get:
+      operationId: GetEstimatesEstimateIdPayments
+      summary: List manual payments and payment summary
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Estimate payments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimatePaymentListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      operationId: PostEstimatesEstimateIdPayments
+      summary: Add manual payment entry
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEstimatePaymentRequest'
+      responses:
+        '201':
+          description: Payment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimatePaymentResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/payments/{paymentId}:
+    delete:
+      operationId: DeleteEstimatesEstimateIdPaymentsPaymentId
+      summary: Delete manual payment entry (soft delete)
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Payment deleted
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /estimates/{estimateId}/documents/estimate-pdf:
     post:
       operationId: PostEstimatesEstimateIdDocumentsEstimatePdf
@@ -1756,6 +2032,221 @@ components:
         charges:
           $ref: '#/components/schemas/EstimateCharges'
         requestId:
+          type: string
+    EstimateWorkflowStatus:
+      type: string
+      enum: [draft, open, follow_up, quoted, booked, on_hold, canceled]
+    EstimateWorkflow:
+      type: object
+      required:
+        - estimateId
+        - status
+        - priorityLevel
+        - vip
+        - updatedAt
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/EstimateWorkflowStatus'
+        priorityLevel:
+          type: integer
+          minimum: 0
+          maximum: 8
+        followUpAt:
+          type: string
+          format: date-time
+        followUpNote:
+          type: string
+        vip:
+          type: boolean
+        bookedAt:
+          type: string
+          format: date-time
+        holdReason:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    EstimateWorkflowResponse:
+      type: object
+      required: [workflow, requestId]
+      properties:
+        workflow:
+          $ref: '#/components/schemas/EstimateWorkflow'
+        requestId:
+          type: string
+    UpdateEstimateWorkflowRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/EstimateWorkflowStatus'
+        priorityLevel:
+          type: integer
+          minimum: 0
+          maximum: 8
+        followUpAt:
+          type: string
+          format: date-time
+        clearFollowUpAt:
+          type: boolean
+        followUpNote:
+          type: string
+        clearFollowUpNote:
+          type: boolean
+        vip:
+          type: boolean
+    HoldEstimateRequest:
+      type: object
+      properties:
+        holdReason:
+          type: string
+    EstimateTask:
+      type: object
+      required: [id, estimateId, title, isDone, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        isDone:
+          type: boolean
+        dueAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EstimateTaskResponse:
+      type: object
+      required: [task, requestId]
+      properties:
+        task:
+          $ref: '#/components/schemas/EstimateTask'
+        requestId:
+          type: string
+    EstimateTaskListResponse:
+      type: object
+      required: [tasks, requestId]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimateTask'
+        requestId:
+          type: string
+    CreateEstimateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+        dueAt:
+          type: string
+          format: date-time
+    UpdateEstimateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
+        isDone:
+          type: boolean
+        dueAt:
+          type: string
+          format: date-time
+        clearDueAt:
+          type: boolean
+    EstimatePayment:
+      type: object
+      required: [id, estimateId, amountCents, method, paidAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        estimateId:
+          type: string
+          format: uuid
+        amountCents:
+          type: integer
+          format: int64
+          minimum: 1
+        method:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    EstimatePaymentSummary:
+      type: object
+      required: [amountPaidCents]
+      properties:
+        depositRequiredCents:
+          type: integer
+          format: int64
+          minimum: 0
+        totalEstimateCents:
+          type: integer
+          format: int64
+          minimum: 0
+        amountPaidCents:
+          type: integer
+          format: int64
+          minimum: 0
+        remainingBalanceCents:
+          type: integer
+          format: int64
+    EstimatePaymentResponse:
+      type: object
+      required: [payment, requestId]
+      properties:
+        payment:
+          $ref: '#/components/schemas/EstimatePayment'
+        requestId:
+          type: string
+    EstimatePaymentListResponse:
+      type: object
+      required: [summary, payments, requestId]
+      properties:
+        summary:
+          $ref: '#/components/schemas/EstimatePaymentSummary'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimatePayment'
+        requestId:
+          type: string
+    CreateEstimatePaymentRequest:
+      type: object
+      required: [amountCents, method]
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          minimum: 1
+        method:
+          type: string
+          minLength: 1
+          maxLength: 60
+        paidAt:
+          type: string
+          format: date-time
+        notes:
           type: string
     EstimateDocumentType:
       type: string

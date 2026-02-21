@@ -670,6 +670,220 @@ SET
 WHERE id = sqlc.arg(estimate_id)
   AND tenant_id = sqlc.arg(tenant_id);
 
+-- name: GetEstimateWorkflowByEstimateID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  status,
+  priority_level,
+  follow_up_at,
+  follow_up_note,
+  vip,
+  booked_at,
+  hold_reason,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM estimate_workflow
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id);
+
+-- name: UpsertEstimateWorkflow :one
+INSERT INTO estimate_workflow (
+  tenant_id,
+  estimate_id,
+  status,
+  priority_level,
+  follow_up_at,
+  follow_up_note,
+  vip,
+  booked_at,
+  hold_reason,
+  created_by,
+  updated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(status),
+  sqlc.arg(priority_level),
+  sqlc.narg(follow_up_at),
+  sqlc.narg(follow_up_note),
+  sqlc.arg(vip),
+  sqlc.narg(booked_at),
+  sqlc.narg(hold_reason),
+  sqlc.narg(created_by),
+  sqlc.narg(updated_by)
+)
+ON CONFLICT (tenant_id, estimate_id) DO UPDATE
+SET
+  status = EXCLUDED.status,
+  priority_level = EXCLUDED.priority_level,
+  follow_up_at = EXCLUDED.follow_up_at,
+  follow_up_note = EXCLUDED.follow_up_note,
+  vip = EXCLUDED.vip,
+  booked_at = EXCLUDED.booked_at,
+  hold_reason = EXCLUDED.hold_reason,
+  updated_by = COALESCE(EXCLUDED.updated_by, estimate_workflow.updated_by),
+  updated_at = NOW()
+RETURNING *;
+
+-- name: ListEstimateTasks :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at,
+  deleted_at
+FROM estimate_task
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL
+ORDER BY is_done ASC, due_at ASC NULLS LAST, created_at DESC, id DESC;
+
+-- name: GetEstimateTaskByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at,
+  deleted_at
+FROM estimate_task
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL;
+
+-- name: CreateEstimateTask :one
+INSERT INTO estimate_task (
+  tenant_id,
+  estimate_id,
+  title,
+  is_done,
+  due_at,
+  created_by,
+  updated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(title),
+  COALESCE(sqlc.narg(is_done)::boolean, FALSE),
+  sqlc.narg(due_at),
+  sqlc.narg(created_by),
+  sqlc.narg(updated_by)
+)
+RETURNING *;
+
+-- name: UpdateEstimateTask :one
+UPDATE estimate_task
+SET
+  title = COALESCE(sqlc.narg(title), title),
+  is_done = COALESCE(sqlc.narg(is_done)::boolean, is_done),
+  due_at = CASE
+    WHEN sqlc.arg(clear_due_at)::boolean THEN NULL
+    WHEN sqlc.narg(due_at)::timestamptz IS NOT NULL THEN sqlc.narg(due_at)::timestamptz
+    ELSE due_at
+  END,
+  updated_by = COALESCE(sqlc.narg(updated_by), updated_by),
+  updated_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL
+RETURNING *;
+
+-- name: SoftDeleteEstimateTask :execrows
+UPDATE estimate_task
+SET deleted_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL;
+
+-- name: ListEstimatePayments :many
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by,
+  created_at,
+  deleted_at
+FROM estimate_payment
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL
+ORDER BY paid_at DESC, created_at DESC, id DESC;
+
+-- name: GetEstimatePaymentByID :one
+SELECT
+  id,
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by,
+  created_at,
+  deleted_at
+FROM estimate_payment
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL;
+
+-- name: SumEstimatePayments :one
+SELECT COALESCE(SUM(amount_cents), 0)::bigint AS amount_paid_cents
+FROM estimate_payment
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL;
+
+-- name: CreateEstimatePayment :one
+INSERT INTO estimate_payment (
+  tenant_id,
+  estimate_id,
+  amount_cents,
+  method,
+  paid_at,
+  notes,
+  created_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(estimate_id),
+  sqlc.arg(amount_cents),
+  sqlc.arg(method),
+  sqlc.arg(paid_at),
+  sqlc.narg(notes),
+  sqlc.narg(created_by)
+)
+RETURNING *;
+
+-- name: SoftDeleteEstimatePayment :execrows
+UPDATE estimate_payment
+SET deleted_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND tenant_id = sqlc.arg(tenant_id)
+  AND estimate_id = sqlc.arg(estimate_id)
+  AND deleted_at IS NULL;
+
 -- name: CreateEstimateDocument :one
 INSERT INTO estimate_document (
   tenant_id,

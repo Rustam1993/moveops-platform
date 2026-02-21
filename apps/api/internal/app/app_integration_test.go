@@ -445,6 +445,142 @@ func TestEstimateChargesCalculationLongDistanceAndLocal(t *testing.T) {
 	}
 }
 
+func TestEstimateWorkflowTasksPaymentsTenantIsolation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase5-a", "Tenant Phase5 A", "phase5-a@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase5-b", "Tenant Phase5 B", "phase5-b@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookieA := login(t, env.router, "phase5-a@example.com", "Password123!")
+	csrfA := csrfToken(t, env.router, cookieA)
+	estimateID := createEstimate(t, env.router, cookieA, csrfA, "idem-phase5-a")
+
+	status, body := request(t, env.router, http.MethodPatch, "/api/estimates/"+estimateID+"/workflow", workflowPayload(map[string]any{
+		"status":        "follow_up",
+		"priorityLevel": 3,
+		"vip":           true,
+	}), cookieA, csrfA)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 workflow update by owner tenant, got %d (%s)", status, string(body))
+	}
+	if workflowStatus := parseWorkflowStatus(t, body); workflowStatus != "follow_up" {
+		t.Fatalf("expected workflow status follow_up, got %s", workflowStatus)
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/tasks", taskPayload(map[string]any{
+		"title": "Call customer",
+	}), cookieA, csrfA)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 task create by owner tenant, got %d (%s)", status, string(body))
+	}
+	taskID := parseTaskID(t, body)
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/payments", paymentPayload(map[string]any{
+		"amountCents": 25000,
+		"method":      "check",
+	}), cookieA, csrfA)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 payment create by owner tenant, got %d (%s)", status, string(body))
+	}
+	paymentID := parsePaymentID(t, body)
+
+	cookieB := login(t, env.router, "phase5-b@example.com", "Password123!")
+	csrfB := csrfToken(t, env.router, cookieB)
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/workflow", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant workflow read, got %d", status)
+	}
+	status, body = request(t, env.router, http.MethodPatch, "/api/estimates/"+estimateID+"/workflow", workflowPayload(map[string]any{
+		"status": "booked",
+	}), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant workflow update, got %d (%s)", status, string(body))
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/tasks", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant tasks read, got %d", status)
+	}
+	status, body = request(t, env.router, http.MethodPatch, "/api/estimates/"+estimateID+"/tasks/"+taskID, taskPayload(map[string]any{
+		"isDone": true,
+	}), cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant task update, got %d (%s)", status, string(body))
+	}
+
+	status, _ = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/payments", nil, cookieB, "")
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant payments read, got %d", status)
+	}
+	status, body = request(t, env.router, http.MethodDelete, "/api/estimates/"+estimateID+"/payments/"+paymentID, nil, cookieB, csrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 for cross-tenant payment delete, got %d (%s)", status, string(body))
+	}
+}
+
+func TestEstimateWorkflowBookingTransitionsPersist(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase5-booking", "Tenant Phase5 Booking", "phase5-booking@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	cookie := login(t, env.router, "phase5-booking@example.com", "Password123!")
+	csrf := csrfToken(t, env.router, cookie)
+	estimateID := createEstimate(t, env.router, cookie, csrf, "idem-phase5-booking")
+
+	status, body := request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/workflow", nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 workflow read, got %d (%s)", status, string(body))
+	}
+	if workflowStatus := parseWorkflowStatus(t, body); workflowStatus != "draft" {
+		t.Fatalf("expected default workflow status draft, got %s", workflowStatus)
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/book", nil, cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 book estimate, got %d (%s)", status, string(body))
+	}
+	workflowStatus, bookedAt := parseWorkflowStatusAndBookedAt(t, body)
+	if workflowStatus != "booked" {
+		t.Fatalf("expected booked status after booking, got %s", workflowStatus)
+	}
+	if strings.TrimSpace(bookedAt) == "" {
+		t.Fatalf("expected bookedAt to be populated when booked")
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/release-book", nil, cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 release book, got %d (%s)", status, string(body))
+	}
+	workflowStatus, bookedAt = parseWorkflowStatusAndBookedAt(t, body)
+	if workflowStatus != "open" {
+		t.Fatalf("expected open status after release, got %s", workflowStatus)
+	}
+	if strings.TrimSpace(bookedAt) != "" {
+		t.Fatalf("expected bookedAt to be cleared after release")
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/estimates/"+estimateID+"/hold", workflowPayload(map[string]any{
+		"holdReason": "Customer requested callback",
+	}), cookie, csrf)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 hold estimate, got %d (%s)", status, string(body))
+	}
+	if workflowStatus := parseWorkflowStatus(t, body); workflowStatus != "on_hold" {
+		t.Fatalf("expected on_hold status after hold action, got %s", workflowStatus)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/estimates/"+estimateID+"/workflow", nil, cookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 workflow read after transitions, got %d (%s)", status, string(body))
+	}
+	if workflowStatus := parseWorkflowStatus(t, body); workflowStatus != "on_hold" {
+		t.Fatalf("expected persisted on_hold status, got %s", workflowStatus)
+	}
+}
+
 func TestEstimateDocumentsEmailsAndSignatureRequestTenantIsolation(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
@@ -1433,6 +1569,21 @@ func chargesPayload(payload map[string]any) []byte {
 	return body
 }
 
+func workflowPayload(payload map[string]any) []byte {
+	body, _ := json.Marshal(payload)
+	return body
+}
+
+func taskPayload(payload map[string]any) []byte {
+	body, _ := json.Marshal(payload)
+	return body
+}
+
+func paymentPayload(payload map[string]any) []byte {
+	body, _ := json.Marshal(payload)
+	return body
+}
+
 func estimateEmailPayload(payload map[string]any) []byte {
 	body, _ := json.Marshal(payload)
 	return body
@@ -1509,6 +1660,68 @@ func parseChargesComputed(t *testing.T, body []byte) chargesComputedPayload {
 		t.Fatalf("parse charges response: %v", err)
 	}
 	return payload.Charges.Computed
+}
+
+func parseWorkflowStatus(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Workflow struct {
+			Status string `json:"status"`
+		} `json:"workflow"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse workflow response: %v", err)
+	}
+	return payload.Workflow.Status
+}
+
+func parseWorkflowStatusAndBookedAt(t *testing.T, body []byte) (string, string) {
+	t.Helper()
+	var payload struct {
+		Workflow struct {
+			Status   string  `json:"status"`
+			BookedAt *string `json:"bookedAt"`
+		} `json:"workflow"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse workflow response: %v", err)
+	}
+	if payload.Workflow.BookedAt == nil {
+		return payload.Workflow.Status, ""
+	}
+	return payload.Workflow.Status, *payload.Workflow.BookedAt
+}
+
+func parseTaskID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Task struct {
+			ID string `json:"id"`
+		} `json:"task"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse task response: %v", err)
+	}
+	if payload.Task.ID == "" {
+		t.Fatalf("task id missing")
+	}
+	return payload.Task.ID
+}
+
+func parsePaymentID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Payment struct {
+			ID string `json:"id"`
+		} `json:"payment"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse payment response: %v", err)
+	}
+	if payload.Payment.ID == "" {
+		t.Fatalf("payment id missing")
+	}
+	return payload.Payment.ID
 }
 
 func parsePublicInventoryTotalCf(t *testing.T, body []byte) float64 {
