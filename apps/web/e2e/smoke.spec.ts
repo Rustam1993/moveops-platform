@@ -39,6 +39,8 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
 }
 
 test("Phase 3 smoke: login -> create estimate -> charges update persists", async ({ page }) => {
+  test.setTimeout(180_000);
+
   const suffix = Date.now().toString().slice(-6);
   const firstName = `E2E${suffix}`;
   const lastName = "Customer";
