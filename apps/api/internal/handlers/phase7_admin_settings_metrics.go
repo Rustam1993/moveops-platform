@@ -517,10 +517,15 @@ func (s *Server) PostAdminNewEstimateCatalogImport(w http.ResponseWriter, r *htt
 
 	categoryIDByName := make(map[string]uuid.UUID, len(categories))
 	for idx, category := range categories {
+		sortOrder, convErr := safeInt32(idx)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "category sort order is out of range", nil)
+			return
+		}
 		row, createErr := qtx.CreateNewEstimateCatalogCategory(r.Context(), gen.CreateNewEstimateCatalogCategoryParams{
 			TenantID:  tenantID,
 			Name:      category,
-			SortOrder: int32(idx),
+			SortOrder: sortOrder,
 			Active:    true,
 			CreatedBy: &userID,
 			UpdatedBy: &userID,
@@ -533,13 +538,18 @@ func (s *Server) PostAdminNewEstimateCatalogImport(w http.ResponseWriter, r *htt
 	}
 
 	for _, item := range items {
+		sortOrder, convErr := safeInt32(item.sortOrder)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "item_sort_order is out of range", nil)
+			return
+		}
 		catID := categoryIDByName[strings.ToLower(item.category)]
 		if _, createErr := qtx.CreateNewEstimateCatalogItem(r.Context(), gen.CreateNewEstimateCatalogItemParams{
 			TenantID:   tenantID,
 			CategoryID: &catID,
 			Name:       item.itemName,
 			VolumeCf:   item.volumeCf,
-			SortOrder:  int32(item.sortOrder),
+			SortOrder:  sortOrder,
 			Active:     item.active,
 			CreatedBy:  &userID,
 			UpdatedBy:  &userID,
