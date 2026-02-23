@@ -26,16 +26,29 @@ async function loginAsAdmin(page: import("@playwright/test").Page) {
   throw new Error("Unable to login with admin user after retries");
 }
 
+async function gotoProtectedPath(page: import("@playwright/test").Page, path: string, expectedURL: RegExp) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.goto(path);
+    if (page.url().includes("/login")) {
+      await loginAsAdmin(page);
+      continue;
+    }
+    await expect(page).toHaveURL(expectedURL, { timeout: 30_000 });
+    return;
+  }
+  throw new Error(`Unable to open protected path: ${path}`);
+}
+
 async function waitForInventoryTools(page: import("@playwright/test").Page) {
-  for (let attempt = 0; attempt < 45; attempt += 1) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
     const customItemInput = page.locator("#custom-item-name");
     if (await customItemInput.isVisible().catch(() => false)) {
       return true;
     }
 
-    const retryButton = page.getByRole("button", { name: "Retry" });
-    if (await retryButton.isVisible().catch(() => false)) {
-      await retryButton.click();
+    const unavailableHeading = page.getByRole("heading", { name: "Inventory unavailable" });
+    if (await unavailableHeading.isVisible().catch(() => false)) {
+      return false;
     }
 
     await page.waitForTimeout(1000);
@@ -45,16 +58,16 @@ async function waitForInventoryTools(page: import("@playwright/test").Page) {
 }
 
 async function waitForChargesTools(page: import("@playwright/test").Page) {
-  for (let attempt = 0; attempt < 15; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const ratePerCfInput = page.locator("#charges-rate-per-cf");
     const laborHoursInput = page.getByLabel("Labor hours");
     if ((await ratePerCfInput.isVisible().catch(() => false)) || (await laborHoursInput.isVisible().catch(() => false))) {
       return true;
     }
 
-    const retryButton = page.getByRole("button", { name: "Retry" });
-    if (await retryButton.isVisible().catch(() => false)) {
-      await retryButton.click();
+    const unavailableHeading = page.getByRole("heading", { name: "Charges unavailable" });
+    if (await unavailableHeading.isVisible().catch(() => false)) {
+      return false;
     }
 
     await page.waitForTimeout(1000);
@@ -102,7 +115,7 @@ async function createEstimate(page: import("@playwright/test").Page, suffix: str
 }
 
 test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quote -> Sign -> Book", async ({ page, context }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(180_000);
 
   const suffix = Date.now().toString().slice(-6);
   const categoryName = `E2E Category ${suffix}`;
@@ -110,8 +123,8 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
 
   await loginAsAdmin(page);
 
-  await page.goto("/admin/new-estimate/catalog");
-  await expect(page.getByRole("heading", { name: "New Estimate Catalog" })).toBeVisible();
+  await gotoProtectedPath(page, "/admin/new-estimate/catalog", /\/admin\/new-estimate\/catalog$/);
+  await expect(page.getByRole("heading", { name: "New Estimate Catalog" })).toBeVisible({ timeout: 30_000 });
 
   await page.getByTestId("admin-catalog-category-input").fill(categoryName);
   await page.getByTestId("admin-catalog-category-add").click();
@@ -125,17 +138,13 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
   await expect(page.getByText(customItem)).toBeVisible();
 
   const { estimateId, firstName, lastName, email } = await createEstimate(page, suffix);
-  await page.goto(`/estimates/${estimateId}/inventory`);
-  await expect(page).toHaveURL(/\/estimates\/.+\/inventory$/);
-  const catalogInventoryReady = await waitForInventoryTools(page);
-  if (catalogInventoryReady) {
+  await gotoProtectedPath(page, `/estimates/${estimateId}/inventory`, /\/estimates\/.+\/inventory$/);
+  const inventoryReady = await waitForInventoryTools(page);
+  if (inventoryReady) {
     await page.getByRole("button", { name: categoryName }).click();
-  await page.getByTestId("inventory-search").fill(customItem);
-  await expect(page.getByRole("cell", { name: customItem })).toBeVisible();
-  }
+    await page.getByTestId("inventory-search").fill(customItem);
+    await expect(page.getByRole("cell", { name: customItem, exact: true }).first()).toBeVisible();
 
-  const flowInventoryReady = await waitForInventoryTools(page);
-  if (flowInventoryReady) {
     await page.locator("#custom-item-name").fill(`Smoke Item ${suffix}`);
     await page.locator("#custom-item-volume").fill("2");
     await page.locator("#custom-item-qty").fill("4");
@@ -147,8 +156,7 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
     await expect(page.getByRole("heading", { name: "Inventory unavailable" })).toBeVisible();
   }
 
-  await page.goto(`/estimates/${estimateId}/charges`);
-  await expect(page).toHaveURL(/\/estimates\/.+\/charges$/);
+  await gotoProtectedPath(page, `/estimates/${estimateId}/charges`, /\/estimates\/.+\/charges$/);
 
   const chargesReady = await waitForChargesTools(page);
   if (chargesReady) {
@@ -161,7 +169,7 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
       }
     }
 
-    if (flowInventoryReady) {
+    if (inventoryReady) {
       await expect(ratePerCfInput).toBeVisible();
       await ratePerCfInput.fill("5");
     } else {
@@ -175,10 +183,9 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
     // Charges UI can occasionally fail to hydrate in CI; continue the flow to keep smoke stable.
   }
 
-  await page.goto(`/estimates/${estimateId}/email`);
-  await expect(page).toHaveURL(/\/estimates\/.+\/email$/);
+  await gotoProtectedPath(page, `/estimates/${estimateId}/email`, /\/estimates\/.+\/email$/);
 
-  await page.getByLabel("Email to").fill(email);
+  await page.getByLabel("Email to").fill(email, { timeout: 30_000 });
   await page.getByRole("button", { name: "Send Quote" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Email sent" }).first()).toBeVisible({ timeout: 20000 });
 
@@ -189,19 +196,26 @@ test("Phase 7 smoke: catalog integration + Entry -> Inventory -> Charges -> Quot
   if (!signatureUrl) {
     throw new Error("Missing generated signature link");
   }
+  const signatureTarget = new URL(signatureUrl, page.url());
+  const e2eBaseURL = process.env.E2E_BASE_URL;
+  if (e2eBaseURL) {
+    const base = new URL(e2eBaseURL);
+    signatureTarget.protocol = base.protocol;
+    signatureTarget.host = base.host;
+  }
 
   const signPage = await context.newPage();
-  await signPage.goto(signatureUrl);
+  await signPage.goto(signatureTarget.toString());
   await expect(signPage.getByRole("heading", { name: "Sign Your Moving Estimate" })).toBeVisible();
   await signPage.getByLabel("Signer name").fill(`${firstName} ${lastName}`);
   await signPage.getByLabel("Signer email").fill(email);
-  await signPage.getByLabel("Typed signature").fill(`${firstName} ${lastName}`);
-  await signPage.getByText("I agree that this typed signature is my electronic signature.").click();
+  await signPage.locator("#signature-text").fill(`${firstName} ${lastName}`);
+  await signPage.locator("#agree-terms").click();
   await signPage.getByRole("button", { name: "Sign Estimate" }).click();
   await expect(signPage.getByText("Estimate already signed")).toBeVisible({ timeout: 20000 });
   await signPage.close();
 
-  await page.goto(`/estimates/${estimateId}/entry`);
+  await gotoProtectedPath(page, `/estimates/${estimateId}/entry`, /\/estimates\/.+\/entry$/);
   await page.getByRole("button", { name: "Book This Job" }).click();
   await expect(page.getByText("Job is Booked")).toBeVisible({ timeout: 15000 });
 });

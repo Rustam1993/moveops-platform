@@ -30,6 +30,7 @@ import {
 } from "@/lib/charges-form";
 import { formatCf } from "@/lib/inventory-catalog";
 import { getApiErrorMessage } from "@/lib/phase2-api";
+import { generateUUID } from "@/lib/uuid";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -189,7 +190,7 @@ export function EstimateChargesEditor() {
       otherLineItems: [
         ...previous.otherLineItems,
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           label: "",
           amount: 0,
         },
