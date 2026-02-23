@@ -2,6 +2,7 @@
 
 Goal: map legacy screenshots to MVP screens and define field-by-field parity without copying competitor UI wording.
 We capture legacy labels for migration/field parity, but MVP UI should use original wording.
+For additional sanitized screenshot observations, see `docs/legacy-ui-reference.md`.
 
 ---
 
@@ -205,3 +206,26 @@ Click opens Job detail drawer:
 - Update status (Booked/Confirmed/etc; minimal enum)
 - Update pickup time
 - Toggle storage flag / open storage fields
+
+---
+
+## 6) Estimate Workspace Modules (Additional References)
+
+Observed in screenshot references (sanitized in `docs/legacy-ui-reference.md`):
+- Estimate-scoped tabs: Handbook, Entry Form, Inventory, Items not Moving, Printed Estimate, Charges, Tasks List, Payments, Operations.
+- Charges has two pricing variants (Long Distance and Local) with a persistent right job-action sidebar.
+- Inventory uses category-driven item selection, quantity controls, and a running total-volume panel.
+- Priority is set via a dedicated modal with fixed priority levels plus a general pool option.
+- Email templates are estimate-contextual and support inventory/e-sign/e-quote toggles.
+
+Mapping into MoveOps phases:
+
+### MVP
+- Entry Form parity (already implemented in this document).
+- Calendar + Storage parity (already implemented in this document).
+
+### Post-MVP
+- Inventory workspace (`/estimates/:id/inventory`) with room/category and item catalog model.
+- Charges workspace (`/estimates/:id/charges`) with local/long-distance calculators and a sidebar state machine.
+- Customer communication center (template-driven estimate emails and signature flows).
+- Tasks, payments, and operations tabs under estimate/job detail context.

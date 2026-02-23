@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -143,7 +144,12 @@ func (s *Server) PostAdminNewEstimateCatalogCategories(w http.ResponseWriter, r 
 
 	sortOrder := int32(0)
 	if req.SortOrder != nil {
-		sortOrder = int32(*req.SortOrder)
+		parsed, convErr := safeInt32(*req.SortOrder)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "sortOrder is out of range", nil)
+			return
+		}
+		sortOrder = parsed
 	}
 	active := true
 	if req.Active != nil {
@@ -199,7 +205,11 @@ func (s *Server) PatchAdminNewEstimateCatalogCategoriesCategoryId(w http.Respons
 
 	var sortOrder *int32
 	if req.SortOrder != nil {
-		v := int32(*req.SortOrder)
+		v, convErr := safeInt32(*req.SortOrder)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "sortOrder is out of range", nil)
+			return
+		}
 		sortOrder = &v
 	}
 
@@ -310,7 +320,12 @@ func (s *Server) PostAdminNewEstimateCatalogItems(w http.ResponseWriter, r *http
 
 	sortOrder := int32(0)
 	if req.SortOrder != nil {
-		sortOrder = int32(*req.SortOrder)
+		parsed, convErr := safeInt32(*req.SortOrder)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "sortOrder is out of range", nil)
+			return
+		}
+		sortOrder = parsed
 	}
 	active := true
 	if req.Active != nil {
@@ -394,7 +409,11 @@ func (s *Server) PatchAdminNewEstimateCatalogItemsItemId(w http.ResponseWriter, 
 
 	var sortOrder *int32
 	if req.SortOrder != nil {
-		v := int32(*req.SortOrder)
+		v, convErr := safeInt32(*req.SortOrder)
+		if convErr != nil {
+			httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "sortOrder is out of range", nil)
+			return
+		}
 		sortOrder = &v
 	}
 
@@ -956,8 +975,8 @@ func (s *Server) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, param
 		ActionLike: params.Action,
 		EntityType: params.EntityType,
 		EntityID:   entityID,
-		OffsetRows: int32(offset),
-		LimitRows:  int32(limit),
+		OffsetRows: int32(min(offset, math.MaxInt32)),
+		LimitRows:  int32(min(limit, math.MaxInt32)),
 	})
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "Failed to load audit logs", nil)
@@ -1436,9 +1455,12 @@ func parseCatalogCSV(raw []byte) ([]string, []catalogCSVItem, []string) {
 		if idx, ok := headers["item_sort_order"]; ok && idx < len(row) {
 			trimmed := strings.TrimSpace(row[idx])
 			if trimmed != "" {
-				if parsed, convErr := strconv.Atoi(trimmed); convErr == nil {
-					sortOrder = parsed
+				parsed, convErr := strconv.ParseInt(trimmed, 10, 32)
+				if convErr != nil {
+					errs = append(errs, fmt.Sprintf("row %d: item_sort_order must be a 32-bit integer", rowIndex+1))
+					continue
 				}
+				sortOrder = int(parsed)
 			}
 		}
 
@@ -1474,6 +1496,20 @@ func parseCatalogCSV(raw []byte) ([]string, []catalogCSVItem, []string) {
 	}
 
 	return categories, items, nil
+}
+
+func safeInt32(v int) (int32, error) {
+	if v > math.MaxInt32 || v < math.MinInt32 {
+		return 0, fmt.Errorf("value out of int32 range")
+	}
+	return int32(v), nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (s *Server) trackAnalyticsEvent(ctx context.Context, tenantID uuid.UUID, userID *uuid.UUID, estimateID *uuid.UUID, eventName string, properties map[string]any) {

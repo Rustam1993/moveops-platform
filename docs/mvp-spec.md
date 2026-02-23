@@ -2,6 +2,7 @@
 
 Repo: moveops-platform  
 Scope: Admin Dashboard + New Estimate + Calendar + Storage + Migration Import/Export
+Reference inputs: `docs/legacy-mapping.md` and `docs/legacy-ui-reference.md` (sanitized screenshot behavior notes).
 
 ## Product principles
 - Multi-tenant by default (tenant_id everywhere)
@@ -117,3 +118,13 @@ Two-column address/contact: “Origin” and “Destination”.
   - Estimates
   - Jobs
   - Storage records
+
+---
+
+## Explicitly out of MVP (legacy-reference modules)
+- Estimate-scoped Inventory tab and room/item quantity workflow
+- Full Charges engine (Local + Long Distance tariff breakdowns, liability tables, packing rows)
+- Estimate/job right sidebar booking state machine (follow-up, booked, hold, release controls)
+- Priority modal and dispatch-priority pool workflow
+- Email Center template sender with e-sign/e-quote toggles
+- Tasks list, Payments, and expanded Operations sub-tabs inside estimate workspace
