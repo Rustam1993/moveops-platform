@@ -979,11 +979,13 @@ func (s *Server) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, param
 
 	offsetRows, offsetConvErr := safeInt32(offset)
 	if offsetConvErr != nil {
-		offsetRows = math.MaxInt32
+		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "offset is out of range", nil)
+		return
 	}
 	limitRows, limitConvErr := safeInt32(limit)
 	if limitConvErr != nil {
-		limitRows = math.MaxInt32
+		httpx.WriteError(w, r, http.StatusBadRequest, "validation_error", "limit is out of range", nil)
+		return
 	}
 
 	rows, err := s.Q.ListAuditLogsForTenant(r.Context(), gen.ListAuditLogsForTenantParams{
