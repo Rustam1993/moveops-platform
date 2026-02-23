@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ export default function EstimateWorkspaceLayout({ children }: { children: React.
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  const setEstimateInContext = useCallback((next: Estimate) => setEstimate(next), []);
 
   useEffect(() => {
     if (!estimateId) return;
@@ -84,7 +85,7 @@ export default function EstimateWorkspaceLayout({ children }: { children: React.
   }
 
   return (
-    <EstimateWorkspaceProvider value={{ estimate, setEstimate: (next) => setEstimate(next) }}>
+    <EstimateWorkspaceProvider value={{ estimate, setEstimate: setEstimateInContext }}>
       <EstimateWorkspaceShell mode="existing" activeTab={activeTab} estimate={estimate}>
         {children}
       </EstimateWorkspaceShell>

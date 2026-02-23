@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   createEstimateInventoryShareLink,
+  getEstimateInventoryCatalog,
   getEstimateInventory,
   replaceEstimateInventory,
   type InventoryItem,
@@ -79,6 +80,8 @@ export function EstimateInventoryEditor() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<InventoryRow[]>(INVENTORY_CATALOG);
+  const [catalogCategories, setCatalogCategories] = useState<string[]>(INVENTORY_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Boxes");
@@ -102,9 +105,9 @@ export function EstimateInventoryEditor() {
       .map((item) => item.category.trim())
       .filter((category) => category.length > 0);
 
-    const unique = new Set([...INVENTORY_CATEGORIES, ...dynamicCategories]);
+    const unique = new Set([...catalogCategories, ...dynamicCategories]);
     return Array.from(unique);
-  }, [items]);
+  }, [catalogCategories, items]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -147,7 +150,7 @@ export function EstimateInventoryEditor() {
   const hasChanges = currentFingerprint !== lastSavedFingerprint;
 
   const tableRows = useMemo(() => {
-    const catalogRows: InventoryRow[] = INVENTORY_CATALOG.filter((item) => item.category === selectedCategory).map((item) => ({
+    const catalogRows: InventoryRow[] = catalogItems.filter((item) => item.category === selectedCategory).map((item) => ({
       ...item,
       isCustom: false,
     }));
@@ -173,22 +176,43 @@ export function EstimateInventoryEditor() {
     }
 
     return Array.from(deduped.values());
-  }, [items, search, selectedCategory]);
+  }, [catalogItems, items, search, selectedCategory]);
 
   const loadInventory = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
 
     try {
-      const response = await getEstimateInventory(estimate.id);
-      const normalizedItems = normalizeInventoryItems(response.items);
+      const [inventoryResponse, catalogResponse] = await Promise.all([
+        getEstimateInventory(estimate.id),
+        getEstimateInventoryCatalog(estimate.id).catch(() => null),
+      ]);
+
+      const normalizedItems = normalizeInventoryItems(inventoryResponse.items);
       setItems(normalizedItems);
       setLastSavedFingerprint(inventoryFingerprint(normalizedItems));
+      if (catalogResponse && catalogResponse.items.length > 0) {
+        const mappedItems = catalogResponse.items
+          .filter((item) => item.active)
+          .map((item) => ({
+            category: item.categoryName?.trim() || "Miscellaneous",
+            itemName: item.itemName,
+            volumeCf: roundCf(item.volumeCf),
+          }));
+        const mappedCategories = catalogResponse.categories
+          .filter((category) => category.active)
+          .map((category) => category.name);
+        setCatalogItems(mappedItems.length > 0 ? mappedItems : INVENTORY_CATALOG);
+        setCatalogCategories(mappedCategories.length > 0 ? mappedCategories : INVENTORY_CATEGORIES);
+      } else {
+        setCatalogItems(INVENTORY_CATALOG);
+        setCatalogCategories(INVENTORY_CATEGORIES);
+      }
       setSaveState("saved");
       setSaveMessage("Saved");
       setEstimate({
         ...estimate,
-        totalVolumeCf: response.totalVolumeCf,
+        totalVolumeCf: inventoryResponse.totalVolumeCf,
       });
     } catch (error) {
       setLoadError(getApiErrorMessage(error));
@@ -365,7 +389,7 @@ export function EstimateInventoryEditor() {
       const next = [...previous];
 
       for (const entry of preset.items) {
-        const catalogItem = INVENTORY_CATALOG.find(
+        const catalogItem = [...catalogItems, ...INVENTORY_CATALOG].find(
           (item) => item.category === "Boxes" && normalize(item.itemName) === normalize(entry.itemName),
         );
         if (!catalogItem) continue;

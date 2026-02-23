@@ -1,6 +1,7 @@
 import type { components, operations } from "@moveops/client";
 
 import { api } from "@/lib/api";
+import { generateUUID } from "@/lib/uuid";
 
 export type Estimate = components["schemas"]["Estimate"] & {
   totalVolumeCf?: number;
@@ -26,7 +27,7 @@ type EstimateListResponse = components["schemas"]["EstimateListResponse"];
 type DashboardSummaryResponse = components["schemas"]["DashboardSummaryResponse"];
 
 export function newIdempotencyKey(prefix: "estimate" | "convert") {
-  return `${prefix}-${crypto.randomUUID()}`;
+  return `${prefix}-${generateUUID()}`;
 }
 
 export function getApiErrorMessage(error: unknown) {

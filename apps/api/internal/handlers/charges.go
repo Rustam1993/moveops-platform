@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -107,7 +108,7 @@ func (s *Server) GetEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	defaultInput := defaultChargesInputForEstimate(estimate)
+	defaultInput := s.defaultChargesInputForEstimate(r.Context(), tenantID, estimate)
 	computed := calculateCharges(estimate.TotalVolumeCf, defaultInput)
 
 	httpx.WriteJSON(w, http.StatusOK, oapi.EstimateChargesResponse{
@@ -277,6 +278,11 @@ func (s *Server) PutEstimatesEstimateIdCharges(w http.ResponseWriter, r *http.Re
 			"discountsTotalCents": computed.DiscountsCents,
 		},
 	})
+	s.trackAnalyticsEvent(r.Context(), tenantID, &userID, &targetEstimateID, "estimate.charges_updated", map[string]any{
+		"mode":        normalized.Mode,
+		"total_cents": computed.TotalCents,
+		"total_cf":    computed.TotalCf,
+	})
 
 	charges, mapErr := mapEstimateCharges(row)
 	if mapErr != nil {
@@ -297,18 +303,67 @@ func modeToLocationType(mode string) string {
 	return "Local"
 }
 
-func defaultChargesInputForEstimate(estimate gen.Estimate) normalizedChargesInput {
+func (s *Server) defaultChargesInputForEstimate(ctx context.Context, tenantID uuid.UUID, estimate gen.Estimate) normalizedChargesInput {
 	mode := string(oapi.EstimateChargesModeLocal)
 	if estimate.LocationType != nil && strings.Contains(strings.ToLower(*estimate.LocationType), "long") {
 		mode = string(oapi.EstimateChargesModeLongDistance)
 	}
-	return normalizedChargesInput{
+	out := normalizedChargesInput{
 		Mode:                 mode,
 		CfLbsRatio:           defaultCfLbsRatio,
 		OtherLineItems:       []oapi.EstimateChargesLineItem{},
 		LiabilityType:        string(oapi.Release),
 		DepositRequiredCents: nil,
 	}
+
+	pricingDefaults, err := s.getTenantPricingDefaults(ctx, tenantID)
+	if err != nil {
+		return out
+	}
+
+	if pricingDefaults.LongDistance != nil {
+		if pricingDefaults.LongDistance.RatePerCf != nil {
+			out.LdRatePerCf = *pricingDefaults.LongDistance.RatePerCf
+		}
+		if pricingDefaults.LongDistance.FuelSurchargePct != nil {
+			out.FuelSurchargePct = *pricingDefaults.LongDistance.FuelSurchargePct
+		}
+		if pricingDefaults.LongDistance.TaxRatePct != nil {
+			out.TaxRatePct = *pricingDefaults.LongDistance.TaxRatePct
+		}
+	}
+	if pricingDefaults.Local != nil {
+		if pricingDefaults.Local.LaborRateCents != nil {
+			out.LocalLaborRateCents = *pricingDefaults.Local.LaborRateCents
+		}
+		if pricingDefaults.Local.TravelRateCents != nil {
+			out.LocalTravelRateCents = *pricingDefaults.Local.TravelRateCents
+		}
+		if pricingDefaults.Local.FuelSurchargePct != nil && mode == string(oapi.EstimateChargesModeLocal) {
+			out.FuelSurchargePct = *pricingDefaults.Local.FuelSurchargePct
+		}
+		if pricingDefaults.Local.TaxRatePct != nil && mode == string(oapi.EstimateChargesModeLocal) {
+			out.TaxRatePct = *pricingDefaults.Local.TaxRatePct
+		}
+	}
+	if pricingDefaults.Discounts != nil {
+		if pricingDefaults.Discounts.CouponPct != nil {
+			out.DiscountCouponPct = *pricingDefaults.Discounts.CouponPct
+		}
+		if pricingDefaults.Discounts.SeniorPct != nil {
+			out.DiscountSeniorPct = *pricingDefaults.Discounts.SeniorPct
+		}
+	}
+	if pricingDefaults.Liability != nil {
+		if pricingDefaults.Liability.Type != nil {
+			out.LiabilityType = string(*pricingDefaults.Liability.Type)
+		}
+		if pricingDefaults.Liability.ValuationChargeCents != nil {
+			out.LiabilityValuationChargeCents = *pricingDefaults.Liability.ValuationChargeCents
+		}
+	}
+
+	return out
 }
 
 func normalizeChargesInput(req oapi.ReplaceEstimateChargesRequest) (normalizedChargesInput, error) {

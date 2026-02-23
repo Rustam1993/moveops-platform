@@ -2,6 +2,7 @@
 
 This document summarizes publicly available competitor positioning to understand expected workflows and migration expectations.
 Do not copy proprietary code or replicate competitor UI text verbatim; use original UI wording and implementation.
+For internal sanitized screenshot behavior notes, see `docs/legacy-ui-reference.md`.
 
 ## Sources reviewed (public web pages)
 - Granot “OMS Legacy”

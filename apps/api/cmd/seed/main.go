@@ -74,20 +74,21 @@ func main() {
 	}
 
 	permissionDescriptions := map[string]string{
-		"customers.read":    "Read customer records",
-		"customers.write":   "Create and update customer records",
-		"estimates.read":    "Read estimate records",
-		"estimates.write":   "Create and update estimate records",
-		"estimates.convert": "Convert estimates into jobs",
-		"calendar.read":     "Read calendar and schedule views",
-		"calendar.write":    "Update calendar schedule and phase values",
-		"jobs.read":         "Read job records",
-		"jobs.write":        "Update job scheduling and status",
-		"storage.read":      "Read storage records and list views",
-		"storage.write":     "Create and update storage records",
-		"imports.read":      "Read import run reports and downloads",
-		"imports.write":     "Run import dry-runs and apply imports",
-		"exports.read":      "Download tenant data exports",
+		"customers.read":     "Read customer records",
+		"customers.write":    "Create and update customer records",
+		"estimates.read":     "Read estimate records",
+		"estimates.write":    "Create and update estimate records",
+		"estimates.convert":  "Convert estimates into jobs",
+		"calendar.read":      "Read calendar and schedule views",
+		"calendar.write":     "Update calendar schedule and phase values",
+		"jobs.read":          "Read job records",
+		"jobs.write":         "Update job scheduling and status",
+		"storage.read":       "Read storage records and list views",
+		"storage.write":      "Create and update storage records",
+		"imports.read":       "Read import run reports and downloads",
+		"imports.write":      "Run import dry-runs and apply imports",
+		"exports.read":       "Download tenant data exports",
+		"admin.new_estimate": "Manage tenant New Estimate admin settings and metrics",
 	}
 
 	for perm, description := range permissionDescriptions {
@@ -106,7 +107,7 @@ func main() {
 	}{
 		"admin": {
 			description: "Tenant administrator",
-			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write", "imports.read", "imports.write", "exports.read"},
+			permissions: []string{"customers.read", "customers.write", "estimates.read", "estimates.write", "estimates.convert", "calendar.read", "calendar.write", "jobs.read", "jobs.write", "storage.read", "storage.write", "imports.read", "imports.write", "exports.read", "admin.new_estimate"},
 		},
 		"sales": {
 			description: "Sales role",

@@ -757,6 +757,420 @@ paths:
                 $ref: '#/components/schemas/CreateSignatureRequestResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
+  /estimates/{estimateId}/inventory/catalog:
+    get:
+      operationId: GetEstimatesEstimateIdInventoryCatalog
+      summary: Get effective tenant inventory catalog for this estimate
+      parameters:
+        - in: path
+          name: estimateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Inventory catalog payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/categories:
+    get:
+      operationId: GetAdminNewEstimateCatalogCategories
+      summary: List tenant inventory catalog categories
+      responses:
+        '200':
+          description: Catalog categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogCategoryListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      operationId: PostAdminNewEstimateCatalogCategories
+      summary: Create tenant inventory catalog category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNewEstimateCatalogCategoryRequest'
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogCategoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/categories/{categoryId}:
+    patch:
+      operationId: PatchAdminNewEstimateCatalogCategoriesCategoryId
+      summary: Update tenant inventory catalog category
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNewEstimateCatalogCategoryRequest'
+      responses:
+        '200':
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogCategoryResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      operationId: DeleteAdminNewEstimateCatalogCategoriesCategoryId
+      summary: Delete tenant inventory catalog category
+      parameters:
+        - in: path
+          name: categoryId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Category deleted
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/items:
+    get:
+      operationId: GetAdminNewEstimateCatalogItems
+      summary: List tenant inventory catalog items
+      responses:
+        '200':
+          description: Catalog items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogItemListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      operationId: PostAdminNewEstimateCatalogItems
+      summary: Create tenant inventory catalog item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNewEstimateCatalogItemRequest'
+      responses:
+        '201':
+          description: Catalog item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogItemResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/items/{itemId}:
+    patch:
+      operationId: PatchAdminNewEstimateCatalogItemsItemId
+      summary: Update tenant inventory catalog item
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNewEstimateCatalogItemRequest'
+      responses:
+        '200':
+          description: Catalog item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogItemResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      operationId: DeleteAdminNewEstimateCatalogItemsItemId
+      summary: Delete tenant inventory catalog item
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Item deleted
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/import:
+    post:
+      operationId: PostAdminNewEstimateCatalogImport
+      summary: Import tenant inventory catalog from CSV
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: Catalog import summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateCatalogImportResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/catalog/export:
+    get:
+      operationId: GetAdminNewEstimateCatalogExport
+      summary: Export tenant inventory catalog CSV
+      responses:
+        '200':
+          description: CSV file bytes
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/pricing:
+    get:
+      operationId: GetAdminNewEstimatePricing
+      summary: Get tenant pricing defaults for New Estimate
+      responses:
+        '200':
+          description: Pricing defaults
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimatePricingDefaultsResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutAdminNewEstimatePricing
+      summary: Update tenant pricing defaults for New Estimate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEstimatePricingDefaults'
+      responses:
+        '200':
+          description: Pricing defaults updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimatePricingDefaultsResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/email-templates:
+    get:
+      operationId: GetAdminNewEstimateEmailTemplates
+      summary: Get tenant transactional email templates for New Estimate
+      responses:
+        '200':
+          description: Email templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateEmailTemplatesResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutAdminNewEstimateEmailTemplates
+      summary: Update tenant transactional email templates for New Estimate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEstimateEmailTemplates'
+      responses:
+        '200':
+          description: Email templates updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateEmailTemplatesResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/email-templates/test-send:
+    post:
+      operationId: PostAdminNewEstimateEmailTemplatesTestSend
+      summary: Test-send a rendered tenant email template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEstimateEmailTemplateTestSendRequest'
+      responses:
+        '200':
+          description: Test email send result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateEmailTemplateTestSendResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/documents:
+    get:
+      operationId: GetAdminNewEstimateDocuments
+      summary: Get tenant document branding for printed estimate
+      responses:
+        '200':
+          description: Document branding
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateDocumentBrandingResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      operationId: PutAdminNewEstimateDocuments
+      summary: Update tenant document branding for printed estimate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEstimateDocumentBranding'
+      responses:
+        '200':
+          description: Document branding updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateDocumentBrandingResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /analytics/events:
+    post:
+      operationId: PostAnalyticsEvents
+      summary: Store internal analytics event (tenant-scoped, no PII)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackAnalyticsEventRequest'
+      responses:
+        '204':
+          description: Event accepted
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/new-estimate/metrics:
+    get:
+      operationId: GetAdminNewEstimateMetrics
+      summary: Get tenant New Estimate operational metrics
+      parameters:
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Aggregated New Estimate metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEstimateMetricsResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /admin/audit-logs:
+    get:
+      operationId: GetAdminAuditLogs
+      summary: List tenant audit logs with filters and pagination
+      parameters:
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: actorUserId
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: action
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: entityType
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: entityId
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminAuditLogListResponse'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
   /public/inventory/{token}:
     get:
       operationId: GetPublicInventoryToken
@@ -2499,6 +2913,415 @@ components:
           format: date-time
         document:
           $ref: '#/components/schemas/EstimateDocument'
+        requestId:
+          type: string
+    NewEstimateCatalogCategory:
+      type: object
+      required: [id, name, sortOrder, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    CreateNewEstimateCatalogCategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    UpdateNewEstimateCatalogCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    NewEstimateCatalogCategoryResponse:
+      type: object
+      required: [category, requestId]
+      properties:
+        category:
+          $ref: '#/components/schemas/NewEstimateCatalogCategory'
+        requestId:
+          type: string
+    NewEstimateCatalogCategoryListResponse:
+      type: object
+      required: [categories, requestId]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewEstimateCatalogCategory'
+        requestId:
+          type: string
+    NewEstimateCatalogItem:
+      type: object
+      required: [id, itemName, volumeCf, sortOrder, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        categoryName:
+          type: string
+          nullable: true
+        itemName:
+          type: string
+        volumeCf:
+          type: number
+          format: double
+          minimum: 0
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    CreateNewEstimateCatalogItemRequest:
+      type: object
+      required: [itemName, volumeCf]
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        volumeCf:
+          type: number
+          format: double
+          minimum: 0
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    UpdateNewEstimateCatalogItemRequest:
+      type: object
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        volumeCf:
+          type: number
+          format: double
+          minimum: 0
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+    NewEstimateCatalogItemResponse:
+      type: object
+      required: [item, requestId]
+      properties:
+        item:
+          $ref: '#/components/schemas/NewEstimateCatalogItem'
+        requestId:
+          type: string
+    NewEstimateCatalogItemListResponse:
+      type: object
+      required: [items, requestId]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewEstimateCatalogItem'
+        requestId:
+          type: string
+    NewEstimateCatalogResponse:
+      type: object
+      required: [categories, items, requestId]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewEstimateCatalogCategory'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewEstimateCatalogItem'
+        requestId:
+          type: string
+    NewEstimateCatalogImportResponse:
+      type: object
+      required: [categoriesImported, itemsImported, requestId]
+      properties:
+        categoriesImported:
+          type: integer
+          minimum: 0
+        itemsImported:
+          type: integer
+          minimum: 0
+        errors:
+          type: array
+          items:
+            type: string
+        requestId:
+          type: string
+    NewEstimatePricingDefaults:
+      type: object
+      properties:
+        longDistance:
+          type: object
+          properties:
+            ratePerCf:
+              type: number
+              format: double
+              minimum: 0
+            fuelSurchargePct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+            taxRatePct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+        local:
+          type: object
+          properties:
+            laborRateCents:
+              type: integer
+              format: int64
+              minimum: 0
+            travelRateCents:
+              type: integer
+              format: int64
+              minimum: 0
+            fuelSurchargePct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+            taxRatePct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+        discounts:
+          type: object
+          properties:
+            seniorPct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+            couponPct:
+              type: number
+              format: double
+              minimum: 0
+              maximum: 100
+        liability:
+          type: object
+          properties:
+            type:
+              $ref: '#/components/schemas/EstimateLiabilityType'
+            valuationChargeCents:
+              type: integer
+              format: int64
+              minimum: 0
+    NewEstimatePricingDefaultsResponse:
+      type: object
+      required: [pricing, requestId]
+      properties:
+        pricing:
+          $ref: '#/components/schemas/NewEstimatePricingDefaults'
+        requestId:
+          type: string
+    NewEstimateEmailTemplate:
+      type: object
+      properties:
+        subject:
+          type: string
+        htmlBody:
+          type: string
+        textBody:
+          type: string
+    NewEstimateEmailTemplates:
+      type: object
+      properties:
+        eQuote:
+          $ref: '#/components/schemas/NewEstimateEmailTemplate'
+        inventoryLink:
+          $ref: '#/components/schemas/NewEstimateEmailTemplate'
+        eSign:
+          $ref: '#/components/schemas/NewEstimateEmailTemplate'
+    NewEstimateEmailTemplatesResponse:
+      type: object
+      required: [templates, allowedVariables, requestId]
+      properties:
+        templates:
+          $ref: '#/components/schemas/NewEstimateEmailTemplates'
+        allowedVariables:
+          type: array
+          items:
+            type: string
+        requestId:
+          type: string
+    NewEstimateEmailTemplateTestSendRequest:
+      type: object
+      required: [templateKey, toEmail]
+      properties:
+        templateKey:
+          type: string
+          enum: [e_quote, inventory_link, e_sign]
+        toEmail:
+          type: string
+          format: email
+    NewEstimateEmailTemplateTestSendResponse:
+      type: object
+      required: [status, requestId]
+      properties:
+        status:
+          type: string
+          enum: [sent, failed, logged]
+        requestId:
+          type: string
+    NewEstimateDocumentBranding:
+      type: object
+      properties:
+        companyDisplayName:
+          type: string
+        companyPhone:
+          type: string
+        companyEmail:
+          type: string
+          format: email
+        termsSnippet:
+          type: string
+        logoUrl:
+          type: string
+    NewEstimateDocumentBrandingResponse:
+      type: object
+      required: [branding, requestId]
+      properties:
+        branding:
+          $ref: '#/components/schemas/NewEstimateDocumentBranding'
+        requestId:
+          type: string
+    TrackAnalyticsEventRequest:
+      type: object
+      required: [eventName]
+      properties:
+        eventName:
+          type: string
+          minLength: 1
+        estimateId:
+          type: string
+          format: uuid
+        properties:
+          type: object
+          additionalProperties: true
+    NewEstimateConversionMetric:
+      type: object
+      required: [convertedCount, totalCount, rate]
+      properties:
+        convertedCount:
+          type: integer
+          format: int64
+          minimum: 0
+        totalCount:
+          type: integer
+          format: int64
+          minimum: 0
+        rate:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+    NewEstimateMetrics:
+      type: object
+      required:
+        - medianTimeToQuoteMinutes
+        - quoteToSign
+        - signToBook
+        - inventoryCompletion
+        - stuckEstimatesCount
+      properties:
+        medianTimeToQuoteMinutes:
+          type: number
+          format: double
+          minimum: 0
+        quoteToSign:
+          $ref: '#/components/schemas/NewEstimateConversionMetric'
+        signToBook:
+          $ref: '#/components/schemas/NewEstimateConversionMetric'
+        inventoryCompletion:
+          $ref: '#/components/schemas/NewEstimateConversionMetric'
+        stuckEstimatesCount:
+          type: integer
+          format: int64
+          minimum: 0
+    NewEstimateMetricsResponse:
+      type: object
+      required: [metrics, requestId]
+      properties:
+        metrics:
+          $ref: '#/components/schemas/NewEstimateMetrics'
+        requestId:
+          type: string
+    AdminAuditLogEntry:
+      type: object
+      required: [id, action, entityType, metadata, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: string
+          format: uuid
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        requestId:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+    AdminAuditLogListResponse:
+      type: object
+      required: [items, total, limit, offset, requestId]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminAuditLogEntry'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
         requestId:
           type: string
     EstimateListItem:

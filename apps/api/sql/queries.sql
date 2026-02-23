@@ -484,6 +484,396 @@ SET
 WHERE id = sqlc.arg(id)
   AND tenant_id = sqlc.arg(tenant_id);
 
+-- name: ListNewEstimateCatalogCategories :many
+SELECT
+  id,
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM new_estimate_catalog_category
+WHERE tenant_id = sqlc.arg(tenant_id)
+ORDER BY active DESC, sort_order ASC, lower(name), id;
+
+-- name: GetNewEstimateCatalogCategoryByID :one
+SELECT
+  id,
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM new_estimate_catalog_category
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND id = sqlc.arg(id);
+
+-- name: CreateNewEstimateCatalogCategory :one
+INSERT INTO new_estimate_catalog_category (
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.arg(name),
+  sqlc.arg(sort_order),
+  sqlc.arg(active),
+  sqlc.narg(created_by),
+  sqlc.narg(updated_by)
+)
+RETURNING *;
+
+-- name: UpdateNewEstimateCatalogCategory :one
+UPDATE new_estimate_catalog_category
+SET
+  name = COALESCE(sqlc.narg(name), name),
+  sort_order = COALESCE(sqlc.narg(sort_order)::int, sort_order),
+  active = COALESCE(sqlc.narg(active)::bool, active),
+  updated_by = COALESCE(sqlc.narg(updated_by), updated_by),
+  updated_at = NOW()
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND id = sqlc.arg(id)
+RETURNING *;
+
+-- name: DeleteNewEstimateCatalogCategory :execrows
+DELETE FROM new_estimate_catalog_category
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND id = sqlc.arg(id);
+
+-- name: ListNewEstimateCatalogItems :many
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = sqlc.arg(tenant_id)
+ORDER BY i.active DESC, COALESCE(c.sort_order, 9999), lower(COALESCE(c.name, '')), i.sort_order ASC, lower(i.name), i.id;
+
+-- name: GetNewEstimateCatalogItemByID :one
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = sqlc.arg(tenant_id)
+  AND i.id = sqlc.arg(id);
+
+-- name: CreateNewEstimateCatalogItem :one
+INSERT INTO new_estimate_catalog_item (
+  tenant_id,
+  category_id,
+  name,
+  volume_cf,
+  sort_order,
+  active,
+  created_by,
+  updated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.narg(category_id),
+  sqlc.arg(name),
+  sqlc.arg(volume_cf),
+  sqlc.arg(sort_order),
+  sqlc.arg(active),
+  sqlc.narg(created_by),
+  sqlc.narg(updated_by)
+)
+RETURNING *;
+
+-- name: UpdateNewEstimateCatalogItem :one
+UPDATE new_estimate_catalog_item
+SET
+  category_id = COALESCE(sqlc.narg(category_id), category_id),
+  name = COALESCE(sqlc.narg(name), name),
+  volume_cf = COALESCE(sqlc.narg(volume_cf)::float8, volume_cf),
+  sort_order = COALESCE(sqlc.narg(sort_order)::int, sort_order),
+  active = COALESCE(sqlc.narg(active)::bool, active),
+  updated_by = COALESCE(sqlc.narg(updated_by), updated_by),
+  updated_at = NOW()
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND id = sqlc.arg(id)
+RETURNING *;
+
+-- name: DeleteNewEstimateCatalogItem :execrows
+DELETE FROM new_estimate_catalog_item
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND id = sqlc.arg(id);
+
+-- name: DeleteNewEstimateCatalogItemsByTenant :exec
+DELETE FROM new_estimate_catalog_item
+WHERE tenant_id = sqlc.arg(tenant_id);
+
+-- name: DeleteNewEstimateCatalogCategoriesByTenant :exec
+DELETE FROM new_estimate_catalog_category
+WHERE tenant_id = sqlc.arg(tenant_id);
+
+-- name: ListActiveNewEstimateCatalogItems :many
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = sqlc.arg(tenant_id)
+  AND i.active = TRUE
+  AND (i.category_id IS NULL OR c.active = TRUE)
+ORDER BY COALESCE(c.sort_order, 9999), lower(COALESCE(c.name, '')), i.sort_order ASC, lower(i.name), i.id;
+
+-- name: GetTenantNewEstimateSettings :one
+SELECT
+  tenant_id,
+  pricing_defaults_json,
+  email_templates_json,
+  document_branding_json,
+  updated_by,
+  created_at,
+  updated_at
+FROM tenant_new_estimate_settings
+WHERE tenant_id = sqlc.arg(tenant_id);
+
+-- name: UpsertTenantNewEstimateSettings :one
+INSERT INTO tenant_new_estimate_settings (
+  tenant_id,
+  pricing_defaults_json,
+  email_templates_json,
+  document_branding_json,
+  updated_by
+) VALUES (
+  sqlc.arg(tenant_id),
+  COALESCE(sqlc.narg(pricing_defaults_json)::jsonb, '{}'::jsonb),
+  COALESCE(sqlc.narg(email_templates_json)::jsonb, '{}'::jsonb),
+  COALESCE(sqlc.narg(document_branding_json)::jsonb, '{}'::jsonb),
+  sqlc.narg(updated_by)
+)
+ON CONFLICT (tenant_id) DO UPDATE
+SET
+  pricing_defaults_json = COALESCE(sqlc.narg(pricing_defaults_json)::jsonb, tenant_new_estimate_settings.pricing_defaults_json),
+  email_templates_json = COALESCE(sqlc.narg(email_templates_json)::jsonb, tenant_new_estimate_settings.email_templates_json),
+  document_branding_json = COALESCE(sqlc.narg(document_branding_json)::jsonb, tenant_new_estimate_settings.document_branding_json),
+  updated_by = COALESCE(sqlc.narg(updated_by), tenant_new_estimate_settings.updated_by),
+  updated_at = NOW()
+RETURNING *;
+
+-- name: InsertAnalyticsEvent :exec
+INSERT INTO analytics_event (
+  tenant_id,
+  estimate_id,
+  user_id,
+  event_name,
+  properties_json
+) VALUES (
+  sqlc.arg(tenant_id),
+  sqlc.narg(estimate_id),
+  sqlc.narg(user_id),
+  sqlc.arg(event_name),
+  COALESCE(sqlc.narg(properties_json)::jsonb, '{}'::jsonb)
+);
+
+-- name: GetAnalyticsMedianTimeToQuoteMinutes :one
+WITH entry_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS started_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.entry_started'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+),
+quote_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS quoted_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.quote_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+),
+pairs AS (
+  SELECT EXTRACT(EPOCH FROM (q.quoted_at - e.started_at)) / 60.0 AS minutes
+  FROM entry_events e
+  JOIN quote_events q ON q.estimate_id = e.estimate_id
+  WHERE q.quoted_at >= e.started_at
+)
+SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY minutes), 0)::float8 AS median_minutes
+FROM pairs;
+
+-- name: GetAnalyticsQuoteToSignCounts :one
+WITH quote_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS quoted_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.quote_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+),
+sign_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS signed_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.sign_completed'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE s.estimate_id IS NOT NULL AND s.signed_at >= q.quoted_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM quote_events q
+LEFT JOIN sign_events s ON s.estimate_id = q.estimate_id;
+
+-- name: GetAnalyticsSignToBookCounts :one
+WITH sign_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS signed_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.sign_completed'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+),
+book_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS booked_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.booked'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE b.estimate_id IS NOT NULL AND b.booked_at >= s.signed_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM sign_events s
+LEFT JOIN book_events b ON b.estimate_id = s.estimate_id;
+
+-- name: GetAnalyticsInventoryCompletionCounts :one
+WITH sent_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS sent_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.inventory_link_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+),
+updated_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS updated_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = sqlc.arg(tenant_id)
+    AND ae.event_name = 'estimate.inventory_updated'
+    AND ae.estimate_id IS NOT NULL
+    AND (sqlc.narg(from_time)::timestamptz IS NULL OR ae.created_at >= sqlc.narg(from_time)::timestamptz)
+    AND (sqlc.narg(to_time)::timestamptz IS NULL OR ae.created_at <= sqlc.narg(to_time)::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE u.estimate_id IS NOT NULL AND u.updated_at >= s.sent_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM sent_events s
+LEFT JOIN updated_events u ON u.estimate_id = s.estimate_id;
+
+-- name: CountStuckEstimates :one
+SELECT COUNT(*)::bigint AS count
+FROM estimates e
+LEFT JOIN estimate_workflow w
+  ON w.tenant_id = e.tenant_id
+  AND w.estimate_id = e.id
+WHERE e.tenant_id = sqlc.arg(tenant_id)
+  AND COALESCE(w.status, 'draft') IN ('draft', 'open', 'follow_up', 'quoted')
+  AND e.created_at < NOW() - make_interval(days => sqlc.arg(stuck_days)::int);
+
+-- name: ListAuditLogsForTenant :many
+SELECT
+  id,
+  tenant_id,
+  user_id,
+  action,
+  entity_type,
+  entity_id,
+  request_id,
+  metadata,
+  created_at
+FROM audit_log
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND (sqlc.narg(from_time)::timestamptz IS NULL OR created_at >= sqlc.narg(from_time)::timestamptz)
+  AND (sqlc.narg(to_time)::timestamptz IS NULL OR created_at <= sqlc.narg(to_time)::timestamptz)
+  AND (sqlc.narg(user_id)::uuid IS NULL OR user_id = sqlc.narg(user_id)::uuid)
+  AND (sqlc.narg(action_like)::text IS NULL OR action ILIKE sqlc.narg(action_like)::text || '%')
+  AND (sqlc.narg(entity_type)::text IS NULL OR entity_type = sqlc.narg(entity_type)::text)
+  AND (sqlc.narg(entity_id)::uuid IS NULL OR entity_id = sqlc.narg(entity_id)::uuid)
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(limit_rows)
+OFFSET sqlc.arg(offset_rows);
+
+-- name: CountAuditLogsForTenant :one
+SELECT COUNT(*)::bigint AS count
+FROM audit_log
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND (sqlc.narg(from_time)::timestamptz IS NULL OR created_at >= sqlc.narg(from_time)::timestamptz)
+  AND (sqlc.narg(to_time)::timestamptz IS NULL OR created_at <= sqlc.narg(to_time)::timestamptz)
+  AND (sqlc.narg(user_id)::uuid IS NULL OR user_id = sqlc.narg(user_id)::uuid)
+  AND (sqlc.narg(action_like)::text IS NULL OR action ILIKE sqlc.narg(action_like)::text || '%')
+  AND (sqlc.narg(entity_type)::text IS NULL OR entity_type = sqlc.narg(entity_type)::text)
+  AND (sqlc.narg(entity_id)::uuid IS NULL OR entity_id = sqlc.narg(entity_id)::uuid);
+
 -- name: GetEstimateChargesByEstimateID :one
 SELECT
   id,

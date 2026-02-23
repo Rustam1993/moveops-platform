@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isUnauthorizedError } from "@/lib/api";
 import { getMe, type SessionPayload } from "@/lib/session";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -20,9 +21,9 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         if (!mounted) return;
         setSession(data);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!mounted) return;
-        if (pathname !== "/login") {
+        if (isUnauthorizedError(error) && pathname !== "/login") {
           router.replace("/login");
         }
       })

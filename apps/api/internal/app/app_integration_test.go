@@ -747,6 +747,101 @@ func TestPublicQuoteAndSignatureTokens(t *testing.T) {
 	}
 }
 
+func TestPhase7AdminEndpointsTenantIsolationAndRBAC(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	tenantA, _ := seedTenantUser(t, ctx, env.pool, "tenant-phase7-admin-a", "Tenant Phase7 Admin A", "phase7-admin-a@example.com", "Password123!", []string{"admin.new_estimate", "estimates.read", "estimates.write"})
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase7-admin-b", "Tenant Phase7 Admin B", "phase7-admin-b@example.com", "Password123!", []string{"admin.new_estimate", "estimates.read", "estimates.write"})
+	_, _ = seedUserInTenant(t, ctx, env.pool, tenantA, "phase7-non-admin@example.com", "Password123!", []string{"estimates.read", "estimates.write"})
+
+	adminCookieA := login(t, env.router, "phase7-admin-a@example.com", "Password123!")
+	adminCsrfA := csrfToken(t, env.router, adminCookieA)
+
+	status, body := request(t, env.router, http.MethodPost, "/api/admin/new-estimate/catalog/categories", []byte(`{"name":"Boxes","sortOrder":1}`), adminCookieA, adminCsrfA)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 catalog category create, got %d (%s)", status, string(body))
+	}
+	categoryID := parseCatalogCategoryID(t, body)
+	if categoryID == "" {
+		t.Fatalf("expected category id in response")
+	}
+
+	status, body = request(t, env.router, http.MethodPost, "/api/admin/new-estimate/catalog/items", []byte(fmt.Sprintf(`{"categoryId":"%s","itemName":"Box, Medium 18x18x16","volumeCf":3}`, categoryID)), adminCookieA, adminCsrfA)
+	if status != http.StatusCreated {
+		t.Fatalf("expected 201 catalog item create, got %d (%s)", status, string(body))
+	}
+	itemID := parseCatalogItemID(t, body)
+	if itemID == "" {
+		t.Fatalf("expected item id in response")
+	}
+
+	adminCookieB := login(t, env.router, "phase7-admin-b@example.com", "Password123!")
+	adminCsrfB := csrfToken(t, env.router, adminCookieB)
+	status, body = request(t, env.router, http.MethodPatch, "/api/admin/new-estimate/catalog/items/"+itemID, []byte(`{"itemName":"Cross Tenant Edit"}`), adminCookieB, adminCsrfB)
+	if status != http.StatusNotFound {
+		t.Fatalf("expected 404 cross-tenant catalog patch, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/admin/new-estimate/catalog/items", nil, adminCookieB, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 tenant B catalog list, got %d (%s)", status, string(body))
+	}
+	if count := parseCatalogItemCount(t, body); count != 0 {
+		t.Fatalf("expected tenant B catalog item count 0, got %d", count)
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/admin/new-estimate/metrics", nil, adminCookieA, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 admin metrics read, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/admin/audit-logs", nil, adminCookieA, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 admin audit logs read, got %d (%s)", status, string(body))
+	}
+	if total := parseAuditLogTotal(t, body); total < 1 {
+		t.Fatalf("expected at least 1 audit row, got %d", total)
+	}
+
+	nonAdminCookie := login(t, env.router, "phase7-non-admin@example.com", "Password123!")
+	nonAdminCsrf := csrfToken(t, env.router, nonAdminCookie)
+	status, body = request(t, env.router, http.MethodPut, "/api/admin/new-estimate/pricing", []byte(`{"longDistance":{"ratePerCf":4.5}}`), nonAdminCookie, nonAdminCsrf)
+	if status != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-admin pricing update, got %d (%s)", status, string(body))
+	}
+}
+
+func TestPhase7CatalogImportCSVValidation(t *testing.T) {
+	env := setupTestEnv(t)
+	ctx := context.Background()
+
+	_, _ = seedTenantUser(t, ctx, env.pool, "tenant-phase7-csv", "Tenant Phase7 CSV", "phase7-csv@example.com", "Password123!", []string{"admin.new_estimate", "estimates.read", "estimates.write"})
+
+	adminCookie := login(t, env.router, "phase7-csv@example.com", "Password123!")
+	adminCsrf := csrfToken(t, env.router, adminCookie)
+
+	malformedCSV := "category,item_name,volume_cf\nBoxes,Box Small,not-a-number\n"
+	status, body := request(t, env.router, http.MethodPost, "/api/admin/new-estimate/catalog/import", []byte(malformedCSV), adminCookie, adminCsrf, map[string]string{"Content-Type": "text/csv"})
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400 malformed csv import, got %d (%s)", status, string(body))
+	}
+
+	validCSV := "category,item_name,volume_cf,active,item_sort_order\nBoxes,Box Small,1.5,true,1\nBedroom,Bed Queen,65,true,2\n"
+	status, body = request(t, env.router, http.MethodPost, "/api/admin/new-estimate/catalog/import", []byte(validCSV), adminCookie, adminCsrf, map[string]string{"Content-Type": "text/csv"})
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 valid csv import, got %d (%s)", status, string(body))
+	}
+
+	status, body = request(t, env.router, http.MethodGet, "/api/admin/new-estimate/catalog/items", nil, adminCookie, "")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200 catalog items after import, got %d (%s)", status, string(body))
+	}
+	if count := parseCatalogItemCount(t, body); count != 2 {
+		t.Fatalf("expected 2 catalog items after import, got %d", count)
+	}
+}
+
 func TestEstimateRBACForCreateAndConvert(t *testing.T) {
 	env := setupTestEnv(t)
 	ctx := context.Background()
@@ -1722,6 +1817,54 @@ func parsePaymentID(t *testing.T, body []byte) string {
 		t.Fatalf("payment id missing")
 	}
 	return payload.Payment.ID
+}
+
+func parseCatalogCategoryID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Category struct {
+			ID string `json:"id"`
+		} `json:"category"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse catalog category response: %v", err)
+	}
+	return payload.Category.ID
+}
+
+func parseCatalogItemID(t *testing.T, body []byte) string {
+	t.Helper()
+	var payload struct {
+		Item struct {
+			ID string `json:"id"`
+		} `json:"item"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse catalog item response: %v", err)
+	}
+	return payload.Item.ID
+}
+
+func parseCatalogItemCount(t *testing.T, body []byte) int {
+	t.Helper()
+	var payload struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse catalog item list response: %v", err)
+	}
+	return len(payload.Items)
+}
+
+func parseAuditLogTotal(t *testing.T, body []byte) int64 {
+	t.Helper()
+	var payload struct {
+		Total int64 `json:"total"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("parse audit log response: %v", err)
+	}
+	return payload.Total
 }
 
 func parsePublicInventoryTotalCf(t *testing.T, body []byte) float64 {

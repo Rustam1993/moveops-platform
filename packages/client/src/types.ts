@@ -130,7 +130,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List estimates (paged) */
+        get: operations["GetEstimates"];
         put?: never;
         /** Create a draft estimate */
         post: operations["PostEstimates"];
@@ -175,6 +176,566 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/estimates/{estimateId}/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get estimate inventory */
+        get: operations["GetEstimatesEstimateIdInventory"];
+        /** Replace estimate inventory and recalculate totals */
+        put: operations["PutEstimatesEstimateIdInventory"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/inventory-share-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create customer inventory share link and send email */
+        post: operations["PostEstimatesEstimateIdInventoryShareLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get estimate charges and computed totals */
+        get: operations["GetEstimatesEstimateIdCharges"];
+        /** Upsert estimate charges and recalculate totals */
+        put: operations["PutEstimatesEstimateIdCharges"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get estimate workflow controls for sidebar */
+        get: operations["GetEstimatesEstimateIdWorkflow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update estimate workflow controls */
+        patch: operations["PatchEstimatesEstimateIdWorkflow"];
+        trace?: never;
+    };
+    "/estimates/{estimateId}/book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark estimate as booked */
+        post: operations["PostEstimatesEstimateIdBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/release-book": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release booked estimate back to open status */
+        post: operations["PostEstimatesEstimateIdReleaseBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move estimate to on-hold status */
+        post: operations["PostEstimatesEstimateIdHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List estimate tasks */
+        get: operations["GetEstimatesEstimateIdTasks"];
+        put?: never;
+        /** Create estimate task */
+        post: operations["PostEstimatesEstimateIdTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete estimate task (soft delete) */
+        delete: operations["DeleteEstimatesEstimateIdTasksTaskId"];
+        options?: never;
+        head?: never;
+        /** Update estimate task */
+        patch: operations["PatchEstimatesEstimateIdTasksTaskId"];
+        trace?: never;
+    };
+    "/estimates/{estimateId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List manual payments and payment summary */
+        get: operations["GetEstimatesEstimateIdPayments"];
+        put?: never;
+        /** Add manual payment entry */
+        post: operations["PostEstimatesEstimateIdPayments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/payments/{paymentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete manual payment entry (soft delete) */
+        delete: operations["DeleteEstimatesEstimateIdPaymentsPaymentId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/documents/estimate-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get latest generated estimate PDF document */
+        get: operations["GetEstimatesEstimateIdDocumentsEstimatePdf"];
+        put?: never;
+        /** Generate and store estimate PDF document */
+        post: operations["PostEstimatesEstimateIdDocumentsEstimatePdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List estimate transactional emails */
+        get: operations["GetEstimatesEstimateIdEmails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/emails/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send estimate transactional email from a template */
+        post: operations["PostEstimatesEstimateIdEmailsSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/signature-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a public signature request link for estimate */
+        post: operations["PostEstimatesEstimateIdSignatureRequests"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/estimates/{estimateId}/inventory/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get effective tenant inventory catalog for this estimate */
+        get: operations["GetEstimatesEstimateIdInventoryCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant inventory catalog categories */
+        get: operations["GetAdminNewEstimateCatalogCategories"];
+        put?: never;
+        /** Create tenant inventory catalog category */
+        post: operations["PostAdminNewEstimateCatalogCategories"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/categories/{categoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete tenant inventory catalog category */
+        delete: operations["DeleteAdminNewEstimateCatalogCategoriesCategoryId"];
+        options?: never;
+        head?: never;
+        /** Update tenant inventory catalog category */
+        patch: operations["PatchAdminNewEstimateCatalogCategoriesCategoryId"];
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant inventory catalog items */
+        get: operations["GetAdminNewEstimateCatalogItems"];
+        put?: never;
+        /** Create tenant inventory catalog item */
+        post: operations["PostAdminNewEstimateCatalogItems"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete tenant inventory catalog item */
+        delete: operations["DeleteAdminNewEstimateCatalogItemsItemId"];
+        options?: never;
+        head?: never;
+        /** Update tenant inventory catalog item */
+        patch: operations["PatchAdminNewEstimateCatalogItemsItemId"];
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import tenant inventory catalog from CSV */
+        post: operations["PostAdminNewEstimateCatalogImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/catalog/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export tenant inventory catalog CSV */
+        get: operations["GetAdminNewEstimateCatalogExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tenant pricing defaults for New Estimate */
+        get: operations["GetAdminNewEstimatePricing"];
+        /** Update tenant pricing defaults for New Estimate */
+        put: operations["PutAdminNewEstimatePricing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/email-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tenant transactional email templates for New Estimate */
+        get: operations["GetAdminNewEstimateEmailTemplates"];
+        /** Update tenant transactional email templates for New Estimate */
+        put: operations["PutAdminNewEstimateEmailTemplates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/email-templates/test-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test-send a rendered tenant email template */
+        post: operations["PostAdminNewEstimateEmailTemplatesTestSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tenant document branding for printed estimate */
+        get: operations["GetAdminNewEstimateDocuments"];
+        /** Update tenant document branding for printed estimate */
+        put: operations["PutAdminNewEstimateDocuments"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Store internal analytics event (tenant-scoped, no PII) */
+        post: operations["PostAnalyticsEvents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/new-estimate/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tenant New Estimate operational metrics */
+        get: operations["GetAdminNewEstimateMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant audit logs with filters and pagination */
+        get: operations["GetAdminAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/inventory/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch customer inventory payload via share token */
+        get: operations["GetPublicInventoryToken"];
+        /** Submit customer inventory payload via share token */
+        put: operations["PutPublicInventoryToken"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/estimate/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch read-only public estimate PDF payload */
+        get: operations["GetPublicEstimateToken"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/sign/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch public estimate signature request payload */
+        get: operations["GetPublicSignToken"];
+        put?: never;
+        /** Submit typed signature for estimate */
+        post: operations["PostPublicSignToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/calendar": {
         parameters: {
             query?: never;
@@ -188,6 +749,40 @@ export interface paths {
          *
          */
         get: operations["GetCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard summary counts for the current tenant */
+        get: operations["GetDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List jobs (paged) */
+        get: operations["GetJobs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -565,6 +1160,8 @@ export interface components {
             leadSource: string;
             moveSize?: string;
             locationType?: string;
+            /** Format: double */
+            totalVolumeCf: number;
             /** Format: int64 */
             estimatedTotalCents?: number;
             /** Format: int64 */
@@ -581,12 +1178,687 @@ export interface components {
             estimate: components["schemas"]["Estimate"];
             requestId: string;
         };
+        EstimateInventoryItem: {
+            category: string;
+            itemName: string;
+            /** Format: double */
+            volumeCf: number;
+            qty: number;
+            isCustom?: boolean;
+        };
+        ReplaceEstimateInventoryRequest: {
+            items: components["schemas"]["EstimateInventoryItem"][];
+        };
+        EstimateInventoryResponse: {
+            /** Format: uuid */
+            estimateId: string;
+            items: components["schemas"]["EstimateInventoryItem"][];
+            /** Format: double */
+            totalVolumeCf: number;
+            requestId: string;
+        };
+        CreateInventoryShareLinkRequest: {
+            expiresInDays?: number;
+        };
+        CreateInventoryShareLinkResponse: {
+            /** Format: uuid */
+            shareLinkId: string;
+            /** Format: uuid */
+            estimateId: string;
+            /** Format: email */
+            recipientEmail: string;
+            shareUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @enum {string} */
+            deliveryMode: "log" | "smtp";
+            requestId: string;
+        };
+        PublicInventoryResponse: {
+            /** Format: uuid */
+            estimateId: string;
+            customerName: string;
+            /** Format: date */
+            moveDate: string;
+            items: components["schemas"]["EstimateInventoryItem"][];
+            /** Format: double */
+            totalVolumeCf: number;
+            /** Format: date-time */
+            expiresAt: string;
+            requestId: string;
+        };
+        /** @enum {string} */
+        EstimateChargesMode: "local" | "long_distance";
+        /** @enum {string} */
+        EstimateLiabilityType: "release" | "full_value";
+        EstimateChargesLineItem: {
+            label: string;
+            /** Format: int64 */
+            amountCents: number;
+        };
+        EstimateChargesLongDistanceInput: {
+            /** Format: double */
+            ratePerCf?: number;
+            /** Format: int64 */
+            fixedBaseAmountCents?: number;
+        };
+        EstimateChargesLocalInput: {
+            trucks?: number;
+            workers?: number;
+            /** Format: double */
+            laborHours?: number;
+            /** Format: int64 */
+            laborRateCents?: number;
+            /** Format: double */
+            travelHours?: number;
+            /** Format: int64 */
+            travelRateCents?: number;
+        };
+        EstimateChargesDiscountInput: {
+            /** Format: double */
+            couponPct?: number;
+            /** Format: int64 */
+            couponAmountCents?: number;
+            /** Format: double */
+            seniorPct?: number;
+            /** Format: int64 */
+            seniorAmountCents?: number;
+        };
+        EstimateChargesPackingInput: {
+            packers?: number;
+            /** Format: double */
+            hours?: number;
+            /** Format: int64 */
+            rateCents?: number;
+        };
+        EstimateChargesLiabilityInput: {
+            type?: components["schemas"]["EstimateLiabilityType"];
+            /** Format: int64 */
+            valuationChargeCents?: number;
+        };
+        ReplaceEstimateChargesRequest: {
+            mode: components["schemas"]["EstimateChargesMode"];
+            /** Format: double */
+            cfLbsRatio?: number;
+            /** Format: double */
+            fuelSurchargePct?: number;
+            longDistance?: components["schemas"]["EstimateChargesLongDistanceInput"];
+            local?: components["schemas"]["EstimateChargesLocalInput"];
+            otherLineItems?: components["schemas"]["EstimateChargesLineItem"][];
+            discounts?: components["schemas"]["EstimateChargesDiscountInput"];
+            packing?: components["schemas"]["EstimateChargesPackingInput"];
+            liability?: components["schemas"]["EstimateChargesLiabilityInput"];
+            /** Format: double */
+            taxRatePct?: number;
+            /** Format: int64 */
+            depositRequiredCents?: number;
+            /** Format: int64 */
+            amountPaidCents?: number;
+        };
+        EstimateChargesComputed: {
+            /** Format: int64 */
+            baseCents: number;
+            /** Format: int64 */
+            fuelSurchargeCents: number;
+            /** Format: int64 */
+            otherItemsTotalCents: number;
+            /** Format: int64 */
+            packingTotalCents: number;
+            /** Format: int64 */
+            liabilityTotalCents: number;
+            /** Format: int64 */
+            subtotalCents: number;
+            /** Format: int64 */
+            discountsTotalCents: number;
+            /** Format: int64 */
+            taxTotalCents: number;
+            /** Format: int64 */
+            totalCents: number;
+            /** Format: double */
+            totalCf: number;
+            /** Format: double */
+            totalLbs: number;
+        };
+        EstimateCharges: {
+            /** Format: uuid */
+            estimateId: string;
+            mode: components["schemas"]["EstimateChargesMode"];
+            calculationVersion: string;
+            /** Format: double */
+            cfLbsRatio: number;
+            /** Format: double */
+            fuelSurchargePct: number;
+            longDistance: components["schemas"]["EstimateChargesLongDistanceInput"];
+            local: components["schemas"]["EstimateChargesLocalInput"];
+            otherLineItems: components["schemas"]["EstimateChargesLineItem"][];
+            discounts: components["schemas"]["EstimateChargesDiscountInput"];
+            packing: components["schemas"]["EstimateChargesPackingInput"];
+            liability: components["schemas"]["EstimateChargesLiabilityInput"];
+            /** Format: double */
+            taxRatePct: number;
+            /** Format: int64 */
+            depositRequiredCents?: number;
+            /** Format: int64 */
+            amountPaidCents: number;
+            computed: components["schemas"]["EstimateChargesComputed"];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        EstimateChargesResponse: {
+            charges: components["schemas"]["EstimateCharges"];
+            requestId: string;
+        };
+        /** @enum {string} */
+        EstimateWorkflowStatus: "draft" | "open" | "follow_up" | "quoted" | "booked" | "on_hold" | "canceled";
+        EstimateWorkflow: {
+            /** Format: uuid */
+            estimateId: string;
+            status: components["schemas"]["EstimateWorkflowStatus"];
+            priorityLevel: number;
+            /** Format: date-time */
+            followUpAt?: string;
+            followUpNote?: string;
+            vip: boolean;
+            /** Format: date-time */
+            bookedAt?: string;
+            holdReason?: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        EstimateWorkflowResponse: {
+            workflow: components["schemas"]["EstimateWorkflow"];
+            requestId: string;
+        };
+        UpdateEstimateWorkflowRequest: {
+            status?: components["schemas"]["EstimateWorkflowStatus"];
+            priorityLevel?: number;
+            /** Format: date-time */
+            followUpAt?: string;
+            clearFollowUpAt?: boolean;
+            followUpNote?: string;
+            clearFollowUpNote?: boolean;
+            vip?: boolean;
+        };
+        HoldEstimateRequest: {
+            holdReason?: string;
+        };
+        EstimateTask: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            estimateId: string;
+            title: string;
+            isDone: boolean;
+            /** Format: date-time */
+            dueAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        EstimateTaskResponse: {
+            task: components["schemas"]["EstimateTask"];
+            requestId: string;
+        };
+        EstimateTaskListResponse: {
+            tasks: components["schemas"]["EstimateTask"][];
+            requestId: string;
+        };
+        CreateEstimateTaskRequest: {
+            title: string;
+            /** Format: date-time */
+            dueAt?: string;
+        };
+        UpdateEstimateTaskRequest: {
+            title?: string;
+            isDone?: boolean;
+            /** Format: date-time */
+            dueAt?: string;
+            clearDueAt?: boolean;
+        };
+        EstimatePayment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            estimateId: string;
+            /** Format: int64 */
+            amountCents: number;
+            method: string;
+            /** Format: date-time */
+            paidAt: string;
+            notes?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        EstimatePaymentSummary: {
+            /** Format: int64 */
+            depositRequiredCents?: number;
+            /** Format: int64 */
+            totalEstimateCents?: number;
+            /** Format: int64 */
+            amountPaidCents: number;
+            /** Format: int64 */
+            remainingBalanceCents?: number;
+        };
+        EstimatePaymentResponse: {
+            payment: components["schemas"]["EstimatePayment"];
+            requestId: string;
+        };
+        EstimatePaymentListResponse: {
+            summary: components["schemas"]["EstimatePaymentSummary"];
+            payments: components["schemas"]["EstimatePayment"][];
+            requestId: string;
+        };
+        CreateEstimatePaymentRequest: {
+            /** Format: int64 */
+            amountCents: number;
+            method: string;
+            /** Format: date-time */
+            paidAt?: string;
+            notes?: string;
+        };
+        /** @enum {string} */
+        EstimateDocumentType: "estimate_pdf" | "signed_estimate_pdf";
+        EstimateDocument: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            estimateId: string;
+            documentType: components["schemas"]["EstimateDocumentType"];
+            fileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            contentBase64: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        EstimateDocumentResponse: {
+            document: components["schemas"]["EstimateDocument"];
+            requestId: string;
+        };
+        /** @enum {string} */
+        EstimateEmailTemplateKey: "moving_estimate" | "update_inventory" | "signature_request" | "credit_card_authorization" | "waiver_cancellation" | "follow_up_move";
+        SendEstimateEmailRequest: {
+            templateKey: components["schemas"]["EstimateEmailTemplateKey"];
+            /** Format: email */
+            toEmail?: string;
+            ccMe?: boolean;
+        };
+        EstimateEmailGeneratedLinks: {
+            quoteUrl?: string;
+            inventoryUrl?: string;
+            signatureUrl?: string;
+        };
+        EstimateEmailLog: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            estimateId: string;
+            templateKey: components["schemas"]["EstimateEmailTemplateKey"];
+            /** Format: email */
+            to: string;
+            /** Format: email */
+            cc?: string;
+            /** Format: email */
+            from: string;
+            subject: string;
+            /** @enum {string} */
+            status: "queued" | "sent" | "failed";
+            /** @enum {string} */
+            deliveryMode: "log" | "smtp";
+            providerMessageId?: string;
+            errorMessage?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SendEstimateEmailResponse: {
+            email: components["schemas"]["EstimateEmailLog"];
+            generatedLinks?: components["schemas"]["EstimateEmailGeneratedLinks"];
+            requestId: string;
+        };
+        EstimateEmailLogListResponse: {
+            emails: components["schemas"]["EstimateEmailLog"][];
+            requestId: string;
+        };
+        CreateSignatureRequestRequest: {
+            expiresInDays?: number;
+        };
+        CreateSignatureRequestResponse: {
+            /** Format: uuid */
+            signatureRequestId: string;
+            /** Format: uuid */
+            estimateId: string;
+            /** Format: email */
+            recipientEmail: string;
+            signatureUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @enum {string} */
+            deliveryMode: "log" | "smtp";
+            requestId: string;
+        };
+        PublicEstimateDocumentResponse: {
+            /** Format: uuid */
+            estimateId: string;
+            customerName: string;
+            /** Format: date */
+            moveDate: string;
+            /** Format: double */
+            totalVolumeCf: number;
+            /** Format: int64 */
+            totalEstimateCents?: number;
+            document: components["schemas"]["EstimateDocument"];
+            /** Format: date-time */
+            expiresAt: string;
+            requestId: string;
+        };
+        PublicSignContextResponse: {
+            /** Format: uuid */
+            estimateId: string;
+            customerName: string;
+            /** Format: date */
+            moveDate: string;
+            /** Format: double */
+            totalVolumeCf: number;
+            /** Format: int64 */
+            totalEstimateCents?: number;
+            document: components["schemas"]["EstimateDocument"];
+            /** Format: email */
+            signerEmail: string;
+            /** Format: date-time */
+            expiresAt: string;
+            alreadySigned: boolean;
+            requestId: string;
+        };
+        CompleteSignatureRequest: {
+            signerName: string;
+            /** Format: email */
+            signerEmail: string;
+            signatureText: string;
+            agreeToTerms: boolean;
+        };
+        CompleteSignatureResponse: {
+            /** Format: uuid */
+            estimateId: string;
+            /** Format: uuid */
+            signatureId: string;
+            signerName: string;
+            /** Format: email */
+            signerEmail: string;
+            /** Format: date-time */
+            signedAt: string;
+            document: components["schemas"]["EstimateDocument"];
+            requestId: string;
+        };
+        NewEstimateCatalogCategory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            sortOrder: number;
+            active: boolean;
+        };
+        CreateNewEstimateCatalogCategoryRequest: {
+            name: string;
+            sortOrder?: number;
+            active?: boolean;
+        };
+        UpdateNewEstimateCatalogCategoryRequest: {
+            name?: string;
+            sortOrder?: number;
+            active?: boolean;
+        };
+        NewEstimateCatalogCategoryResponse: {
+            category: components["schemas"]["NewEstimateCatalogCategory"];
+            requestId: string;
+        };
+        NewEstimateCatalogCategoryListResponse: {
+            categories: components["schemas"]["NewEstimateCatalogCategory"][];
+            requestId: string;
+        };
+        NewEstimateCatalogItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            categoryId?: string | null;
+            categoryName?: string | null;
+            itemName: string;
+            /** Format: double */
+            volumeCf: number;
+            sortOrder: number;
+            active: boolean;
+        };
+        CreateNewEstimateCatalogItemRequest: {
+            /** Format: uuid */
+            categoryId?: string;
+            itemName: string;
+            /** Format: double */
+            volumeCf: number;
+            sortOrder?: number;
+            active?: boolean;
+        };
+        UpdateNewEstimateCatalogItemRequest: {
+            /** Format: uuid */
+            categoryId?: string | null;
+            itemName?: string;
+            /** Format: double */
+            volumeCf?: number;
+            sortOrder?: number;
+            active?: boolean;
+        };
+        NewEstimateCatalogItemResponse: {
+            item: components["schemas"]["NewEstimateCatalogItem"];
+            requestId: string;
+        };
+        NewEstimateCatalogItemListResponse: {
+            items: components["schemas"]["NewEstimateCatalogItem"][];
+            requestId: string;
+        };
+        NewEstimateCatalogResponse: {
+            categories: components["schemas"]["NewEstimateCatalogCategory"][];
+            items: components["schemas"]["NewEstimateCatalogItem"][];
+            requestId: string;
+        };
+        NewEstimateCatalogImportResponse: {
+            categoriesImported: number;
+            itemsImported: number;
+            errors?: string[];
+            requestId: string;
+        };
+        NewEstimatePricingDefaults: {
+            longDistance?: {
+                /** Format: double */
+                ratePerCf?: number;
+                /** Format: double */
+                fuelSurchargePct?: number;
+                /** Format: double */
+                taxRatePct?: number;
+            };
+            local?: {
+                /** Format: int64 */
+                laborRateCents?: number;
+                /** Format: int64 */
+                travelRateCents?: number;
+                /** Format: double */
+                fuelSurchargePct?: number;
+                /** Format: double */
+                taxRatePct?: number;
+            };
+            discounts?: {
+                /** Format: double */
+                seniorPct?: number;
+                /** Format: double */
+                couponPct?: number;
+            };
+            liability?: {
+                type?: components["schemas"]["EstimateLiabilityType"];
+                /** Format: int64 */
+                valuationChargeCents?: number;
+            };
+        };
+        NewEstimatePricingDefaultsResponse: {
+            pricing: components["schemas"]["NewEstimatePricingDefaults"];
+            requestId: string;
+        };
+        NewEstimateEmailTemplate: {
+            subject?: string;
+            htmlBody?: string;
+            textBody?: string;
+        };
+        NewEstimateEmailTemplates: {
+            eQuote?: components["schemas"]["NewEstimateEmailTemplate"];
+            inventoryLink?: components["schemas"]["NewEstimateEmailTemplate"];
+            eSign?: components["schemas"]["NewEstimateEmailTemplate"];
+        };
+        NewEstimateEmailTemplatesResponse: {
+            templates: components["schemas"]["NewEstimateEmailTemplates"];
+            allowedVariables: string[];
+            requestId: string;
+        };
+        NewEstimateEmailTemplateTestSendRequest: {
+            /** @enum {string} */
+            templateKey: "e_quote" | "inventory_link" | "e_sign";
+            /** Format: email */
+            toEmail: string;
+        };
+        NewEstimateEmailTemplateTestSendResponse: {
+            /** @enum {string} */
+            status: "sent" | "failed" | "logged";
+            requestId: string;
+        };
+        NewEstimateDocumentBranding: {
+            companyDisplayName?: string;
+            companyPhone?: string;
+            /** Format: email */
+            companyEmail?: string;
+            termsSnippet?: string;
+            logoUrl?: string;
+        };
+        NewEstimateDocumentBrandingResponse: {
+            branding: components["schemas"]["NewEstimateDocumentBranding"];
+            requestId: string;
+        };
+        TrackAnalyticsEventRequest: {
+            eventName: string;
+            /** Format: uuid */
+            estimateId?: string;
+            properties?: {
+                [key: string]: unknown;
+            };
+        };
+        NewEstimateConversionMetric: {
+            /** Format: int64 */
+            convertedCount: number;
+            /** Format: int64 */
+            totalCount: number;
+            /** Format: double */
+            rate: number;
+        };
+        NewEstimateMetrics: {
+            /** Format: double */
+            medianTimeToQuoteMinutes: number;
+            quoteToSign: components["schemas"]["NewEstimateConversionMetric"];
+            signToBook: components["schemas"]["NewEstimateConversionMetric"];
+            inventoryCompletion: components["schemas"]["NewEstimateConversionMetric"];
+            /** Format: int64 */
+            stuckEstimatesCount: number;
+        };
+        NewEstimateMetricsResponse: {
+            metrics: components["schemas"]["NewEstimateMetrics"];
+            requestId: string;
+        };
+        AdminAuditLogEntry: {
+            /** Format: int64 */
+            id: number;
+            /** Format: uuid */
+            userId?: string;
+            action: string;
+            entityType: string;
+            /** Format: uuid */
+            entityId?: string;
+            requestId?: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminAuditLogListResponse: {
+            items: components["schemas"]["AdminAuditLogEntry"][];
+            /** Format: int64 */
+            total: number;
+            limit: number;
+            offset: number;
+            requestId: string;
+        };
+        EstimateListItem: {
+            /** Format: uuid */
+            estimateId: string;
+            estimateNumber: string;
+            customerName: string;
+            /** Format: email */
+            email?: string;
+            primaryPhone?: string;
+            /** @enum {string} */
+            status: "draft" | "converted";
+            /** Format: date */
+            moveDate: string;
+            /** Format: uuid */
+            convertedJobId?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        EstimateListResponse: {
+            items: components["schemas"]["EstimateListItem"][];
+            nextCursor?: string | null;
+            requestId: string;
+        };
         UpdateJobRequest: {
             /** Format: date */
             scheduledDate?: string;
             pickupTime?: string;
             /** @enum {string} */
             status?: "booked" | "scheduled" | "completed" | "cancelled";
+        };
+        JobListItem: {
+            /** Format: uuid */
+            jobId: string;
+            jobNumber: string;
+            /** @enum {string} */
+            status: "booked" | "scheduled" | "completed" | "cancelled";
+            /** Format: date */
+            scheduledDate?: string | null;
+            pickupTime?: string | null;
+            customerName: string;
+            originShort: string;
+            destinationShort: string;
+            hasStorage: boolean;
+            /** Format: int64 */
+            balanceDueCents: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        JobListResponse: {
+            items: components["schemas"]["JobListItem"][];
+            nextCursor?: string | null;
+            requestId: string;
+        };
+        DashboardSummaryResponse: {
+            allowed: {
+                estimates: boolean;
+                jobs: boolean;
+                storage: boolean;
+            };
+            openEstimatesCount?: number | null;
+            upcomingJobsCount?: number | null;
+            storageRecordsCount?: number | null;
+            requestId: string;
         };
         CalendarJobCard: {
             /** Format: uuid */
@@ -1039,6 +2311,32 @@ export interface operations {
             default: components["responses"]["ErrorResponse"];
         };
     };
+    GetEstimates: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: "draft" | "converted";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
     PostEstimates: {
         parameters: {
             query?: never;
@@ -1159,6 +2457,1171 @@ export interface operations {
             default: components["responses"]["ErrorResponse"];
         };
     };
+    GetEstimatesEstimateIdInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate inventory */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateInventoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutEstimatesEstimateIdInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceEstimateInventoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Inventory updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateInventoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdInventoryShareLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateInventoryShareLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Share link created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateInventoryShareLinkResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdCharges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate charges */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateChargesResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutEstimatesEstimateIdCharges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceEstimateChargesRequest"];
+            };
+        };
+        responses: {
+            /** @description Estimate charges updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateChargesResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate workflow state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateWorkflowResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PatchEstimatesEstimateIdWorkflow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEstimateWorkflowRequest"];
+            };
+        };
+        responses: {
+            /** @description Workflow updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateWorkflowResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate booked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateWorkflowResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdReleaseBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate booking released */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateWorkflowResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["HoldEstimateRequest"];
+            };
+        };
+        responses: {
+            /** @description Estimate moved on hold */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateWorkflowResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate tasks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateTaskListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEstimateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Task created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateTaskResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    DeleteEstimatesEstimateIdTasksTaskId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PatchEstimatesEstimateIdTasksTaskId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEstimateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Task updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateTaskResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdPayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate payments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimatePaymentListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdPayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEstimatePaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Payment added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimatePaymentResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    DeleteEstimatesEstimateIdPaymentsPaymentId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdDocumentsEstimatePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest estimate PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateDocumentResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdDocumentsEstimatePdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate PDF generated */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateDocumentResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdEmails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estimate email history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EstimateEmailLogListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdEmailsSend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendEstimateEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Email send completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendEstimateEmailResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostEstimatesEstimateIdSignatureRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CreateSignatureRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description Signature request created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateSignatureRequestResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetEstimatesEstimateIdInventoryCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                estimateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Inventory catalog payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog categories */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogCategoryListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostAdminNewEstimateCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNewEstimateCatalogCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Category created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogCategoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    DeleteAdminNewEstimateCatalogCategoriesCategoryId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PatchAdminNewEstimateCatalogCategoriesCategoryId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                categoryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNewEstimateCatalogCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Category updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogCategoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateCatalogItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogItemListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostAdminNewEstimateCatalogItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNewEstimateCatalogItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Catalog item created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogItemResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    DeleteAdminNewEstimateCatalogItemsItemId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Item deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PatchAdminNewEstimateCatalogItemsItemId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNewEstimateCatalogItemRequest"];
+            };
+        };
+        responses: {
+            /** @description Catalog item updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogItemResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostAdminNewEstimateCatalogImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "text/csv": string;
+            };
+        };
+        responses: {
+            /** @description Catalog import summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateCatalogImportResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateCatalogExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimatePricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pricing defaults */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimatePricingDefaultsResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutAdminNewEstimatePricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEstimatePricingDefaults"];
+            };
+        };
+        responses: {
+            /** @description Pricing defaults updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimatePricingDefaultsResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateEmailTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Email templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateEmailTemplatesResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutAdminNewEstimateEmailTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEstimateEmailTemplates"];
+            };
+        };
+        responses: {
+            /** @description Email templates updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateEmailTemplatesResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostAdminNewEstimateEmailTemplatesTestSend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEstimateEmailTemplateTestSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Test email send result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateEmailTemplateTestSendResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document branding */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateDocumentBrandingResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutAdminNewEstimateDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewEstimateDocumentBranding"];
+            };
+        };
+        responses: {
+            /** @description Document branding updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateDocumentBrandingResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostAnalyticsEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackAnalyticsEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Event accepted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminNewEstimateMetrics: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aggregated New Estimate metrics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NewEstimateMetricsResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetAdminAuditLogs: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                actorUserId?: string;
+                action?: string;
+                entityType?: string;
+                entityId?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audit log page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAuditLogListResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetPublicInventoryToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public inventory payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInventoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PutPublicInventoryToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceEstimateInventoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Public inventory updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInventoryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetPublicEstimateToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public estimate PDF payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEstimateDocumentResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetPublicSignToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public sign payload */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicSignContextResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    PostPublicSignToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteSignatureRequest"];
+            };
+        };
+        responses: {
+            /** @description Signature completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompleteSignatureResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
     GetCalendar: {
         parameters: {
             query: {
@@ -1184,6 +3647,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CalendarResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetDashboardSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary counts (permission-aware) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummaryResponse"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    GetJobs: {
+        parameters: {
+            query?: {
+                q?: string;
+                status?: "booked" | "scheduled" | "completed" | "cancelled";
+                jobType?: "local" | "long_distance" | "other";
+                /** @description When true, only jobs with scheduledDate set are returned. When false, only jobs with scheduledDate missing are returned.
+                 *      */
+                scheduled?: boolean;
+                scheduledFrom?: string;
+                scheduledTo?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobListResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];

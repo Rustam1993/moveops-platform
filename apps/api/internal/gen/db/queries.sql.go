@@ -55,6 +55,43 @@ func (q *Queries) CompleteImportRun(ctx context.Context, arg CompleteImportRunPa
 	return i, err
 }
 
+const countAuditLogsForTenant = `-- name: CountAuditLogsForTenant :one
+SELECT COUNT(*)::bigint AS count
+FROM audit_log
+WHERE tenant_id = $1
+  AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
+  AND ($3::timestamptz IS NULL OR created_at <= $3::timestamptz)
+  AND ($4::uuid IS NULL OR user_id = $4::uuid)
+  AND ($5::text IS NULL OR action ILIKE $5::text || '%')
+  AND ($6::text IS NULL OR entity_type = $6::text)
+  AND ($7::uuid IS NULL OR entity_id = $7::uuid)
+`
+
+type CountAuditLogsForTenantParams struct {
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	FromTime   *time.Time `json:"from_time"`
+	ToTime     *time.Time `json:"to_time"`
+	UserID     *uuid.UUID `json:"user_id"`
+	ActionLike *string    `json:"action_like"`
+	EntityType *string    `json:"entity_type"`
+	EntityID   *uuid.UUID `json:"entity_id"`
+}
+
+func (q *Queries) CountAuditLogsForTenant(ctx context.Context, arg CountAuditLogsForTenantParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAuditLogsForTenant,
+		arg.TenantID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.UserID,
+		arg.ActionLike,
+		arg.EntityType,
+		arg.EntityID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countOpenEstimates = `-- name: CountOpenEstimates :one
 SELECT COUNT(*)::bigint AS count
 FROM estimates
@@ -77,6 +114,29 @@ WHERE tenant_id = $1
 
 func (q *Queries) CountStorageRecords(ctx context.Context, tenantID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countStorageRecords, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countStuckEstimates = `-- name: CountStuckEstimates :one
+SELECT COUNT(*)::bigint AS count
+FROM estimates e
+LEFT JOIN estimate_workflow w
+  ON w.tenant_id = e.tenant_id
+  AND w.estimate_id = e.id
+WHERE e.tenant_id = $1
+  AND COALESCE(w.status, 'draft') IN ('draft', 'open', 'follow_up', 'quoted')
+  AND e.created_at < NOW() - make_interval(days => $2::int)
+`
+
+type CountStuckEstimatesParams struct {
+	TenantID  uuid.UUID `json:"tenant_id"`
+	StuckDays int32     `json:"stuck_days"`
+}
+
+func (q *Queries) CountStuckEstimates(ctx context.Context, arg CountStuckEstimatesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStuckEstimates, arg.TenantID, arg.StuckDays)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1078,6 +1138,120 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 	return i, err
 }
 
+const createNewEstimateCatalogCategory = `-- name: CreateNewEstimateCatalogCategory :one
+INSERT INTO new_estimate_catalog_category (
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6
+)
+RETURNING id, tenant_id, name, sort_order, active, created_by, updated_by, created_at, updated_at
+`
+
+type CreateNewEstimateCatalogCategoryParams struct {
+	TenantID  uuid.UUID  `json:"tenant_id"`
+	Name      string     `json:"name"`
+	SortOrder int32      `json:"sort_order"`
+	Active    bool       `json:"active"`
+	CreatedBy *uuid.UUID `json:"created_by"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) CreateNewEstimateCatalogCategory(ctx context.Context, arg CreateNewEstimateCatalogCategoryParams) (NewEstimateCatalogCategory, error) {
+	row := q.db.QueryRow(ctx, createNewEstimateCatalogCategory,
+		arg.TenantID,
+		arg.Name,
+		arg.SortOrder,
+		arg.Active,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	var i NewEstimateCatalogCategory
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Name,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createNewEstimateCatalogItem = `-- name: CreateNewEstimateCatalogItem :one
+INSERT INTO new_estimate_catalog_item (
+  tenant_id,
+  category_id,
+  name,
+  volume_cf,
+  sort_order,
+  active,
+  created_by,
+  updated_by
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8
+)
+RETURNING id, tenant_id, category_id, name, volume_cf, sort_order, active, created_by, updated_by, created_at, updated_at
+`
+
+type CreateNewEstimateCatalogItemParams struct {
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	CategoryID *uuid.UUID `json:"category_id"`
+	Name       string     `json:"name"`
+	VolumeCf   float64    `json:"volume_cf"`
+	SortOrder  int32      `json:"sort_order"`
+	Active     bool       `json:"active"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) CreateNewEstimateCatalogItem(ctx context.Context, arg CreateNewEstimateCatalogItemParams) (NewEstimateCatalogItem, error) {
+	row := q.db.QueryRow(ctx, createNewEstimateCatalogItem,
+		arg.TenantID,
+		arg.CategoryID,
+		arg.Name,
+		arg.VolumeCf,
+		arg.SortOrder,
+		arg.Active,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	var i NewEstimateCatalogItem
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.VolumeCf,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
   tenant_id,
@@ -1256,6 +1430,64 @@ type DeleteEstimateInventoryItemsParams struct {
 
 func (q *Queries) DeleteEstimateInventoryItems(ctx context.Context, arg DeleteEstimateInventoryItemsParams) error {
 	_, err := q.db.Exec(ctx, deleteEstimateInventoryItems, arg.TenantID, arg.EstimateID)
+	return err
+}
+
+const deleteNewEstimateCatalogCategoriesByTenant = `-- name: DeleteNewEstimateCatalogCategoriesByTenant :exec
+DELETE FROM new_estimate_catalog_category
+WHERE tenant_id = $1
+`
+
+func (q *Queries) DeleteNewEstimateCatalogCategoriesByTenant(ctx context.Context, tenantID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteNewEstimateCatalogCategoriesByTenant, tenantID)
+	return err
+}
+
+const deleteNewEstimateCatalogCategory = `-- name: DeleteNewEstimateCatalogCategory :execrows
+DELETE FROM new_estimate_catalog_category
+WHERE tenant_id = $1
+  AND id = $2
+`
+
+type DeleteNewEstimateCatalogCategoryParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) DeleteNewEstimateCatalogCategory(ctx context.Context, arg DeleteNewEstimateCatalogCategoryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteNewEstimateCatalogCategory, arg.TenantID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteNewEstimateCatalogItem = `-- name: DeleteNewEstimateCatalogItem :execrows
+DELETE FROM new_estimate_catalog_item
+WHERE tenant_id = $1
+  AND id = $2
+`
+
+type DeleteNewEstimateCatalogItemParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) DeleteNewEstimateCatalogItem(ctx context.Context, arg DeleteNewEstimateCatalogItemParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteNewEstimateCatalogItem, arg.TenantID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteNewEstimateCatalogItemsByTenant = `-- name: DeleteNewEstimateCatalogItemsByTenant :exec
+DELETE FROM new_estimate_catalog_item
+WHERE tenant_id = $1
+`
+
+func (q *Queries) DeleteNewEstimateCatalogItemsByTenant(ctx context.Context, tenantID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteNewEstimateCatalogItemsByTenant, tenantID)
 	return err
 }
 
@@ -1667,6 +1899,188 @@ func (q *Queries) FindCustomerByPhone(ctx context.Context, arg FindCustomerByPho
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const getAnalyticsInventoryCompletionCounts = `-- name: GetAnalyticsInventoryCompletionCounts :one
+WITH sent_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS sent_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.inventory_link_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+),
+updated_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS updated_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.inventory_updated'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE u.estimate_id IS NOT NULL AND u.updated_at >= s.sent_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM sent_events s
+LEFT JOIN updated_events u ON u.estimate_id = s.estimate_id
+`
+
+type GetAnalyticsInventoryCompletionCountsParams struct {
+	TenantID uuid.UUID  `json:"tenant_id"`
+	FromTime *time.Time `json:"from_time"`
+	ToTime   *time.Time `json:"to_time"`
+}
+
+type GetAnalyticsInventoryCompletionCountsRow struct {
+	ConvertedCount int64 `json:"converted_count"`
+	TotalCount     int64 `json:"total_count"`
+}
+
+func (q *Queries) GetAnalyticsInventoryCompletionCounts(ctx context.Context, arg GetAnalyticsInventoryCompletionCountsParams) (GetAnalyticsInventoryCompletionCountsRow, error) {
+	row := q.db.QueryRow(ctx, getAnalyticsInventoryCompletionCounts, arg.TenantID, arg.FromTime, arg.ToTime)
+	var i GetAnalyticsInventoryCompletionCountsRow
+	err := row.Scan(&i.ConvertedCount, &i.TotalCount)
+	return i, err
+}
+
+const getAnalyticsMedianTimeToQuoteMinutes = `-- name: GetAnalyticsMedianTimeToQuoteMinutes :one
+WITH entry_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS started_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.entry_started'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+),
+quote_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS quoted_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.quote_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+),
+pairs AS (
+  SELECT EXTRACT(EPOCH FROM (q.quoted_at - e.started_at)) / 60.0 AS minutes
+  FROM entry_events e
+  JOIN quote_events q ON q.estimate_id = e.estimate_id
+  WHERE q.quoted_at >= e.started_at
+)
+SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY minutes), 0)::float8 AS median_minutes
+FROM pairs
+`
+
+type GetAnalyticsMedianTimeToQuoteMinutesParams struct {
+	TenantID uuid.UUID  `json:"tenant_id"`
+	FromTime *time.Time `json:"from_time"`
+	ToTime   *time.Time `json:"to_time"`
+}
+
+func (q *Queries) GetAnalyticsMedianTimeToQuoteMinutes(ctx context.Context, arg GetAnalyticsMedianTimeToQuoteMinutesParams) (float64, error) {
+	row := q.db.QueryRow(ctx, getAnalyticsMedianTimeToQuoteMinutes, arg.TenantID, arg.FromTime, arg.ToTime)
+	var median_minutes float64
+	err := row.Scan(&median_minutes)
+	return median_minutes, err
+}
+
+const getAnalyticsQuoteToSignCounts = `-- name: GetAnalyticsQuoteToSignCounts :one
+WITH quote_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS quoted_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.quote_sent'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+),
+sign_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS signed_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.sign_completed'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE s.estimate_id IS NOT NULL AND s.signed_at >= q.quoted_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM quote_events q
+LEFT JOIN sign_events s ON s.estimate_id = q.estimate_id
+`
+
+type GetAnalyticsQuoteToSignCountsParams struct {
+	TenantID uuid.UUID  `json:"tenant_id"`
+	FromTime *time.Time `json:"from_time"`
+	ToTime   *time.Time `json:"to_time"`
+}
+
+type GetAnalyticsQuoteToSignCountsRow struct {
+	ConvertedCount int64 `json:"converted_count"`
+	TotalCount     int64 `json:"total_count"`
+}
+
+func (q *Queries) GetAnalyticsQuoteToSignCounts(ctx context.Context, arg GetAnalyticsQuoteToSignCountsParams) (GetAnalyticsQuoteToSignCountsRow, error) {
+	row := q.db.QueryRow(ctx, getAnalyticsQuoteToSignCounts, arg.TenantID, arg.FromTime, arg.ToTime)
+	var i GetAnalyticsQuoteToSignCountsRow
+	err := row.Scan(&i.ConvertedCount, &i.TotalCount)
+	return i, err
+}
+
+const getAnalyticsSignToBookCounts = `-- name: GetAnalyticsSignToBookCounts :one
+WITH sign_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS signed_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.sign_completed'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+),
+book_events AS (
+  SELECT ae.estimate_id, MIN(ae.created_at) AS booked_at
+  FROM analytics_event ae
+  WHERE ae.tenant_id = $1
+    AND ae.event_name = 'estimate.booked'
+    AND ae.estimate_id IS NOT NULL
+    AND ($2::timestamptz IS NULL OR ae.created_at >= $2::timestamptz)
+    AND ($3::timestamptz IS NULL OR ae.created_at <= $3::timestamptz)
+  GROUP BY ae.estimate_id
+)
+SELECT
+  COUNT(*) FILTER (WHERE b.estimate_id IS NOT NULL AND b.booked_at >= s.signed_at)::bigint AS converted_count,
+  COUNT(*)::bigint AS total_count
+FROM sign_events s
+LEFT JOIN book_events b ON b.estimate_id = s.estimate_id
+`
+
+type GetAnalyticsSignToBookCountsParams struct {
+	TenantID uuid.UUID  `json:"tenant_id"`
+	FromTime *time.Time `json:"from_time"`
+	ToTime   *time.Time `json:"to_time"`
+}
+
+type GetAnalyticsSignToBookCountsRow struct {
+	ConvertedCount int64 `json:"converted_count"`
+	TotalCount     int64 `json:"total_count"`
+}
+
+func (q *Queries) GetAnalyticsSignToBookCounts(ctx context.Context, arg GetAnalyticsSignToBookCountsParams) (GetAnalyticsSignToBookCountsRow, error) {
+	row := q.db.QueryRow(ctx, getAnalyticsSignToBookCounts, arg.TenantID, arg.FromTime, arg.ToTime)
+	var i GetAnalyticsSignToBookCountsRow
+	err := row.Scan(&i.ConvertedCount, &i.TotalCount)
 	return i, err
 }
 
@@ -2952,6 +3366,112 @@ func (q *Queries) GetLatestEstimateSignatureByEstimateID(ctx context.Context, ar
 	return i, err
 }
 
+const getNewEstimateCatalogCategoryByID = `-- name: GetNewEstimateCatalogCategoryByID :one
+SELECT
+  id,
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM new_estimate_catalog_category
+WHERE tenant_id = $1
+  AND id = $2
+`
+
+type GetNewEstimateCatalogCategoryByIDParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) GetNewEstimateCatalogCategoryByID(ctx context.Context, arg GetNewEstimateCatalogCategoryByIDParams) (NewEstimateCatalogCategory, error) {
+	row := q.db.QueryRow(ctx, getNewEstimateCatalogCategoryByID, arg.TenantID, arg.ID)
+	var i NewEstimateCatalogCategory
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Name,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getNewEstimateCatalogItemByID = `-- name: GetNewEstimateCatalogItemByID :one
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = $1
+  AND i.id = $2
+`
+
+type GetNewEstimateCatalogItemByIDParams struct {
+	TenantID uuid.UUID `json:"tenant_id"`
+	ID       uuid.UUID `json:"id"`
+}
+
+type GetNewEstimateCatalogItemByIDRow struct {
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	CategoryID        *uuid.UUID `json:"category_id"`
+	Name              string     `json:"name"`
+	VolumeCf          float64    `json:"volume_cf"`
+	SortOrder         int32      `json:"sort_order"`
+	Active            bool       `json:"active"`
+	CreatedBy         *uuid.UUID `json:"created_by"`
+	UpdatedBy         *uuid.UUID `json:"updated_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	CategoryName      *string    `json:"category_name"`
+	CategorySortOrder *int32     `json:"category_sort_order"`
+	CategoryActive    *bool      `json:"category_active"`
+}
+
+func (q *Queries) GetNewEstimateCatalogItemByID(ctx context.Context, arg GetNewEstimateCatalogItemByIDParams) (GetNewEstimateCatalogItemByIDRow, error) {
+	row := q.db.QueryRow(ctx, getNewEstimateCatalogItemByID, arg.TenantID, arg.ID)
+	var i GetNewEstimateCatalogItemByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.VolumeCf,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CategoryName,
+		&i.CategorySortOrder,
+		&i.CategoryActive,
+	)
+	return i, err
+}
+
 const getSessionPrincipalByTokenHash = `-- name: GetSessionPrincipalByTokenHash :one
 SELECT
   s.id AS session_id,
@@ -3254,6 +3774,34 @@ func (q *Queries) GetStorageRecordDetailByID(ctx context.Context, arg GetStorage
 	return i, err
 }
 
+const getTenantNewEstimateSettings = `-- name: GetTenantNewEstimateSettings :one
+SELECT
+  tenant_id,
+  pricing_defaults_json,
+  email_templates_json,
+  document_branding_json,
+  updated_by,
+  created_at,
+  updated_at
+FROM tenant_new_estimate_settings
+WHERE tenant_id = $1
+`
+
+func (q *Queries) GetTenantNewEstimateSettings(ctx context.Context, tenantID uuid.UUID) (TenantNewEstimateSetting, error) {
+	row := q.db.QueryRow(ctx, getTenantNewEstimateSettings, tenantID)
+	var i TenantNewEstimateSetting
+	err := row.Scan(
+		&i.TenantID,
+		&i.PricingDefaultsJson,
+		&i.EmailTemplatesJson,
+		&i.DocumentBrandingJson,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const incrementTenantCounter = `-- name: IncrementTenantCounter :one
 INSERT INTO tenant_counters (tenant_id, counter_type, next_value)
 VALUES ($1, $2, 2)
@@ -3274,6 +3822,41 @@ func (q *Queries) IncrementTenantCounter(ctx context.Context, arg IncrementTenan
 	var value int64
 	err := row.Scan(&value)
 	return value, err
+}
+
+const insertAnalyticsEvent = `-- name: InsertAnalyticsEvent :exec
+INSERT INTO analytics_event (
+  tenant_id,
+  estimate_id,
+  user_id,
+  event_name,
+  properties_json
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  COALESCE($5::jsonb, '{}'::jsonb)
+)
+`
+
+type InsertAnalyticsEventParams struct {
+	TenantID       uuid.UUID  `json:"tenant_id"`
+	EstimateID     *uuid.UUID `json:"estimate_id"`
+	UserID         *uuid.UUID `json:"user_id"`
+	EventName      string     `json:"event_name"`
+	PropertiesJson []byte     `json:"properties_json"`
+}
+
+func (q *Queries) InsertAnalyticsEvent(ctx context.Context, arg InsertAnalyticsEventParams) error {
+	_, err := q.db.Exec(ctx, insertAnalyticsEvent,
+		arg.TenantID,
+		arg.EstimateID,
+		arg.UserID,
+		arg.EventName,
+		arg.PropertiesJson,
+	)
+	return err
 }
 
 const insertAuditLog = `-- name: InsertAuditLog :exec
@@ -3374,6 +3957,160 @@ func (q *Queries) InsertEstimateInventoryItem(ctx context.Context, arg InsertEst
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listActiveNewEstimateCatalogItems = `-- name: ListActiveNewEstimateCatalogItems :many
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = $1
+  AND i.active = TRUE
+  AND (i.category_id IS NULL OR c.active = TRUE)
+ORDER BY COALESCE(c.sort_order, 9999), lower(COALESCE(c.name, '')), i.sort_order ASC, lower(i.name), i.id
+`
+
+type ListActiveNewEstimateCatalogItemsRow struct {
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	CategoryID        *uuid.UUID `json:"category_id"`
+	Name              string     `json:"name"`
+	VolumeCf          float64    `json:"volume_cf"`
+	SortOrder         int32      `json:"sort_order"`
+	Active            bool       `json:"active"`
+	CreatedBy         *uuid.UUID `json:"created_by"`
+	UpdatedBy         *uuid.UUID `json:"updated_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	CategoryName      *string    `json:"category_name"`
+	CategorySortOrder *int32     `json:"category_sort_order"`
+	CategoryActive    *bool      `json:"category_active"`
+}
+
+func (q *Queries) ListActiveNewEstimateCatalogItems(ctx context.Context, tenantID uuid.UUID) ([]ListActiveNewEstimateCatalogItemsRow, error) {
+	rows, err := q.db.Query(ctx, listActiveNewEstimateCatalogItems, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListActiveNewEstimateCatalogItemsRow{}
+	for rows.Next() {
+		var i ListActiveNewEstimateCatalogItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CategoryID,
+			&i.Name,
+			&i.VolumeCf,
+			&i.SortOrder,
+			&i.Active,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CategoryName,
+			&i.CategorySortOrder,
+			&i.CategoryActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogsForTenant = `-- name: ListAuditLogsForTenant :many
+SELECT
+  id,
+  tenant_id,
+  user_id,
+  action,
+  entity_type,
+  entity_id,
+  request_id,
+  metadata,
+  created_at
+FROM audit_log
+WHERE tenant_id = $1
+  AND ($2::timestamptz IS NULL OR created_at >= $2::timestamptz)
+  AND ($3::timestamptz IS NULL OR created_at <= $3::timestamptz)
+  AND ($4::uuid IS NULL OR user_id = $4::uuid)
+  AND ($5::text IS NULL OR action ILIKE $5::text || '%')
+  AND ($6::text IS NULL OR entity_type = $6::text)
+  AND ($7::uuid IS NULL OR entity_id = $7::uuid)
+ORDER BY created_at DESC, id DESC
+LIMIT $9
+OFFSET $8
+`
+
+type ListAuditLogsForTenantParams struct {
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	FromTime   *time.Time `json:"from_time"`
+	ToTime     *time.Time `json:"to_time"`
+	UserID     *uuid.UUID `json:"user_id"`
+	ActionLike *string    `json:"action_like"`
+	EntityType *string    `json:"entity_type"`
+	EntityID   *uuid.UUID `json:"entity_id"`
+	OffsetRows int32      `json:"offset_rows"`
+	LimitRows  int32      `json:"limit_rows"`
+}
+
+func (q *Queries) ListAuditLogsForTenant(ctx context.Context, arg ListAuditLogsForTenantParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogsForTenant,
+		arg.TenantID,
+		arg.FromTime,
+		arg.ToTime,
+		arg.UserID,
+		arg.ActionLike,
+		arg.EntityType,
+		arg.EntityID,
+		arg.OffsetRows,
+		arg.LimitRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AuditLog{}
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.UserID,
+			&i.Action,
+			&i.EntityType,
+			&i.EntityID,
+			&i.RequestID,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCalendarJobs = `-- name: ListCalendarJobs :many
@@ -4023,6 +4760,128 @@ func (q *Queries) ListJobs(ctx context.Context, arg ListJobsParams) ([]ListJobsR
 			&i.UpdatedAt,
 			&i.SortCreatedAt,
 			&i.SortJobID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNewEstimateCatalogCategories = `-- name: ListNewEstimateCatalogCategories :many
+SELECT
+  id,
+  tenant_id,
+  name,
+  sort_order,
+  active,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+FROM new_estimate_catalog_category
+WHERE tenant_id = $1
+ORDER BY active DESC, sort_order ASC, lower(name), id
+`
+
+func (q *Queries) ListNewEstimateCatalogCategories(ctx context.Context, tenantID uuid.UUID) ([]NewEstimateCatalogCategory, error) {
+	rows, err := q.db.Query(ctx, listNewEstimateCatalogCategories, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []NewEstimateCatalogCategory{}
+	for rows.Next() {
+		var i NewEstimateCatalogCategory
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Name,
+			&i.SortOrder,
+			&i.Active,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNewEstimateCatalogItems = `-- name: ListNewEstimateCatalogItems :many
+SELECT
+  i.id,
+  i.tenant_id,
+  i.category_id,
+  i.name,
+  i.volume_cf,
+  i.sort_order,
+  i.active,
+  i.created_by,
+  i.updated_by,
+  i.created_at,
+  i.updated_at,
+  c.name AS category_name,
+  c.sort_order AS category_sort_order,
+  c.active AS category_active
+FROM new_estimate_catalog_item i
+LEFT JOIN new_estimate_catalog_category c
+  ON c.id = i.category_id
+  AND c.tenant_id = i.tenant_id
+WHERE i.tenant_id = $1
+ORDER BY i.active DESC, COALESCE(c.sort_order, 9999), lower(COALESCE(c.name, '')), i.sort_order ASC, lower(i.name), i.id
+`
+
+type ListNewEstimateCatalogItemsRow struct {
+	ID                uuid.UUID  `json:"id"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	CategoryID        *uuid.UUID `json:"category_id"`
+	Name              string     `json:"name"`
+	VolumeCf          float64    `json:"volume_cf"`
+	SortOrder         int32      `json:"sort_order"`
+	Active            bool       `json:"active"`
+	CreatedBy         *uuid.UUID `json:"created_by"`
+	UpdatedBy         *uuid.UUID `json:"updated_by"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	CategoryName      *string    `json:"category_name"`
+	CategorySortOrder *int32     `json:"category_sort_order"`
+	CategoryActive    *bool      `json:"category_active"`
+}
+
+func (q *Queries) ListNewEstimateCatalogItems(ctx context.Context, tenantID uuid.UUID) ([]ListNewEstimateCatalogItemsRow, error) {
+	rows, err := q.db.Query(ctx, listNewEstimateCatalogItems, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNewEstimateCatalogItemsRow{}
+	for rows.Next() {
+		var i ListNewEstimateCatalogItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CategoryID,
+			&i.Name,
+			&i.VolumeCf,
+			&i.SortOrder,
+			&i.Active,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CategoryName,
+			&i.CategorySortOrder,
+			&i.CategoryActive,
 		); err != nil {
 			return nil, err
 		}
@@ -5052,6 +5911,106 @@ func (q *Queries) UpdateJobScheduleStatus(ctx context.Context, arg UpdateJobSche
 	return i, err
 }
 
+const updateNewEstimateCatalogCategory = `-- name: UpdateNewEstimateCatalogCategory :one
+UPDATE new_estimate_catalog_category
+SET
+  name = COALESCE($1, name),
+  sort_order = COALESCE($2::int, sort_order),
+  active = COALESCE($3::bool, active),
+  updated_by = COALESCE($4, updated_by),
+  updated_at = NOW()
+WHERE tenant_id = $5
+  AND id = $6
+RETURNING id, tenant_id, name, sort_order, active, created_by, updated_by, created_at, updated_at
+`
+
+type UpdateNewEstimateCatalogCategoryParams struct {
+	Name      *string    `json:"name"`
+	SortOrder *int32     `json:"sort_order"`
+	Active    *bool      `json:"active"`
+	UpdatedBy *uuid.UUID `json:"updated_by"`
+	TenantID  uuid.UUID  `json:"tenant_id"`
+	ID        uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) UpdateNewEstimateCatalogCategory(ctx context.Context, arg UpdateNewEstimateCatalogCategoryParams) (NewEstimateCatalogCategory, error) {
+	row := q.db.QueryRow(ctx, updateNewEstimateCatalogCategory,
+		arg.Name,
+		arg.SortOrder,
+		arg.Active,
+		arg.UpdatedBy,
+		arg.TenantID,
+		arg.ID,
+	)
+	var i NewEstimateCatalogCategory
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Name,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateNewEstimateCatalogItem = `-- name: UpdateNewEstimateCatalogItem :one
+UPDATE new_estimate_catalog_item
+SET
+  category_id = COALESCE($1, category_id),
+  name = COALESCE($2, name),
+  volume_cf = COALESCE($3::float8, volume_cf),
+  sort_order = COALESCE($4::int, sort_order),
+  active = COALESCE($5::bool, active),
+  updated_by = COALESCE($6, updated_by),
+  updated_at = NOW()
+WHERE tenant_id = $7
+  AND id = $8
+RETURNING id, tenant_id, category_id, name, volume_cf, sort_order, active, created_by, updated_by, created_at, updated_at
+`
+
+type UpdateNewEstimateCatalogItemParams struct {
+	CategoryID *uuid.UUID `json:"category_id"`
+	Name       *string    `json:"name"`
+	VolumeCf   *float64   `json:"volume_cf"`
+	SortOrder  *int32     `json:"sort_order"`
+	Active     *bool      `json:"active"`
+	UpdatedBy  *uuid.UUID `json:"updated_by"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	ID         uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) UpdateNewEstimateCatalogItem(ctx context.Context, arg UpdateNewEstimateCatalogItemParams) (NewEstimateCatalogItem, error) {
+	row := q.db.QueryRow(ctx, updateNewEstimateCatalogItem,
+		arg.CategoryID,
+		arg.Name,
+		arg.VolumeCf,
+		arg.SortOrder,
+		arg.Active,
+		arg.UpdatedBy,
+		arg.TenantID,
+		arg.ID,
+	)
+	var i NewEstimateCatalogItem
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CategoryID,
+		&i.Name,
+		&i.VolumeCf,
+		&i.SortOrder,
+		&i.Active,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateStorageRecordByID = `-- name: UpdateStorageRecordByID :one
 UPDATE storage_record
 SET
@@ -5626,6 +6585,59 @@ func (q *Queries) UpsertImportRowResult(ctx context.Context, arg UpsertImportRow
 		&i.RawValue,
 		&i.TargetEntityID,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const upsertTenantNewEstimateSettings = `-- name: UpsertTenantNewEstimateSettings :one
+INSERT INTO tenant_new_estimate_settings (
+  tenant_id,
+  pricing_defaults_json,
+  email_templates_json,
+  document_branding_json,
+  updated_by
+) VALUES (
+  $1,
+  COALESCE($2::jsonb, '{}'::jsonb),
+  COALESCE($3::jsonb, '{}'::jsonb),
+  COALESCE($4::jsonb, '{}'::jsonb),
+  $5
+)
+ON CONFLICT (tenant_id) DO UPDATE
+SET
+  pricing_defaults_json = COALESCE($2::jsonb, tenant_new_estimate_settings.pricing_defaults_json),
+  email_templates_json = COALESCE($3::jsonb, tenant_new_estimate_settings.email_templates_json),
+  document_branding_json = COALESCE($4::jsonb, tenant_new_estimate_settings.document_branding_json),
+  updated_by = COALESCE($5, tenant_new_estimate_settings.updated_by),
+  updated_at = NOW()
+RETURNING tenant_id, pricing_defaults_json, email_templates_json, document_branding_json, updated_by, created_at, updated_at
+`
+
+type UpsertTenantNewEstimateSettingsParams struct {
+	TenantID             uuid.UUID  `json:"tenant_id"`
+	PricingDefaultsJson  []byte     `json:"pricing_defaults_json"`
+	EmailTemplatesJson   []byte     `json:"email_templates_json"`
+	DocumentBrandingJson []byte     `json:"document_branding_json"`
+	UpdatedBy            *uuid.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpsertTenantNewEstimateSettings(ctx context.Context, arg UpsertTenantNewEstimateSettingsParams) (TenantNewEstimateSetting, error) {
+	row := q.db.QueryRow(ctx, upsertTenantNewEstimateSettings,
+		arg.TenantID,
+		arg.PricingDefaultsJson,
+		arg.EmailTemplatesJson,
+		arg.DocumentBrandingJson,
+		arg.UpdatedBy,
+	)
+	var i TenantNewEstimateSetting
+	err := row.Scan(
+		&i.TenantID,
+		&i.PricingDefaultsJson,
+		&i.EmailTemplatesJson,
+		&i.DocumentBrandingJson,
+		&i.UpdatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
