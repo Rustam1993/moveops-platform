@@ -977,6 +977,15 @@ func (s *Server) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, param
 		entityID = &parsed
 	}
 
+	offsetRows, offsetConvErr := safeInt32(offset)
+	if offsetConvErr != nil {
+		offsetRows = math.MaxInt32
+	}
+	limitRows, limitConvErr := safeInt32(limit)
+	if limitConvErr != nil {
+		limitRows = math.MaxInt32
+	}
+
 	rows, err := s.Q.ListAuditLogsForTenant(r.Context(), gen.ListAuditLogsForTenantParams{
 		TenantID:   tenantID,
 		FromTime:   params.From,
@@ -985,8 +994,8 @@ func (s *Server) GetAdminAuditLogs(w http.ResponseWriter, r *http.Request, param
 		ActionLike: params.Action,
 		EntityType: params.EntityType,
 		EntityID:   entityID,
-		OffsetRows: int32(min(offset, math.MaxInt32)),
-		LimitRows:  int32(min(limit, math.MaxInt32)),
+		OffsetRows: offsetRows,
+		LimitRows:  limitRows,
 	})
 	if err != nil {
 		httpx.WriteError(w, r, http.StatusInternalServerError, "internal_error", "Failed to load audit logs", nil)
